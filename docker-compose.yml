@@ -1,0 +1,17 @@
+services:
+  youtube-loop-player:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: youtube-loop-player
+    ports:
+      - "${PORT:-8080}:80"
+    restart: unless-stopped
+    networks:
+      - youtube-player-network
+    environment:
+      - NODE_ENV=production
+
+networks:
+  youtube-player-network:
+    driver: bridge

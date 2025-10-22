@@ -1,0 +1,52 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Development files
+src/
+tests/
+specs/
+.specify/
+
+# Build artifacts (will be copied separately)
+# dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Version control
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Test coverage
+coverage/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/

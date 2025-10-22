@@ -29,7 +29,11 @@
       "Bash(pkill:*)",
       "Bash(timeout 8 npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(if [ ! -f \".env\" ])",
+      "Bash(then cp .env.example .env)",
+      "Bash(else echo \".env already exists\")",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

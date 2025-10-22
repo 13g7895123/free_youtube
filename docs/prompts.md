@@ -1,0 +1,1 @@
+1. 幫我寫一支docker compose可以啟用這個專案build後的檔案，且port要用.env儲存並可以自定義，然後給我一支sh，執行後即可執行production
