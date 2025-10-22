@@ -77,28 +77,25 @@ const statusText = computed(() => {
 .player-wrapper {
   position: relative;
   width: 100%;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
   background-color: #000;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  /* 讓容器根據內容自適應高度 */
+  aspect-ratio: 16 / 9;
 }
 
 .youtube-player {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
 }
 
-.youtube-player iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
+/* 確保 YouTube iframe 完全填滿容器 */
+.youtube-player :deep(iframe) {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  display: block !important;
 }
 
 .youtube-player.is-loading {

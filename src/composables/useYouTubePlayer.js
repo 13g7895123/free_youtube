@@ -127,8 +127,7 @@ export function useYouTubePlayer(containerId, options = {}) {
 
     try {
       playerInstance = new window.YT.Player(containerId, {
-        height: '100%',
-        width: '100%',
+        // 不設置 height 和 width，讓 CSS 完全控制尺寸
         playerVars: {
           autoplay: 0,
           controls: 1,
