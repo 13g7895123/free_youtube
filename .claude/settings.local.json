@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \".specify/scripts/powershell/create-new-feature.ps1\" -Json -ShortName \"youtube-loop-player\" \"核心目標為建立一個貼上youtube網址即可播放的播放器，且會循環播放\")",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \".specify/scripts/powershell/setup-plan.ps1\" -Json)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \".specify/scripts/powershell/update-agent-context.ps1\" -AgentType claude)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \".specify/scripts/powershell/check-prerequisites.ps1\" -Json)",
+      "Bash(powershell.exe:*)",
+      "Bash(if [ -d \"specs/001-youtube-loop-player/checklists\" ])",
+      "Bash(then find specs/001-youtube-loop-player/checklists -name \"*.md\" -type f)",
+      "Bash(else echo \"No checklists directory found\")",
+      "Bash(fi)",
+      "Bash(git rev-parse:*)",
+      "Bash(if [ -f \".gitignore\" ])",
+      "Bash(then echo \"EXISTS\")",
+      "Bash(else echo \"MISSING\")",
+      "Bash(npm install:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(npm test:*)",
+      "Bash(if [ -d \"src\" ])",
+      "Bash(then find src -type f)",
+      "Bash(else echo \"src directory not found\")",
+      "Bash(if [ -d \"tests\" ])",
+      "Bash(then find tests -type f)",
+      "Bash(else echo \"tests directory empty or not found\")",
+      "Bash(if [ -d \"src/components\" ])",
+      "Bash(then ls -la src/components)",
+      "Bash(else mkdir -p src/components)",
+      "Bash(pkill:*)",
+      "Bash(timeout 8 npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(awk:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
