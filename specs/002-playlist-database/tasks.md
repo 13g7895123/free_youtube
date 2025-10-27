@@ -87,26 +87,26 @@
 
 ### Backend Implementation for US1
 
-- [ ] T033 [P] [US1] 實作 VideoController::index() 取得所有影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T034 [P] [US1] 實作 VideoController::show() 取得單一影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T035 [US1] 實作 VideoController::create() 新增影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T036 [US1] 實作 VideoController::update() 更新影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T037 [US1] 實作 VideoController::delete() 刪除影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T038 [US1] 實作 VideoController::check() 檢查影片是否存在 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T039 [US1] 新增影片驗證規則於 backend/app/Validation/VideoRules.php
-- [ ] T040 [US1] 實作搜尋功能於 VideoModel::search() 於 backend/app/Models/VideoModel.php
+- [X] T033 [P] [US1] 實作 VideoController::index() 取得所有影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T034 [P] [US1] 實作 VideoController::show() 取得單一影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T035 [US1] 實作 VideoController::create() 新增影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T036 [US1] 實作 VideoController::update() 更新影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T037 [US1] 實作 VideoController::delete() 刪除影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T038 [US1] 實作 VideoController::check() 檢查影片是否存在 API 於 backend/app/Controllers/Api/VideoController.php
+- [X] T039 [US1] 新增影片驗證規則於 backend/app/Validation/VideoRules.php
+- [X] T040 [US1] 實作搜尋功能於 VideoModel::search() 於 backend/app/Models/VideoModel.php
 
 ### Frontend Implementation for US1
 
-- [ ] T041 [P] [US1] 建立 Video API Service 於 frontend/src/services/api/videoService.js
-- [ ] T042 [US1] 建立 Video Store (Pinia) 於 frontend/src/stores/videoStore.js
-- [ ] T043 [P] [US1] 建立 VideoCard 元件於 frontend/src/components/VideoCard.vue
-- [ ] T044 [P] [US1] 建立 VideoList 元件於 frontend/src/components/VideoList.vue
-- [ ] T045 [US1] 建立 VideoLibrary 頁面於 frontend/src/views/VideoLibrary.vue
-- [ ] T046 [US1] 實作「儲存影片」按鈕於現有播放器 UI 於 frontend/src/components/YoutubePlayer.vue
-- [ ] T047 [US1] 實作影片刪除功能 UI 於 frontend/src/components/VideoCard.vue
-- [ ] T048 [US1] 整合 VideoLibrary 到主路由於 frontend/src/router/index.js
-- [ ] T049 [US1] 新增成功/錯誤訊息提示 UI (Toast/Notification)
+- [X] T041 [P] [US1] 建立 Video API Service 於 frontend/src/services/api/videoService.js
+- [X] T042 [US1] 建立 Video Store (Pinia) 於 frontend/src/stores/videoStore.js
+- [X] T043 [P] [US1] 建立 VideoCard 元件於 frontend/src/components/VideoCard.vue
+- [X] T044 [P] [US1] 建立 VideoList 元件於 frontend/src/components/VideoList.vue
+- [X] T045 [US1] 建立 VideoLibrary 頁面於 frontend/src/views/VideoLibrary.vue
+- [X] T046 [US1] 實作「儲存影片」按鈕於現有播放器 UI 於 frontend/src/components/YoutubePlayer.vue
+- [X] T047 [US1] 實作影片刪除功能 UI 於 frontend/src/components/VideoCard.vue
+- [X] T048 [US1] 整合 VideoLibrary 到主路由於 frontend/src/router/index.js
+- [X] T049 [US1] 新增成功/錯誤訊息提示 UI (Toast/Notification)
 
 **Checkpoint**: 使用者可以儲存、查看、刪除影片。此故事應完全可獨立運作並測試。
 
@@ -120,25 +120,25 @@
 
 ### Backend Implementation for US2
 
-- [ ] T037 [P] [US2] 實作 PlaylistController::index() 取得所有播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
-- [ ] T038 [P] [US2] 實作 PlaylistController::show() 取得單一播放清單(含影片) API 於 backend/app/Controllers/Api/PlaylistController.php
-- [ ] T039 [US2] 實作 PlaylistController::create() 建立播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
-- [ ] T040 [US2] 實作 PlaylistController::update() 更新播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
-- [ ] T041 [US2] 實作 PlaylistController::delete() 刪除播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
-- [ ] T042 [US2] 新增播放清單驗證規則於 backend/app/Validation/PlaylistRules.php
-- [ ] T043 [US2] 實作 PlaylistModel::getWithVideoCount() 於 backend/app/Models/PlaylistModel.php
+- [X] T037 [P] [US2] 實作 PlaylistController::index() 取得所有播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
+- [X] T038 [P] [US2] 實作 PlaylistController::show() 取得單一播放清單(含影片) API 於 backend/app/Controllers/Api/PlaylistController.php
+- [X] T039 [US2] 實作 PlaylistController::create() 建立播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
+- [X] T040 [US2] 實作 PlaylistController::update() 更新播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
+- [X] T041 [US2] 實作 PlaylistController::delete() 刪除播放清單 API 於 backend/app/Controllers/Api/PlaylistController.php
+- [X] T042 [US2] 新增播放清單驗證規則於 backend/app/Validation/PlaylistRules.php
+- [X] T043 [US2] 實作 PlaylistModel::getWithVideoCount() 於 backend/app/Models/PlaylistModel.php
 
 ### Playlist Items API for US2
 
-- [ ] T044 [P] [US2] 實作 PlaylistItemController::index() 取得播放清單項目 API 於 backend/app/Controllers/Api/PlaylistItemController.php
-- [ ] T045 [US2] 實作 PlaylistItemController::create() 新增影片到播放清單 API 於 backend/app/Controllers/Api/PlaylistItemController.php
-- [ ] T046 [US2] 實作 PlaylistItemController::delete() 從播放清單移除影片 API 於 backend/app/Controllers/Api/PlaylistItemController.php
-- [ ] T047 [US2] 實作自動取得下一個 position 邏輯於 PlaylistItemModel::getNextPosition() 於 backend/app/Models/PlaylistItemModel.php
-- [ ] T048 [US2] 實作取得播放清單影片於 PlaylistItemModel::getPlaylistVideos() 於 backend/app/Models/PlaylistItemModel.php
+- [X] T044 [P] [US2] 實作 PlaylistItemController::index() 取得播放清單項目 API 於 backend/app/Controllers/Api/PlaylistItemController.php
+- [X] T045 [US2] 實作 PlaylistItemController::create() 新增影片到播放清單 API 於 backend/app/Controllers/Api/PlaylistItemController.php
+- [X] T046 [US2] 實作 PlaylistItemController::delete() 從播放清單移除影片 API 於 backend/app/Controllers/Api/PlaylistItemController.php
+- [X] T047 [US2] 實作自動取得下一個 position 邏輯於 PlaylistItemModel::getNextPosition() 於 backend/app/Models/PlaylistItemModel.php
+- [X] T048 [US2] 實作取得播放清單影片於 PlaylistItemModel::getPlaylistVideos() 於 backend/app/Models/PlaylistItemModel.php
 
 ### Frontend Implementation for US2
 
-- [ ] T049 [P] [US2] 建立 Playlist API Service 於 frontend/src/services/api/playlistService.js
+- [X] T049 [P] [US2] 建立 Playlist API Service 於 frontend/src/services/api/playlistService.js
 - [ ] T050 [US2] 建立 Playlist Store (Pinia) 於 frontend/src/stores/playlistStore.js
 - [ ] T051 [P] [US2] 建立 PlaylistCard 元件於 frontend/src/components/PlaylistCard.vue
 - [ ] T052 [P] [US2] 建立 PlaylistList 元件於 frontend/src/components/PlaylistList.vue
