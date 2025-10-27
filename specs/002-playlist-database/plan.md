@@ -24,13 +24,16 @@
 - **套件管理**: Composer (後端), npm (前端)
 - **版本控制**: Git
 - **容器化**: Docker + Docker Compose
+- **資料庫管理**: phpMyAdmin (http://localhost:8081)
 
 ## 實作階段規劃
 
 ### 第一階段：後端基礎建置（第 1 週）
 - [ ] 建立 CodeIgniter 4 專案結構
 - [ ] 設定 MariaDB 資料庫連線
+- [ ] 啟動 phpMyAdmin 容器進行資料庫管理
 - [ ] 建立資料庫遷移檔案（Migrations）
+- [ ] 使用 phpMyAdmin 驗證資料表結構
 - [ ] 實作 Models 和 Entities
 - [ ] 設定 CORS 過濾器
 - [ ] 建立 API 回應格式輔助函數
@@ -106,7 +109,7 @@ app.indexPage = ''
 app.forceGlobalSecureRequests = false
 ```
 
-### docker-compose.yml（新增 MariaDB 服務）
+### docker-compose.yml（新增 MariaDB 與 phpMyAdmin 服務）
 ```yaml
 version: '3.8'
 
@@ -133,6 +136,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # phpMyAdmin 資料庫管理工具
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: free_youtube_phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: secret
+      UPLOAD_LIMIT: 100M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 600
+    ports:
+      - "8081:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
 
   # CodeIgniter 4 後端服務
   ci4_backend:
@@ -176,6 +200,13 @@ networks:
   app_network:
     driver: bridge
 ```
+
+### 存取資訊
+
+- **phpMyAdmin 網址**: http://localhost:8081
+- **登入帳號**: root
+- **登入密碼**: secret
+- **資料庫名稱**: free_youtube
 
 ## 安全性考量
 
