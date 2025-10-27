@@ -15,9 +15,9 @@
 ## Path Conventions
 
 - **Backend**: `backend/app/` (CodeIgniter 4 structure)
-- **Frontend**: `src/` (Vue.js application)
+- **Frontend**: `frontend/src/` (Vue.js application)
 - **Database**: `backend/app/Database/Migrations/`
-- **Tests**: `backend/tests/`, `tests/`
+- **Tests**: `backend/tests/`, `frontend/tests/`
 
 ---
 
@@ -25,13 +25,34 @@
 
 **目的**: 專案初始化與基本結構建立
 
-- [ ] T001 建立 CodeIgniter 4 專案結構於 backend/ 目錄
-- [ ] T002 初始化 Composer 並安裝 CI4 相依套件於 backend/composer.json
-- [ ] T003 [P] 設定 Docker Compose 服務 (MariaDB + phpMyAdmin) 於 docker-compose.yml
-- [ ] T004 [P] 建立 .env 檔案並設定 MariaDB 連線資訊於 backend/.env
-- [ ] T005 [P] 設定 CORS 過濾器於 backend/app/Filters/CorsFilter.php
-- [ ] T006 [P] 建立 API 回應格式輔助函數於 backend/app/Helpers/response_helper.php
-- [ ] T007 啟動 Docker 容器並驗證 MariaDB 與 phpMyAdmin (http://localhost:8081) 連線正常
+### 專案結構重組
+
+- [ ] T001 建立 frontend/ 目錄
+- [ ] T002 移動前端檔案到 frontend/ 目錄 (src/, public/, index.html, package.json, vite.config.js, vitest.config.js, .eslintrc.cjs, .prettierrc)
+- [ ] T003 更新 vite.config.js 中的路徑設定
+- [ ] T004 更新 package.json 中的 scripts 路徑（如果需要）
+- [ ] T005 更新 .gitignore 以反映新的目錄結構
+- [ ] T006 在 frontend/ 目錄執行 npm install 驗證前端專案正常運作
+- [ ] T007 更新 README.md 說明新的專案結構
+
+### CodeIgniter 4 後端建置
+
+- [ ] T008 建立 backend/ 目錄
+- [ ] T009 建立 CodeIgniter 4 專案結構於 backend/ 目錄
+- [ ] T010 初始化 Composer 並安裝 CI4 相依套件於 backend/composer.json
+- [ ] T011 [P] 建立 .env 檔案並設定 MariaDB 連線資訊於 backend/.env
+- [ ] T012 [P] 設定 CORS 過濾器於 backend/app/Filters/CorsFilter.php
+- [ ] T013 [P] 建立 API 回應格式輔助函數於 backend/app/Helpers/response_helper.php
+
+### Docker 環境設定
+
+- [ ] T014 設定 Docker Compose 服務 (MariaDB + phpMyAdmin + CI4 Backend + Vue Frontend) 於 docker-compose.yml
+- [ ] T015 建立 backend/Dockerfile 用於 CI4 容器
+- [ ] T016 更新 frontend/Dockerfile 路徑設定
+- [ ] T017 在 frontend/.env 或 vite.config.js 設定 API 基礎網址 (VITE_API_URL=http://localhost:8080)
+- [ ] T018 啟動 Docker 容器並驗證所有服務正常運作
+- [ ] T019 驗證 MariaDB (port 3306) 與 phpMyAdmin (http://localhost:8081) 連線正常
+- [ ] T020 驗證前端 (http://localhost:5173) 與後端 API (http://localhost:8080) 可正常通訊
 
 ---
 
@@ -41,18 +62,18 @@
 
 **⚠️ 重要**: 所有使用者故事工作必須等待此階段完成
 
-- [ ] T008 建立資料庫遷移：videos 資料表於 backend/app/Database/Migrations/2025-10-27-000001_CreateVideosTable.php
-- [ ] T009 建立資料庫遷移：playlists 資料表於 backend/app/Database/Migrations/2025-10-27-000002_CreatePlaylistsTable.php
-- [ ] T010 建立資料庫遷移：playlist_items 資料表於 backend/app/Database/Migrations/2025-10-27-000003_CreatePlaylistItemsTable.php
-- [ ] T011 執行 migrations 並使用 phpMyAdmin 驗證資料表結構
-- [ ] T012 [P] 建立 Video Entity 於 backend/app/Entities/Video.php
-- [ ] T013 [P] 建立 Playlist Entity 於 backend/app/Entities/Playlist.php
-- [ ] T014 [P] 建立 PlaylistItem Entity 於 backend/app/Entities/PlaylistItem.php
-- [ ] T015 [P] 實作 VideoModel 於 backend/app/Models/VideoModel.php
-- [ ] T016 [P] 實作 PlaylistModel 於 backend/app/Models/PlaylistModel.php
-- [ ] T017 [P] 實作 PlaylistItemModel 於 backend/app/Models/PlaylistItemModel.php
-- [ ] T018 設定 API 路由於 backend/app/Config/Routes.php
-- [ ] T019 建立測試資料 Seeder 於 backend/app/Database/Seeds/VideoSeeder.php
+- [ ] T021 建立資料庫遷移：videos 資料表於 backend/app/Database/Migrations/2025-10-27-000001_CreateVideosTable.php
+- [ ] T022 建立資料庫遷移：playlists 資料表於 backend/app/Database/Migrations/2025-10-27-000002_CreatePlaylistsTable.php
+- [ ] T023 建立資料庫遷移：playlist_items 資料表於 backend/app/Database/Migrations/2025-10-27-000003_CreatePlaylistItemsTable.php
+- [ ] T024 執行 migrations 並使用 phpMyAdmin 驗證資料表結構
+- [ ] T025 [P] 建立 Video Entity 於 backend/app/Entities/Video.php
+- [ ] T026 [P] 建立 Playlist Entity 於 backend/app/Entities/Playlist.php
+- [ ] T027 [P] 建立 PlaylistItem Entity 於 backend/app/Entities/PlaylistItem.php
+- [ ] T028 [P] 實作 VideoModel 於 backend/app/Models/VideoModel.php
+- [ ] T029 [P] 實作 PlaylistModel 於 backend/app/Models/PlaylistModel.php
+- [ ] T030 [P] 實作 PlaylistItemModel 於 backend/app/Models/PlaylistItemModel.php
+- [ ] T031 設定 API 路由於 backend/app/Config/Routes.php
+- [ ] T032 建立測試資料 Seeder 於 backend/app/Database/Seeds/VideoSeeder.php
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -66,26 +87,26 @@
 
 ### Backend Implementation for US1
 
-- [ ] T020 [P] [US1] 實作 VideoController::index() 取得所有影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T021 [P] [US1] 實作 VideoController::show() 取得單一影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T022 [US1] 實作 VideoController::create() 新增影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T023 [US1] 實作 VideoController::update() 更新影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T024 [US1] 實作 VideoController::delete() 刪除影片 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T025 [US1] 實作 VideoController::check() 檢查影片是否存在 API 於 backend/app/Controllers/Api/VideoController.php
-- [ ] T026 [US1] 新增影片驗證規則於 backend/app/Validation/VideoRules.php
-- [ ] T027 [US1] 實作搜尋功能於 VideoModel::search() 於 backend/app/Models/VideoModel.php
+- [ ] T033 [P] [US1] 實作 VideoController::index() 取得所有影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T034 [P] [US1] 實作 VideoController::show() 取得單一影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T035 [US1] 實作 VideoController::create() 新增影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T036 [US1] 實作 VideoController::update() 更新影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T037 [US1] 實作 VideoController::delete() 刪除影片 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T038 [US1] 實作 VideoController::check() 檢查影片是否存在 API 於 backend/app/Controllers/Api/VideoController.php
+- [ ] T039 [US1] 新增影片驗證規則於 backend/app/Validation/VideoRules.php
+- [ ] T040 [US1] 實作搜尋功能於 VideoModel::search() 於 backend/app/Models/VideoModel.php
 
 ### Frontend Implementation for US1
 
-- [ ] T028 [P] [US1] 建立 Video API Service 於 src/services/api/videoService.js
-- [ ] T029 [US1] 建立 Video Store (Pinia) 於 src/stores/videoStore.js
-- [ ] T030 [P] [US1] 建立 VideoCard 元件於 src/components/VideoCard.vue
-- [ ] T031 [P] [US1] 建立 VideoList 元件於 src/components/VideoList.vue
-- [ ] T032 [US1] 建立 VideoLibrary 頁面於 src/views/VideoLibrary.vue
-- [ ] T033 [US1] 實作「儲存影片」按鈕於現有播放器 UI 於 src/components/YoutubePlayer.vue
-- [ ] T034 [US1] 實作影片刪除功能 UI 於 src/components/VideoCard.vue
-- [ ] T035 [US1] 整合 VideoLibrary 到主路由於 src/router/index.js
-- [ ] T036 [US1] 新增成功/錯誤訊息提示 UI (Toast/Notification)
+- [ ] T041 [P] [US1] 建立 Video API Service 於 frontend/src/services/api/videoService.js
+- [ ] T042 [US1] 建立 Video Store (Pinia) 於 frontend/src/stores/videoStore.js
+- [ ] T043 [P] [US1] 建立 VideoCard 元件於 frontend/src/components/VideoCard.vue
+- [ ] T044 [P] [US1] 建立 VideoList 元件於 frontend/src/components/VideoList.vue
+- [ ] T045 [US1] 建立 VideoLibrary 頁面於 frontend/src/views/VideoLibrary.vue
+- [ ] T046 [US1] 實作「儲存影片」按鈕於現有播放器 UI 於 frontend/src/components/YoutubePlayer.vue
+- [ ] T047 [US1] 實作影片刪除功能 UI 於 frontend/src/components/VideoCard.vue
+- [ ] T048 [US1] 整合 VideoLibrary 到主路由於 frontend/src/router/index.js
+- [ ] T049 [US1] 新增成功/錯誤訊息提示 UI (Toast/Notification)
 
 **Checkpoint**: 使用者可以儲存、查看、刪除影片。此故事應完全可獨立運作並測試。
 
@@ -117,17 +138,17 @@
 
 ### Frontend Implementation for US2
 
-- [ ] T049 [P] [US2] 建立 Playlist API Service 於 src/services/api/playlistService.js
-- [ ] T050 [US2] 建立 Playlist Store (Pinia) 於 src/stores/playlistStore.js
-- [ ] T051 [P] [US2] 建立 PlaylistCard 元件於 src/components/PlaylistCard.vue
-- [ ] T052 [P] [US2] 建立 PlaylistList 元件於 src/components/PlaylistList.vue
-- [ ] T053 [US2] 建立 CreatePlaylistModal 元件於 src/components/modals/CreatePlaylistModal.vue
-- [ ] T054 [US2] 建立 PlaylistDetail 頁面於 src/views/PlaylistDetail.vue
-- [ ] T055 [US2] 建立 PlaylistManager 頁面於 src/views/PlaylistManager.vue
-- [ ] T056 [US2] 實作「新增到播放清單」功能於 VideoCard 元件於 src/components/VideoCard.vue
+- [ ] T049 [P] [US2] 建立 Playlist API Service 於 frontend/src/services/api/playlistService.js
+- [ ] T050 [US2] 建立 Playlist Store (Pinia) 於 frontend/src/stores/playlistStore.js
+- [ ] T051 [P] [US2] 建立 PlaylistCard 元件於 frontend/src/components/PlaylistCard.vue
+- [ ] T052 [P] [US2] 建立 PlaylistList 元件於 frontend/src/components/PlaylistList.vue
+- [ ] T053 [US2] 建立 CreatePlaylistModal 元件於 frontend/src/components/modals/CreatePlaylistModal.vue
+- [ ] T054 [US2] 建立 PlaylistDetail 頁面於 frontend/src/views/PlaylistDetail.vue
+- [ ] T055 [US2] 建立 PlaylistManager 頁面於 frontend/src/views/PlaylistManager.vue
+- [ ] T056 [US2] 實作「新增到播放清單」功能於 VideoCard 元件於 frontend/src/components/VideoCard.vue
 - [ ] T057 [US2] 實作播放清單編輯功能 (名稱、描述) UI
 - [ ] T058 [US2] 實作播放清單刪除功能 (含確認對話框) UI
-- [ ] T059 [US2] 整合 PlaylistManager 到主路由於 src/router/index.js
+- [ ] T059 [US2] 整合 PlaylistManager 到主路由於 frontend/src/router/index.js
 
 **Checkpoint**: 使用者可以建立、查看、編輯、刪除播放清單，並新增/移除影片。使用者故事 1 和 2 應該都能獨立運作。
 
@@ -146,11 +167,11 @@
 
 ### Frontend Implementation for US3
 
-- [ ] T062 [US3] 擴充 YouTube Player 支援播放清單模式於 src/composables/useYoutubePlayer.js
-- [ ] T063 [US3] 實作播放清單播放邏輯 (自動切換下一首) 於 src/composables/usePlaylistPlayer.js
+- [ ] T062 [US3] 擴充 YouTube Player 支援播放清單模式於 frontend/src/composables/useYoutubePlayer.js
+- [ ] T063 [US3] 實作播放清單播放邏輯 (自動切換下一首) 於 frontend/src/composables/usePlaylistPlayer.js
 - [ ] T064 [US3] 實作循環播放邏輯 (最後一首回到第一首)
-- [ ] T065 [P] [US3] 建立播放清單控制 UI (上一首、下一首按鈕) 於 src/components/PlaylistControls.vue
-- [ ] T066 [US3] 實作當前播放狀態顯示 (正在播放: 3/10) 於 src/components/PlaylistControls.vue
+- [ ] T065 [P] [US3] 建立播放清單控制 UI (上一首、下一首按鈕) 於 frontend/src/components/PlaylistControls.vue
+- [ ] T066 [US3] 實作當前播放狀態顯示 (正在播放: 3/10) 於 frontend/src/components/PlaylistControls.vue
 - [ ] T067 [US3] 實作點擊播放清單項目直接跳播功能
 - [ ] T068 [US3] 整合播放清單播放功能到 PlaylistDetail 頁面
 - [ ] T069 [US3] 新增視覺化標示當前播放中的影片
@@ -174,9 +195,9 @@
 
 ### Frontend Implementation for US4
 
-- [ ] T074 [US4] 安裝拖曳排序套件 (如 Sortable.js 或 VueDraggable) 於 package.json
+- [ ] T074 [US4] 安裝拖曳排序套件 (如 Sortable.js 或 VueDraggable) 於 frontend/package.json
 - [ ] T075 [US4] 實作拖曳排序功能於 PlaylistDetail 頁面的影片清單
-- [ ] T076 [P] [US4] 建立「上移」「下移」按鈕元件於 src/components/PlaylistItemActions.vue
+- [ ] T076 [P] [US4] 建立「上移」「下移」按鈕元件於 frontend/src/components/PlaylistItemActions.vue
 - [ ] T077 [US4] 實作「移到最前」「移到最後」功能
 - [ ] T078 [US4] 實作排序變更後自動儲存到後端
 - [ ] T079 [US4] 新增排序變更的視覺回饋 (loading 狀態)
@@ -200,7 +221,7 @@
 ### Frontend Implementation for US6
 
 - [ ] T083 [P] [US6] 優化 VideoCard 元件顯示完整影片資訊 (縮圖、標題、時長、頻道)
-- [ ] T084 [P] [US6] 實作時長格式化 (秒數轉 mm:ss) 於 src/utils/formatters.js
+- [ ] T084 [P] [US6] 實作時長格式化 (秒數轉 mm:ss) 於 frontend/src/utils/formatters.js
 - [ ] T085 [US6] 實作縮圖 lazy loading 優化效能
 - [ ] T086 [US6] 實作縮圖載入失敗時的預設占位圖
 - [ ] T087 [US6] 新增影片資訊 tooltip 顯示完整描述
@@ -223,9 +244,9 @@
 
 ### Frontend Implementation for US5
 
-- [ ] T091 [P] [US5] 建立 SearchBar 元件於 src/components/SearchBar.vue
+- [ ] T091 [P] [US5] 建立 SearchBar 元件於 frontend/src/components/SearchBar.vue
 - [ ] T092 [US5] 實作即時搜尋功能 (debounce) 於 VideoLibrary 頁面
-- [ ] T093 [P] [US5] 建立 FilterPanel 元件於 src/components/FilterPanel.vue
+- [ ] T093 [P] [US5] 建立 FilterPanel 元件於 frontend/src/components/FilterPanel.vue
 - [ ] T094 [US5] 實作播放清單篩選器
 - [ ] T095 [US5] 實作搜尋結果高亮顯示
 - [ ] T096 [US5] 實作清除搜尋/篩選功能
@@ -242,17 +263,16 @@
 - [ ] T098 [P] 實作 API 錯誤處理中介軟體於 backend/app/Filters/ErrorFilter.php
 - [ ] T099 [P] 實作請求速率限制於 backend/app/Filters/ThrottleFilter.php
 - [ ] T100 [P] 新增 API 文件 (Swagger/OpenAPI) 於 backend/public/api-docs/
-- [ ] T101 [P] 實作前端全域錯誤處理於 src/utils/errorHandler.js
+- [ ] T101 [P] 實作前端全域錯誤處理於 frontend/src/utils/errorHandler.js
 - [ ] T102 [P] 實作 loading 狀態管理於各個頁面
 - [ ] T103 優化資料庫查詢效能 (使用 EXPLAIN 分析)
-- [ ] T104 [P] 新增 E2E 測試於 tests/e2e/ (可選)
-- [ ] T105 [P] 實作響應式設計優化 (手機、平板適配)
-- [ ] T106 [P] 實作鍵盤快捷鍵 (空白鍵播放/暫停等)
-- [ ] T107 實作資料匯出/匯入功能 (JSON 格式)
-- [ ] T108 [P] 撰寫使用者文件於 docs/user-guide.md
-- [ ] T109 [P] 撰寫開發者文件於 docs/developer-guide.md
-- [ ] T110 程式碼重構與最佳化
-- [ ] T111 執行 quickstart.md 驗證測試
+- [ ] T104 [P] 實作響應式設計優化 (手機、平板適配)
+- [ ] T105 [P] 實作鍵盤快捷鍵 (空白鍵播放/暫停等)
+- [ ] T106 實作資料匯出/匯入功能 (JSON 格式)
+- [ ] T107 [P] 撰寫使用者文件於 docs/user-guide.md
+- [ ] T108 [P] 撰寫開發者文件於 docs/developer-guide.md
+- [ ] T109 程式碼重構與最佳化
+- [ ] T110 執行 quickstart.md 驗證測試
 
 ---
 
@@ -285,8 +305,10 @@
 
 ### Parallel Opportunities
 
-- Phase 1: T003, T004, T005, T006 可平行執行
-- Phase 2: T012-T017 (Entities 和 Models) 可平行執行
+- Phase 1 專案重組: T001-T007 必須依序執行
+- Phase 1 CI4 建置: T011-T013 可平行執行
+- Phase 1 Docker: T015-T016 可平行執行
+- Phase 2: T025-T030 (Entities 和 Models) 可平行執行
 - 每個使用者故事中標記 [P] 的任務可平行執行
 - 不同使用者故事可由不同團隊成員平行開發 (在 Foundational 完成後)
 
@@ -296,13 +318,13 @@
 
 ```bash
 # 同時啟動 Backend API 開發:
-Task T020: "實作 VideoController::index()"
-Task T021: "實作 VideoController::show()"
+Task T033: "實作 VideoController::index()"
+Task T034: "實作 VideoController::show()"
 
 # 同時啟動 Frontend 元件開發:
-Task T028: "建立 Video API Service"
-Task T030: "建立 VideoCard 元件"
-Task T031: "建立 VideoList 元件"
+Task T041: "建立 Video API Service"
+Task T043: "建立 VideoCard 元件"
+Task T044: "建立 VideoList 元件"
 ```
 
 ---
@@ -311,7 +333,7 @@ Task T031: "建立 VideoList 元件"
 
 ### MVP First (僅 User Story 1)
 
-1. 完成 Phase 1: Setup
+1. 完成 Phase 1: 專案結構重組 + Setup
 2. 完成 Phase 2: Foundational (重要 - 阻塞所有故事)
 3. 完成 Phase 3: User Story 1
 4. **停止並驗證**: 獨立測試 User Story 1
@@ -341,11 +363,26 @@ Task T031: "建立 VideoList 元件"
 
 ## Summary
 
-- **總任務數**: 111 個任務
-- **MVP 範圍**: Phase 1 + Phase 2 + Phase 3 (User Story 1) = ~40 個任務
+- **總任務數**: 123 個任務 (移除 E2E 測試任務)
+- **MVP 範圍**: Phase 1 (專案重組 + Setup) + Phase 2 (Foundational) + Phase 3 (User Story 1) = ~53 個任務
 - **平行機會**: 每個 phase 內標記 [P] 的任務可同時執行
 - **獨立測試**: 每個使用者故事都有明確的獨立測試標準
-- **建議開發順序**: Setup → Foundational → US1 (MVP) → US2 → US3 → US4 → US6 → US5 → Polish
+- **建議開發順序**: 專案重組 → Setup → Foundational → US1 (MVP) → US2 → US3 → US4 → US6 → US5 → Polish
+
+### 新增專案結構調整
+
+**Phase 1 現在包含**:
+1. **專案結構重組** (T001-T007): 將前端移至 frontend/ 目錄
+2. **CI4 後端建置** (T008-T013): 建立 backend/ 目錄與基礎設定
+3. **Docker 環境設定** (T014-T020): 更新容器設定以反映新結構
+
+### 測試策略
+
+本專案將專注於單元測試與整合測試：
+- **單元測試**: 使用 PHPUnit (後端) 和 Vitest (前端)
+- **整合測試**: API 端點測試
+- **手動測試**: 使用者驗收測試依照 spec.md 驗收情境
+- **不包含**: E2E 自動化測試（簡化開發流程）
 
 ---
 

@@ -26,10 +26,49 @@
 - **容器化**: Docker + Docker Compose
 - **資料庫管理**: phpMyAdmin (http://localhost:8081)
 
+## 專案目錄結構
+
+```
+free_youtube/
+├── backend/                    # CodeIgniter 4 後端
+│   ├── app/
+│   │   ├── Config/
+│   │   ├── Controllers/
+│   │   ├── Models/
+│   │   ├── Entities/
+│   │   ├── Database/
+│   │   ├── Filters/
+│   │   ├── Validation/
+│   │   └── Helpers/
+│   ├── public/
+│   ├── tests/
+│   ├── composer.json
+│   └── .env
+├── frontend/                   # Vue.js 3 前端
+│   ├── src/
+│   │   ├── components/
+│   │   ├── views/
+│   │   ├── stores/
+│   │   ├── services/
+│   │   ├── composables/
+│   │   ├── utils/
+│   │   └── router/
+│   ├── public/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── vitest.config.js
+├── docker-compose.yml
+├── .gitignore
+└── README.md
+```
+
 ## 實作階段規劃
 
 ### 第一階段：後端基礎建置（第 1 週）
-- [ ] 建立 CodeIgniter 4 專案結構
+- [ ] 調整專案結構：將前端專案移至 frontend/ 目錄
+- [ ] 更新前端相關設定檔路徑（vite.config.js, package.json 等）
+- [ ] 建立 backend/ 目錄並建立 CodeIgniter 4 專案結構
 - [ ] 設定 MariaDB 資料庫連線
 - [ ] 啟動 phpMyAdmin 容器進行資料庫管理
 - [ ] 建立資料庫遷移檔案（Migrations）
@@ -179,18 +218,19 @@ services:
   # Vue.js 前端服務（開發模式）
   vue_frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: free_youtube_frontend
     volumes:
-      - ./src:/app/src
-      - ./public:/app/public
+      - ./frontend:/app
     ports:
       - "5173:5173"
     depends_on:
       - ci4_backend
     networks:
       - app_network
+    environment:
+      - VITE_API_URL=http://localhost:8080
 
 volumes:
   mariadb_data:
