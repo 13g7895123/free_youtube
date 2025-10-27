@@ -1,26 +1,27 @@
 # YouTube Player Constitution
 <!--
-Sync Impact Report - Constitution Version 1.0.0
+Sync Impact Report - Constitution Version 1.1.0
 ===============================================
-Version Change: N/A → 1.0.0 (Initial creation)
-Rationale: Initial constitution establishing core principles for code quality, testing, UX, and performance
+Version Change: 1.0.0 → 1.1.0 (Minor amendment)
+Rationale: Added new principle V (Language & Localization) requiring Traditional Chinese for all user-facing documentation and specifications
 
-Modified Principles: N/A (new constitution)
+Modified Principles: None
 
 Added Sections:
-- Core Principles (4 principles established)
-- Development Standards
-- Quality Gates
-- Governance
+- Principle V: Language & Localization Standards (new)
 
-Removed Sections: N/A
+Removed Sections: None
 
 Templates Status:
-✅ .specify/templates/plan-template.md - Reviewed, Constitution Check section aligns
-✅ .specify/templates/spec-template.md - Reviewed, requirements and success criteria align
-✅ .specify/templates/tasks-template.md - Reviewed, task organization reflects principles
+⚠ .specify/templates/plan-template.md - Requires update for language requirements
+⚠ .specify/templates/spec-template.md - Requires update for language requirements
+⚠ .specify/templates/tasks-template.md - May require language compliance checks
+⚠ specs/001-youtube-loop-player/ - Existing documentation may need translation
 
-Follow-up TODOs: None
+Follow-up TODOs:
+- Review and update existing documentation to Traditional Chinese
+- Update templates to enforce language requirements
+- Add language validation to quality gates
 -->
 
 ## Core Principles
@@ -88,6 +89,30 @@ Follow-up TODOs: None
 
 **Rationale**: Performance impacts user satisfaction, conversion rates, and operational costs. Defining performance as a measurable feature ensures it receives equal priority with functional requirements.
 
+### V. Language & Localization Standards (NON-NEGOTIABLE)
+
+**All user-facing content MUST be in Traditional Chinese (zh-TW):**
+- Specifications (spec.md) MUST be written in Traditional Chinese
+- Planning documents (plan.md) MUST be written in Traditional Chinese
+- User documentation (quickstart.md, README.md) MUST be written in Traditional Chinese
+- User interface text, labels, and messages MUST be in Traditional Chinese
+- Error messages and user feedback MUST be in Traditional Chinese
+- Commit messages and PR descriptions SHOULD be in Traditional Chinese or English
+
+**Exceptions (English is permitted):**
+- Source code (variables, functions, classes, comments)
+- Technical configuration files (package.json, vite.config.js, etc.)
+- API contracts and technical specifications in contracts/ directory
+- Third-party library documentation references
+- Internal development notes and ADRs (Architecture Decision Records)
+
+**Translation requirements**:
+- Technical terms MUST use standard Traditional Chinese translations where established
+- When no standard translation exists, include English term in parentheses on first use
+- Maintain glossary of technical terms in docs/ directory for consistency
+
+**Rationale**: Ensuring all user-facing documentation and specifications are in Traditional Chinese makes the project accessible to the target audience, reduces miscommunication, and maintains cultural relevance. Code remains in English following global software development standards.
+
 ## Development Standards
 
 ### Code Review Requirements
@@ -133,6 +158,7 @@ Required documentation:
 - Accessibility audit passed (automated + manual)
 - User testing completed for critical journeys (if applicable)
 - Documentation reviewed and updated
+- All user-facing documentation verified in Traditional Chinese
 
 ## Governance
 
@@ -149,9 +175,10 @@ This constitution supersedes all other development practices and guidelines. In 
 
 ### Compliance Verification
 All pull requests and code reviews MUST verify:
-- Adherence to all four core principles
+- Adherence to all five core principles
 - Completion of all quality gates
 - Justification for any complexity introduced (documented in plan.md Complexity Tracking section)
+- Language requirements compliance for user-facing documentation
 
 ### Complexity Justification Policy
 Any pattern or architecture that violates YAGNI (You Aren't Gonna Need It) MUST be justified:
@@ -161,4 +188,4 @@ Any pattern or architecture that violates YAGNI (You Aren't Gonna Need It) MUST 
 
 Use plan.md Complexity Tracking table to document justified violations.
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-22 | **Last Amended**: 2025-10-22
+**Version**: 1.1.0 | **Ratified**: 2025-10-22 | **Last Amended**: 2025-10-27
