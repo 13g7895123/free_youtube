@@ -139,16 +139,16 @@
 ### Frontend Implementation for US2
 
 - [X] T049 [P] [US2] 建立 Playlist API Service 於 frontend/src/services/api/playlistService.js
-- [ ] T050 [US2] 建立 Playlist Store (Pinia) 於 frontend/src/stores/playlistStore.js
-- [ ] T051 [P] [US2] 建立 PlaylistCard 元件於 frontend/src/components/PlaylistCard.vue
-- [ ] T052 [P] [US2] 建立 PlaylistList 元件於 frontend/src/components/PlaylistList.vue
-- [ ] T053 [US2] 建立 CreatePlaylistModal 元件於 frontend/src/components/modals/CreatePlaylistModal.vue
-- [ ] T054 [US2] 建立 PlaylistDetail 頁面於 frontend/src/views/PlaylistDetail.vue
-- [ ] T055 [US2] 建立 PlaylistManager 頁面於 frontend/src/views/PlaylistManager.vue
-- [ ] T056 [US2] 實作「新增到播放清單」功能於 VideoCard 元件於 frontend/src/components/VideoCard.vue
-- [ ] T057 [US2] 實作播放清單編輯功能 (名稱、描述) UI
-- [ ] T058 [US2] 實作播放清單刪除功能 (含確認對話框) UI
-- [ ] T059 [US2] 整合 PlaylistManager 到主路由於 frontend/src/router/index.js
+- [X] T050 [US2] 建立 Playlist Store (Pinia) 於 frontend/src/stores/playlistStore.js
+- [X] T051 [P] [US2] 建立 PlaylistCard 元件於 frontend/src/components/PlaylistCard.vue
+- [X] T052 [P] [US2] 建立 PlaylistList 元件於 frontend/src/components/PlaylistList.vue
+- [X] T053 [US2] 建立 CreatePlaylistModal 元件於 frontend/src/components/modals/CreatePlaylistModal.vue
+- [X] T054 [US2] 建立 PlaylistDetail 頁面於 frontend/src/views/PlaylistDetail.vue
+- [X] T055 [US2] 建立 PlaylistManager 頁面於 frontend/src/views/PlaylistManager.vue
+- [X] T056 [US2] 實作「新增到播放清單」功能於 VideoCard 元件於 frontend/src/components/VideoCard.vue
+- [X] T057 [US2] 實作播放清單編輯功能 (名稱、描述) UI
+- [X] T058 [US2] 實作播放清單刪除功能 (含確認對話框) UI
+- [X] T059 [US2] 整合 PlaylistManager 到主路由於 frontend/src/router/index.js
 
 **Checkpoint**: 使用者可以建立、查看、編輯、刪除播放清單，並新增/移除影片。使用者故事 1 和 2 應該都能獨立運作。
 
@@ -162,19 +162,19 @@
 
 ### Backend Support for US3
 
-- [ ] T060 [US3] 確保 PlaylistItemController::index() 回傳依 position 排序的影片清單
-- [ ] T061 [US3] 新增取得下一首/上一首影片的輔助方法於 PlaylistItemModel
+- [X] T060 [US3] 確保 PlaylistItemController::index() 回傳依 position 排序的影片清單
+- [X] T061 [US3] 新增取得下一首/上一首影片的輔助方法於 PlaylistItemModel
 
 ### Frontend Implementation for US3
 
-- [ ] T062 [US3] 擴充 YouTube Player 支援播放清單模式於 frontend/src/composables/useYoutubePlayer.js
-- [ ] T063 [US3] 實作播放清單播放邏輯 (自動切換下一首) 於 frontend/src/composables/usePlaylistPlayer.js
-- [ ] T064 [US3] 實作循環播放邏輯 (最後一首回到第一首)
-- [ ] T065 [P] [US3] 建立播放清單控制 UI (上一首、下一首按鈕) 於 frontend/src/components/PlaylistControls.vue
-- [ ] T066 [US3] 實作當前播放狀態顯示 (正在播放: 3/10) 於 frontend/src/components/PlaylistControls.vue
-- [ ] T067 [US3] 實作點擊播放清單項目直接跳播功能
-- [ ] T068 [US3] 整合播放清單播放功能到 PlaylistDetail 頁面
-- [ ] T069 [US3] 新增視覺化標示當前播放中的影片
+- [X] T062 [US3] 擴充 YouTube Player 支援播放清單模式於 frontend/src/composables/useYoutubePlayer.js
+- [X] T063 [US3] 實作播放清單播放邏輯 (自動切換下一首) 於 frontend/src/composables/usePlaylistPlayer.js
+- [X] T064 [US3] 實作循環播放邏輯 (最後一首回到第一首)
+- [X] T065 [P] [US3] 建立播放清單控制 UI (上一首、下一首按鈕) 於 frontend/src/components/PlaylistControls.vue
+- [X] T066 [US3] 實作當前播放狀態顯示 (正在播放: 3/10) 於 frontend/src/components/PlaylistControls.vue
+- [X] T067 [US3] 實作點擊播放清單項目直接跳播功能
+- [X] T068 [US3] 整合播放清單播放功能到 PlaylistDetail 頁面
+- [X] T069 [US3] 新增視覺化標示當前播放中的影片
 
 **Checkpoint**: 使用者可以播放整個播放清單，影片自動依序播放。所有 P1 功能現在都應該完全可運作。
 
@@ -188,9 +188,9 @@
 
 ### Backend Implementation for US4
 
-- [ ] T070 [US4] 實作 PlaylistItemController::updatePosition() 更新單一項目位置 API 於 backend/app/Controllers/Api/PlaylistItemController.php
-- [ ] T071 [US4] 實作 PlaylistItemController::reorder() 批次重新排序 API 於 backend/app/Controllers/Api/PlaylistItemController.php
-- [ ] T072 [US4] 實作位置重排邏輯於 PlaylistItemModel::reorderItems() 於 backend/app/Models/PlaylistItemModel.php
+- [X] T070 [US4] 實作 PlaylistItemController::updatePosition() 更新單一項目位置 API 於 backend/app/Controllers/Api/PlaylistItemController.php
+- [X] T071 [US4] 實作 PlaylistItemController::reorder() 批次重新排序 API 於 backend/app/Controllers/Api/PlaylistItemController.php
+- [X] T072 [US4] 實作位置重排邏輯於 PlaylistItemModel::reorderItems() 於 backend/app/Models/PlaylistItemModel.php
 - [ ] T073 [US4] 實作刪除項目後自動調整順序於 PlaylistItemModel::deleteAndReorder() 於 backend/app/Models/PlaylistItemModel.php
 
 ### Frontend Implementation for US4

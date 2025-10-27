@@ -165,4 +165,46 @@ class PlaylistItemController extends ResourceController
             return $this->fail($e->getMessage(), 500);
         }
     }
+
+    /**
+     * PUT /api/playlists/:playlist_id/items/:item_id/position
+     * T070: 更新單一項目的位置
+     */
+    public function updatePosition($playlistId = null, $itemId = null)
+    {
+        try {
+            if (!$playlistId || !$itemId) {
+                return $this->fail('缺少播放清單 ID 或項目 ID', 400);
+            }
+
+            $data = $this->request->getJSON(true);
+
+            if (!isset($data['position']) && $data['position'] !== 0) {
+                return $this->fail('缺少 position 參數', 422);
+            }
+
+            // 驗證播放清單是否存在
+            $playlistModel = new PlaylistModel();
+            $playlist = $playlistModel->find($playlistId);
+
+            if (!$playlist) {
+                return $this->failNotFound('播放清單不存在');
+            }
+
+            // 驗證項目是否存在
+            $item = $this->model->find($itemId);
+            if (!$item || $item['playlist_id'] != $playlistId) {
+                return $this->failNotFound('項目不存在或不屬於該播放清單');
+            }
+
+            // 更新位置
+            $this->model->update($itemId, ['position' => $data['position']]);
+
+            $items = $this->model->getPlaylistVideos($playlistId);
+
+            return $this->respond(api_success($items, '位置更新成功'), 200);
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage(), 500);
+        }
+    }
 }

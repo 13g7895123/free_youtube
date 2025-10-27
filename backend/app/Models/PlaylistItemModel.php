@@ -105,4 +105,67 @@ class PlaylistItemModel extends Model
                     ->where('video_id', $videoId)
                     ->first() !== null;
     }
+
+    /**
+     * 取得播放清單中的下一個影片
+     * T061: Helper to get next video in playlist
+     */
+    public function getNextVideo(int $playlistId, int $currentPosition)
+    {
+        $item = $this->where('playlist_id', $playlistId)
+                     ->where('position >', $currentPosition)
+                     ->orderBy('position', 'ASC')
+                     ->first();
+        
+        if (!$item) {
+            // 如果沒有下一個，回圈回到第一個
+            return $this->where('playlist_id', $playlistId)
+                        ->orderBy('position', 'ASC')
+                        ->first();
+        }
+        
+        return $item;
+    }
+
+    /**
+     * 取得播放清單中的前一個影片
+     * T061: Helper to get previous video in playlist
+     */
+    public function getPreviousVideo(int $playlistId, int $currentPosition)
+    {
+        $item = $this->where('playlist_id', $playlistId)
+                     ->where('position <', $currentPosition)
+                     ->orderBy('position', 'DESC')
+                     ->first();
+        
+        if (!$item) {
+            // 如果沒有前一個，回圈到最後一個
+            return $this->where('playlist_id', $playlistId)
+                        ->orderBy('position', 'DESC')
+                        ->first();
+        }
+        
+        return $item;
+    }
+
+    /**
+     * 取得播放清單中指定位置的影片
+     * T061: Helper to get video at specific position
+     */
+    public function getVideoAtPosition(int $playlistId, int $position)
+    {
+        return $this->where('playlist_id', $playlistId)
+                    ->where('position', $position)
+                    ->first();
+    }
+
+    /**
+     * 取得播放清單的總影片數
+     * T061: Helper to count videos in playlist
+     */
+    public function getPlaylistItemCount(int $playlistId): int
+    {
+        return $this->where('playlist_id', $playlistId)
+                    ->countAllResults();
+    }
 }
