@@ -62,18 +62,18 @@
 
 **⚠️ 重要**: 所有使用者故事工作必須等待此階段完成
 
-- [ ] T021 建立資料庫遷移：videos 資料表於 backend/app/Database/Migrations/2025-10-27-000001_CreateVideosTable.php
-- [ ] T022 建立資料庫遷移：playlists 資料表於 backend/app/Database/Migrations/2025-10-27-000002_CreatePlaylistsTable.php
-- [ ] T023 建立資料庫遷移：playlist_items 資料表於 backend/app/Database/Migrations/2025-10-27-000003_CreatePlaylistItemsTable.php
-- [ ] T024 執行 migrations 並使用 phpMyAdmin 驗證資料表結構
-- [ ] T025 [P] 建立 Video Entity 於 backend/app/Entities/Video.php
-- [ ] T026 [P] 建立 Playlist Entity 於 backend/app/Entities/Playlist.php
-- [ ] T027 [P] 建立 PlaylistItem Entity 於 backend/app/Entities/PlaylistItem.php
-- [ ] T028 [P] 實作 VideoModel 於 backend/app/Models/VideoModel.php
-- [ ] T029 [P] 實作 PlaylistModel 於 backend/app/Models/PlaylistModel.php
-- [ ] T030 [P] 實作 PlaylistItemModel 於 backend/app/Models/PlaylistItemModel.php
-- [ ] T031 設定 API 路由於 backend/app/Config/Routes.php
-- [ ] T032 建立測試資料 Seeder 於 backend/app/Database/Seeds/VideoSeeder.php
+- [X] T021 建立資料庫遷移：videos 資料表於 backend/app/Database/Migrations/2025-10-27-000001_CreateVideosTable.php
+- [X] T022 建立資料庫遷移：playlists 資料表於 backend/app/Database/Migrations/2025-10-27-000002_CreatePlaylistsTable.php
+- [X] T023 建立資料庫遷移：playlist_items 資料表於 backend/app/Database/Migrations/2025-10-27-000003_CreatePlaylistItemsTable.php
+- [X] T024 執行 migrations 並使用 phpMyAdmin 驗證資料表結構
+- [X] T025 [P] 建立 Video Entity 於 backend/app/Entities/Video.php
+- [X] T026 [P] 建立 Playlist Entity 於 backend/app/Entities/Playlist.php
+- [X] T027 [P] 建立 PlaylistItem Entity 於 backend/app/Entities/PlaylistItem.php
+- [X] T028 [P] 實作 VideoModel 於 backend/app/Models/VideoModel.php
+- [X] T029 [P] 實作 PlaylistModel 於 backend/app/Models/PlaylistModel.php
+- [X] T030 [P] 實作 PlaylistItemModel 於 backend/app/Models/PlaylistItemModel.php
+- [X] T031 設定 API 路由於 backend/app/Config/Routes.php
+- [X] T032 建立測試資料 Seeder 於 backend/app/Database/Seeds/VideoSeeder.php
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
