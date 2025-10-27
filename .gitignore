@@ -1,50 +1,62 @@
 # Dependencies
 node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+vendor/
+bower_components/
 
-# Build output
+# Frontend build
 dist/
 build/
-.vite/
-*.local
-
-# Logs
-*.log*
+.cache/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-# Environment variables
+# Backend build
+backend/vendor/
+backend/.env
+backend/.env.local
+backend/writable/
+
+# Environment
 .env
 .env.local
 .env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*.local
 
-# Testing
-coverage/
-.nyc_output/
-test-results/
-playwright-report/
-playwright/.cache/
-
-# IDE
+# Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
+Thumbs.db
 
 # OS
-Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+*.sublime-project
+*.sublime-workspace
+
+# IDE specific files
+.c9/
+*.sublime-project
+*.sublime-workspace
+*.iml
+*.iws
+*.ipr
+out/
+
+# Testing
+coverage/
+.nyc_output/
+tests/coverage/
+
+# Docker
+.docker/
+
+# Misc
+TODO
+.turbo/

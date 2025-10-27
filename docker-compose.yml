@@ -1,17 +1,53 @@
+version: '3.8'
+
 services:
-  youtube-loop-player:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: youtube-loop-player
-    ports:
-      - "${PORT:-8080}:80"
-    restart: unless-stopped
-    networks:
-      - youtube-player-network
+  # MariaDB 資料庫服務
+  mariadb:
+    image: mariadb:10.6
+    container_name: free_youtube_db
     environment:
-      - NODE_ENV=production
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: free_youtube
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+      TZ: Asia/Taipei
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # phpMyAdmin 資料庫管理工具
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: free_youtube_phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: secret
+      UPLOAD_LIMIT: 100M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 600
+    ports:
+      - "8081:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+    driver: local
 
 networks:
-  youtube-player-network:
+  app_network:
     driver: bridge

@@ -27,32 +27,32 @@
 
 ### 專案結構重組
 
-- [ ] T001 建立 frontend/ 目錄
-- [ ] T002 移動前端檔案到 frontend/ 目錄 (src/, public/, index.html, package.json, vite.config.js, vitest.config.js, .eslintrc.cjs, .prettierrc)
-- [ ] T003 更新 vite.config.js 中的路徑設定
-- [ ] T004 更新 package.json 中的 scripts 路徑（如果需要）
-- [ ] T005 更新 .gitignore 以反映新的目錄結構
-- [ ] T006 在 frontend/ 目錄執行 npm install 驗證前端專案正常運作
-- [ ] T007 更新 README.md 說明新的專案結構
+- [X] T001 建立 frontend/ 目錄
+- [X] T002 移動前端檔案到 frontend/ 目錄 (src/, public/, index.html, package.json, vite.config.js, vitest.config.js, .eslintrc.cjs, .prettierrc)
+- [X] T003 更新 vite.config.js 中的路徑設定
+- [X] T004 更新 package.json 中的 scripts 路徑（如果需要）
+- [X] T005 更新 .gitignore 以反映新的目錄結構
+- [X] T006 在 frontend/ 目錄執行 npm install 驗證前端專案正常運作
+- [X] T007 更新 README.md 說明新的專案結構
 
 ### CodeIgniter 4 後端建置
 
-- [ ] T008 建立 backend/ 目錄
-- [ ] T009 建立 CodeIgniter 4 專案結構於 backend/ 目錄
-- [ ] T010 初始化 Composer 並安裝 CI4 相依套件於 backend/composer.json
-- [ ] T011 [P] 建立 .env 檔案並設定 MariaDB 連線資訊於 backend/.env
-- [ ] T012 [P] 設定 CORS 過濾器於 backend/app/Filters/CorsFilter.php
-- [ ] T013 [P] 建立 API 回應格式輔助函數於 backend/app/Helpers/response_helper.php
+- [X] T008 建立 backend/ 目錄
+- [X] T009 建立 CodeIgniter 4 專案結構於 backend/ 目錄
+- [X] T010 初始化 Composer 並安裝 CI4 相依套件於 backend/composer.json
+- [X] T011 [P] 建立 .env 檔案並設定 MariaDB 連線資訊於 backend/.env
+- [X] T012 [P] 設定 CORS 過濾器於 backend/app/Filters/CorsFilter.php
+- [X] T013 [P] 建立 API 回應格式輔助函數於 backend/app/Helpers/response_helper.php
 
 ### Docker 環境設定
 
-- [ ] T014 設定 Docker Compose 服務 (MariaDB + phpMyAdmin + CI4 Backend + Vue Frontend) 於 docker-compose.yml
-- [ ] T015 建立 backend/Dockerfile 用於 CI4 容器
-- [ ] T016 更新 frontend/Dockerfile 路徑設定
-- [ ] T017 在 frontend/.env 或 vite.config.js 設定 API 基礎網址 (VITE_API_URL=http://localhost:8080)
-- [ ] T018 啟動 Docker 容器並驗證所有服務正常運作
-- [ ] T019 驗證 MariaDB (port 3306) 與 phpMyAdmin (http://localhost:8081) 連線正常
-- [ ] T020 驗證前端 (http://localhost:5173) 與後端 API (http://localhost:8080) 可正常通訊
+- [X] T014 設定 Docker Compose 服務 (MariaDB + phpMyAdmin + CI4 Backend + Vue Frontend) 於 docker-compose.yml
+- [X] T015 建立 backend/Dockerfile 用於 CI4 容器
+- [X] T016 更新 frontend/Dockerfile 路徑設定
+- [X] T017 在 frontend/.env 或 vite.config.js 設定 API 基礎網址 (VITE_API_URL=http://localhost:8080)
+- [X] T018 啟動 Docker 容器並驗證所有服務正常運作
+- [X] T019 驗證 MariaDB (port 3306) 與 phpMyAdmin (http://localhost:8081) 連線正常
+- [X] T020 驗證前端 (http://localhost:5173) 與後端 API (http://localhost:8080) 可正常通訊
 
 ---
 
