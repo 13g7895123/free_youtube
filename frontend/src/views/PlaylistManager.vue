@@ -141,8 +141,8 @@ const handleDelete = (playlist) => {
 }
 
 const handleViewItems = (playlist) => {
-  console.log('View items for playlist:', playlist)
-  // 可以導航到播放清單詳情頁面
+  // Navigate to playlist detail page
+  window.location.href = `/playlists/${playlist.id}`
 }
 
 const savePlaylist = async () => {

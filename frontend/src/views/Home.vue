@@ -49,6 +49,12 @@
         @toggle="handleLoopToggle"
       />
 
+      <!-- 儲存影片操作 -->
+      <SaveVideoActions
+        v-if="hasVideo && player.isReady.value"
+        :get-video-info="getVideoInfo"
+      />
+
       <!-- 初始狀態提示 -->
       <div v-if="!hasVideo && !isLoading" class="welcome-message">
         <div class="welcome-icon">
@@ -82,9 +88,11 @@ import VideoPlayer from '../components/VideoPlayer.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import PlayerControls from '../components/PlayerControls.vue'
 import LoopToggle from '../components/LoopToggle.vue'
+import SaveVideoActions from '../components/SaveVideoActions.vue'
 import { useUrlParser } from '../composables/useUrlParser'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
 import { useLocalStorage } from '../composables/useLocalStorage'
+import { useGlobalPlayerStore } from '../stores/globalPlayerStore'
 
 // 狀態管理
 const isLoading = ref(false)
@@ -105,6 +113,7 @@ const player = useYouTubePlayer('youtube-player', {
   volume: settingsStorage.value?.volume ?? 100,
   isMuted: settingsStorage.value?.isMuted ?? false
 })
+const globalPlayerStore = useGlobalPlayerStore()
 
 // 監聽設定變化，自動保存到 LocalStorage
 watch(() => player.loopEnabled.value, (newValue) => {
@@ -264,6 +273,14 @@ function handleLoopToggle(enabled) {
  */
 function handleVolumeChange(volume) {
   player.setVolume(volume)
+}
+
+/**
+ * 取得當前影片資訊（供 SaveVideoActions 使用）
+ * @returns {Object|null} 影片資訊
+ */
+function getVideoInfo() {
+  return player.getCurrentVideoInfo()
 }
 
 // 組件掛載時預先載入 YouTube API（但不初始化播放器）

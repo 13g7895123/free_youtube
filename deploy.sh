@@ -21,14 +21,14 @@ fi
 
 # 載入環境變數
 source .env
-PORT=${PORT:-8080}
+BACKEND_PORT=${BACKEND_PORT:-8080}
 
-echo "📦 Step 1: Installing dependencies..."
-npm install
+echo "📦 Step 1: Installing frontend dependencies..."
+cd frontend && npm install && cd ..
 
 echo ""
-echo "🔨 Step 2: Building production bundle..."
-npm run build
+echo "🔨 Step 2: Building frontend production bundle..."
+cd frontend && npm run build && cd ..
 
 echo ""
 echo "🐳 Step 3: Stopping existing containers..."
@@ -47,7 +47,7 @@ echo "================================================"
 echo "✅ Deployment Complete!"
 echo "================================================"
 echo ""
-echo "🌐 Application is running at: http://localhost:${PORT}"
+echo "🌐 Application is running at: http://localhost:${BACKEND_PORT}"
 echo ""
 echo "Useful commands:"
 echo "  - View logs:        docker-compose logs -f"

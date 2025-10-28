@@ -14,6 +14,12 @@ class PlaylistItemController extends ResourceController
 
     protected $modelName = PlaylistItemModel::class;
     protected $format    = 'json';
+    protected $helpers   = ['response'];
+
+    public function __construct()
+    {
+        helper('response');
+    }
 
     /**
      * GET /api/playlists/:playlist_id/items

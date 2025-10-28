@@ -14,11 +14,12 @@
       </div>
     </nav>
     <router-view />
+    <FloatingPlayer />
   </div>
 </template>
 
 <script setup>
-// App.vue 現在作為主要佈局組件
+import FloatingPlayer from '@/components/FloatingPlayer.vue'
 </script>
 
 <style>

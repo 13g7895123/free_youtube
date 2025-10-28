@@ -80,10 +80,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useVideoStore } from '@/stores/videoStore'
 import { usePlaylistStore } from '@/stores/playlistStore'
+import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import VideoCard from '@/components/VideoCard.vue'
 
 const videoStore = useVideoStore()
 const playlistStore = usePlaylistStore()
+const globalPlayerStore = useGlobalPlayerStore()
 
 const searchQuery = ref('')
 const showPlaylistModal = ref(false)
@@ -114,7 +116,15 @@ const fetchVideos = async (page = 1) => {
 
 const handlePlayVideo = (video) => {
   console.log('Playing video:', video)
-  // 這裡可以導航到播放頁面或顯示播放器
+  // 使用全局播放器播放影片
+  globalPlayerStore.playVideo({
+    id: video.id,
+    video_id: video.video_id,
+    title: video.title,
+    youtube_url: video.youtube_url,
+    thumbnail_url: video.thumbnail_url,
+    duration: video.duration
+  })
 }
 
 const handleAddToPlaylist = (video) => {

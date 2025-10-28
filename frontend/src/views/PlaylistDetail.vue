@@ -55,11 +55,11 @@
           >
             <div class="video-number">{{ index + 1 }}</div>
             <div class="video-info-detail">
-              <h3>{{ item.video?.title }}</h3>
-              <p>{{ formatDuration(item.video?.duration) }}</p>
+              <h3>{{ item.title }}</h3>
+              <p>{{ formatDuration(item.duration) }}</p>
             </div>
             <div class="video-actions">
-              <button @click.stop="removeVideo(item.id)" class="btn-remove">
+              <button @click.stop="removeVideo(item.video_id)" class="btn-remove">
                 ✕
               </button>
             </div>
@@ -76,10 +76,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
+import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import PlaylistControls from '@/components/PlaylistControls.vue'
 
 const route = useRoute()
 const playlistStore = usePlaylistStore()
+const globalPlayerStore = useGlobalPlayerStore()
 
 const loading = ref(true)
 const playlist = ref(null)
@@ -92,10 +94,11 @@ const currentItem = computed(() => items.value[currentIndex.value])
 onMounted(async () => {
   const playlistId = route.params.id
   try {
-    await playlistStore.fetchPlaylist(playlistId)
-    playlist.value = playlistStore.currentPlaylist
-    await playlistStore.fetchPlaylistItems(playlistId)
-    items.value = playlistStore.playlistItems
+    const playlistData = await playlistStore.getPlaylist(playlistId)
+    if (playlistData) {
+      playlist.value = playlistData
+      items.value = playlistData.items || []
+    }
     loading.value = false
   } catch (error) {
     console.error('Failed to load playlist:', error)
@@ -106,6 +109,15 @@ onMounted(async () => {
 const selectVideo = (index) => {
   currentIndex.value = index
   isPlaying.value = true
+
+  // Play the playlist using global player store
+  if (playlist.value && items.value.length > 0) {
+    globalPlayerStore.playPlaylist({
+      id: playlist.value.id,
+      name: playlist.value.name,
+      items: items.value
+    }, index)
+  }
 }
 
 const playNext = () => {
@@ -115,6 +127,7 @@ const playNext = () => {
     currentIndex.value = 0
   }
   isPlaying.value = true
+  globalPlayerStore.next()
 }
 
 const playPrevious = () => {
@@ -124,22 +137,40 @@ const playPrevious = () => {
     currentIndex.value = items.value.length - 1
   }
   isPlaying.value = true
+  globalPlayerStore.previous()
 }
 
 const togglePlayback = () => {
+  // If global player is not visible yet, start playing the playlist from the current index
+  if (!globalPlayerStore.isVisible && playlist.value && items.value.length > 0) {
+    globalPlayerStore.playPlaylist({
+      id: playlist.value.id,
+      name: playlist.value.name,
+      items: items.value
+    }, currentIndex.value)
+  } else {
+    globalPlayerStore.togglePlay()
+  }
   isPlaying.value = !isPlaying.value
 }
 
-const removeVideo = async (itemId) => {
+const removeVideo = async (videoId) => {
   if (confirm('Remove this video from the playlist?')) {
     try {
-      await playlistStore.removePlaylistItem(itemId)
-      const index = items.value.findIndex(item => item.id === itemId)
+      const playlistId = route.params.id
+      await playlistStore.removeItemFromPlaylist(playlistId, videoId)
+      // Remove from local items array
+      const index = items.value.findIndex(item => item.video_id === videoId)
       if (index > -1) {
         items.value.splice(index, 1)
       }
+      // Update playlist item count
+      if (playlist.value) {
+        playlist.value.item_count = Math.max(0, (playlist.value.item_count || 1) - 1)
+      }
     } catch (error) {
       console.error('Failed to remove video:', error)
+      alert('移除影片失敗')
     }
   }
 }

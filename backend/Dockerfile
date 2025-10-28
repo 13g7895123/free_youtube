@@ -31,8 +31,12 @@ RUN composer dump-autoload --optimize
 # 設定權限
 RUN chmod -R 777 /var/www/html/writable
 
+# 複製並設定啟動腳本權限
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # 暴露端口
 EXPOSE 8000
 
-# 啟動 CodeIgniter 開發伺服器
-CMD ["php", "spark", "serve", "--host=0.0.0.0", "--port=8000"]
+# 使用啟動腳本
+ENTRYPOINT ["/docker-entrypoint.sh"]

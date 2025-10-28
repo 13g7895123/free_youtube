@@ -310,6 +310,44 @@ export function useYouTubePlayer(containerId, options = {}) {
   }
 
   /**
+   * 取得當前影片資訊
+   * @returns {Object|null} 影片資訊物件或 null
+   */
+  function getCurrentVideoInfo() {
+    if (!isReady.value || !playerInstance) {
+      return null
+    }
+
+    try {
+      const videoUrl = playerInstance.getVideoUrl()
+      const videoData = playerInstance.getVideoData()
+
+      return {
+        videoId: videoData.video_id || extractVideoIdFromUrl(videoUrl),
+        title: videoData.title || 'Unknown Title',
+        author: videoData.author || '',
+        duration: playerInstance.getDuration() || 0,
+        thumbnail: `https://img.youtube.com/vi/${videoData.video_id}/maxresdefault.jpg`,
+        youtubeUrl: videoUrl || `https://www.youtube.com/watch?v=${videoData.video_id}`
+      }
+    } catch (error) {
+      console.error('Failed to get video info:', error)
+      return null
+    }
+  }
+
+  /**
+   * 從 URL 中提取 video ID
+   * @param {string} url - YouTube URL
+   * @returns {string} video ID
+   */
+  function extractVideoIdFromUrl(url) {
+    if (!url) return ''
+    const match = url.match(/[?&]v=([^&]+)/)
+    return match ? match[1] : ''
+  }
+
+  /**
    * 銷毀播放器
    */
   function destroy() {
@@ -363,6 +401,7 @@ export function useYouTubePlayer(containerId, options = {}) {
     seekTo,
     getCurrentTime,
     getDuration,
+    getCurrentVideoInfo,
     setLoop,
     setVolume,
     mute,

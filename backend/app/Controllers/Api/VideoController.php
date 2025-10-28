@@ -12,6 +12,12 @@ class VideoController extends ResourceController
 
     protected $modelName = VideoModel::class;
     protected $format    = 'json';
+    protected $helpers   = ['response'];
+
+    public function __construct()
+    {
+        helper('response');
+    }
 
     /**
      * GET /api/videos
