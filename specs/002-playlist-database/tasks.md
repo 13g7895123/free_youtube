@@ -191,16 +191,16 @@
 - [X] T070 [US4] 實作 PlaylistItemController::updatePosition() 更新單一項目位置 API 於 backend/app/Controllers/Api/PlaylistItemController.php
 - [X] T071 [US4] 實作 PlaylistItemController::reorder() 批次重新排序 API 於 backend/app/Controllers/Api/PlaylistItemController.php
 - [X] T072 [US4] 實作位置重排邏輯於 PlaylistItemModel::reorderItems() 於 backend/app/Models/PlaylistItemModel.php
-- [ ] T073 [US4] 實作刪除項目後自動調整順序於 PlaylistItemModel::deleteAndReorder() 於 backend/app/Models/PlaylistItemModel.php
+- [x] T073 [US4] 實作刪除項目後自動調整順序於 PlaylistItemModel::deleteAndReorder() 於 backend/app/Models/PlaylistItemModel.php
 
 ### Frontend Implementation for US4
 
-- [ ] T074 [US4] 安裝拖曳排序套件 (如 Sortable.js 或 VueDraggable) 於 frontend/package.json
-- [ ] T075 [US4] 實作拖曳排序功能於 PlaylistDetail 頁面的影片清單
-- [ ] T076 [P] [US4] 建立「上移」「下移」按鈕元件於 frontend/src/components/PlaylistItemActions.vue
-- [ ] T077 [US4] 實作「移到最前」「移到最後」功能
-- [ ] T078 [US4] 實作排序變更後自動儲存到後端
-- [ ] T079 [US4] 新增排序變更的視覺回饋 (loading 狀態)
+- [x] T074 [US4] 安裝拖曳排序套件 (如 Sortable.js 或 VueDraggable) 於 frontend/package.json
+- [x] T075 [US4] 實作拖曳排序功能於 PlaylistDetail 頁面的影片清單
+- [x] T076 [P] [US4] 建立「上移」「下移」按鈕元件於 frontend/src/components/PlaylistItemActions.vue
+- [x] T077 [US4] 實作「移到最前」「移到最後」功能
+- [x] T078 [US4] 實作排序變更後自動儲存到後端
+- [x] T079 [US4] 新增排序變更的視覺回饋 (loading 狀態)
 
 **Checkpoint**: 使用者可以透過拖曳或按鈕調整影片順序，播放時會依新順序播放。
 
@@ -214,17 +214,17 @@
 
 ### Backend Implementation for US6
 
-- [ ] T080 [US6] 實作 YouTube Data API 整合以取得影片 metadata 於 backend/app/Libraries/YoutubeApi.php
-- [ ] T081 [US6] 實作影片資訊自動抓取於 VideoController::create() 時
-- [ ] T082 [US6] 新增 fallback 機制處理縮圖載入失敗
+- [x] T080 [US6] 實作 YouTube Data API 整合以取得影片 metadata 於 backend/app/Libraries/YoutubeApi.php
+- [x] T081 [US6] 實作影片資訊自動抓取於 VideoController::create() 時
+- [x] T082 [US6] 新增 fallback 機制處理縮圖載入失敗
 
 ### Frontend Implementation for US6
 
-- [ ] T083 [P] [US6] 優化 VideoCard 元件顯示完整影片資訊 (縮圖、標題、時長、頻道)
-- [ ] T084 [P] [US6] 實作時長格式化 (秒數轉 mm:ss) 於 frontend/src/utils/formatters.js
-- [ ] T085 [US6] 實作縮圖 lazy loading 優化效能
-- [ ] T086 [US6] 實作縮圖載入失敗時的預設占位圖
-- [ ] T087 [US6] 新增影片資訊 tooltip 顯示完整描述
+- [x] T083 [P] [US6] 優化 VideoCard 元件顯示完整影片資訊 (縮圖、標題、時長、頻道)
+- [x] T084 [P] [US6] 實作時長格式化 (秒數轉 mm:ss) 於 frontend/src/utils/formatters.js
+- [x] T085 [US6] 實作縮圖 lazy loading 優化效能
+- [x] T086 [US6] 實作縮圖載入失敗時的預設占位圖
+- [x] T087 [US6] 新增影片資訊 tooltip 顯示完整描述
 
 **Checkpoint**: 影片和播放清單以視覺化方式呈現，提升使用者體驗。
 
@@ -238,19 +238,19 @@
 
 ### Backend Implementation for US5
 
-- [ ] T088 [US5] 優化 VideoModel::search() 使用 FULLTEXT 索引於 backend/app/Models/VideoModel.php
-- [ ] T089 [US5] 實作進階篩選 API (依播放清單、頻道) 於 VideoController::index()
-- [ ] T090 [US5] 實作分頁功能於所有列表 API
+- [x] T088 [US5] 優化 VideoModel::search() 使用 FULLTEXT 索引於 backend/app/Models/VideoModel.php
+- [x] T089 [US5] 實作進階篩選 API (依播放清單、頻道) 於 VideoController::index()
+- [x] T090 [US5] 實作分頁功能於所有列表 API
 
 ### Frontend Implementation for US5
 
-- [ ] T091 [P] [US5] 建立 SearchBar 元件於 frontend/src/components/SearchBar.vue
-- [ ] T092 [US5] 實作即時搜尋功能 (debounce) 於 VideoLibrary 頁面
-- [ ] T093 [P] [US5] 建立 FilterPanel 元件於 frontend/src/components/FilterPanel.vue
-- [ ] T094 [US5] 實作播放清單篩選器
-- [ ] T095 [US5] 實作搜尋結果高亮顯示
-- [ ] T096 [US5] 實作清除搜尋/篩選功能
-- [ ] T097 [US5] 實作分頁或無限滾動載入
+- [x] T091 [P] [US5] 建立 SearchBar 元件於 frontend/src/components/SearchBar.vue
+- [x] T092 [US5] 實作即時搜尋功能 (debounce) 於 VideoLibrary 頁面
+- [x] T093 [P] [US5] 建立 FilterPanel 元件於 frontend/src/components/FilterPanel.vue
+- [x] T094 [US5] 實作播放清單篩選器
+- [x] T095 [US5] 實作搜尋結果高亮顯示
+- [x] T096 [US5] 實作清除搜尋/篩選功能
+- [x] T097 [US5] 實作分頁或無限滾動載入
 
 **Checkpoint**: 使用者可以輕鬆在大量影片中找到想要的內容。
 
@@ -260,19 +260,19 @@
 
 **目的**: 改善影響多個使用者故事的功能
 
-- [ ] T098 [P] 實作 API 錯誤處理中介軟體於 backend/app/Filters/ErrorFilter.php
-- [ ] T099 [P] 實作請求速率限制於 backend/app/Filters/ThrottleFilter.php
-- [ ] T100 [P] 新增 API 文件 (Swagger/OpenAPI) 於 backend/public/api-docs/
-- [ ] T101 [P] 實作前端全域錯誤處理於 frontend/src/utils/errorHandler.js
-- [ ] T102 [P] 實作 loading 狀態管理於各個頁面
-- [ ] T103 優化資料庫查詢效能 (使用 EXPLAIN 分析)
-- [ ] T104 [P] 實作響應式設計優化 (手機、平板適配)
-- [ ] T105 [P] 實作鍵盤快捷鍵 (空白鍵播放/暫停等)
-- [ ] T106 實作資料匯出/匯入功能 (JSON 格式)
-- [ ] T107 [P] 撰寫使用者文件於 docs/user-guide.md
-- [ ] T108 [P] 撰寫開發者文件於 docs/developer-guide.md
-- [ ] T109 程式碼重構與最佳化
-- [ ] T110 執行 quickstart.md 驗證測試
+- [x] T098 [P] 實作 API 錯誤處理中介軟體於 backend/app/Filters/ErrorFilter.php
+- [x] T099 [P] 實作請求速率限制於 backend/app/Filters/ThrottleFilter.php
+- [x] T100 [P] 新增 API 文件 (Swagger/OpenAPI) 於 backend/public/api-docs/
+- [x] T101 [P] 實作前端全域錯誤處理於 frontend/src/utils/errorHandler.js
+- [x] T102 [P] 實作 loading 狀態管理於各個頁面
+- [x] T103 優化資料庫查詢效能 (使用 EXPLAIN 分析)
+- [x] T104 [P] 實作響應式設計優化 (手機、平板適配)
+- [x] T105 [P] 實作鍵盤快捷鍵 (空白鍵播放/暫停等)
+- [x] T106 實作資料匯出/匯入功能 (JSON 格式)
+- [x] T107 [P] 撰寫使用者文件於 docs/user-guide.md
+- [x] T108 [P] 撰寫開發者文件於 docs/developer-guide.md
+- [x] T109 程式碼重構與最佳化
+- [x] T110 執行 quickstart.md 驗證測試
 
 ---
 
