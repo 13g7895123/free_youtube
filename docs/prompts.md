@@ -13,3 +13,4 @@ npm warn EBADENGINE   required: { node: '>=20' },
 npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
 npm warn EBADENGINE }
 7. 你幫我另外寫好了，針對正式環境，完整寫一個docker與部署相關的部分，目前的部分我在wsl還可以用，就不要調整了
+8. 承7，有同步調整cicd flow的檔案了嗎，我記得裡面有寫到使用deploy執行部屬

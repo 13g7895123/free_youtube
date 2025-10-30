@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, master ]
 
+# ========================================
+# 部署說明：
+# - master 分支推送 → 正式環境部署 (deploy-prod.sh)
+# - develop 分支推送 → 開發環境部署 (deploy.sh)
+# ========================================
+
 jobs:
   # test-backend:
   #   name: Backend Tests
@@ -234,8 +240,8 @@ jobs:
   #       working-directory: frontend
   #       run: npm audit --audit-level moderate
 
-  deploy:
-    name: Deploy to VPS
+  deploy-production:
+    name: Deploy to Production (VPS)
     runs-on: ubuntu-latest
     # needs: [test-backend, test-frontend, lint-and-format, security-check]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
@@ -255,24 +261,77 @@ jobs:
         run: |
           ssh -p 8022 -i ~/.ssh/id_ed25519 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             set -e  # Exit on any error
-            
-            echo "🚀 Starting deployment..."
+
+            echo "🚀 Starting production deployment..."
             cd /home/jarvis/project/idea/free_youtube
-            
+
             echo "📥 Pulling latest changes..."
             git pull
 
-            ./deploy.sh
-                        
-            echo "✅ Deployment completed successfully!"
+            echo "🔧 Ensuring deployment script is executable..."
+            chmod +x deploy-prod.sh
+            chmod +x backend/docker-entrypoint.prod.sh
+
+            echo "🚀 Executing production deployment..."
+            ./deploy-prod.sh
+
+            echo "✅ Production deployment completed successfully!"
           EOF
 
       - name: Notify deployment status
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful!"
+            echo "✅ Production deployment successful!"
           else
-            echo "❌ Deployment failed!"
+            echo "❌ Production deployment failed!"
+            exit 1
+          fi
+
+  deploy-development:
+    name: Deploy to Development (VPS)
+    runs-on: ubuntu-latest
+    # needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p 8022 -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH (Development)
+        run: |
+          ssh -p 8022 -i ~/.ssh/id_ed25519 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e  # Exit on any error
+
+            echo "🚀 Starting development deployment..."
+            cd /home/jarvis/project/idea/free_youtube
+
+            echo "📥 Pulling latest changes..."
+            git pull
+
+            echo "🔧 Ensuring deployment script is executable..."
+            chmod +x deploy.sh
+            chmod +x backend/docker-entrypoint.sh
+
+            echo "🚀 Executing development deployment..."
+            ./deploy.sh
+
+            echo "✅ Development deployment completed successfully!"
+          EOF
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Development deployment successful!"
+          else
+            echo "❌ Development deployment failed!"
             exit 1
           fi
