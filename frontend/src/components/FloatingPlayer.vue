@@ -27,6 +27,24 @@
             <button @click="playerStore.next" v-if="playerStore.hasPlaylist" class="btn-control" title="下一首">
               ⏭
             </button>
+            <button
+              @click.stop="playerStore.toggleLoopMode"
+              v-if="playerStore.hasPlaylist"
+              class="btn-control btn-mode-mini"
+              :class="{ active: playerStore.loopMode !== 'playlist' }"
+              :title="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+            >
+              {{ playerStore.loopMode === 'playlist' ? '🔁' : '🔂' }}
+            </button>
+            <button
+              @click.stop="playerStore.toggleShuffle"
+              v-if="playerStore.hasPlaylist"
+              class="btn-control btn-mode-mini"
+              :class="{ active: playerStore.shuffleEnabled }"
+              title="隨機播放"
+            >
+              🔀
+            </button>
             <button @click="playerStore.maximize" class="btn-control" title="展開">
               ⬆
             </button>
@@ -59,11 +77,31 @@
         <div class="player-controls">
           <!-- 播放列表控制 -->
           <template v-if="playerStore.hasPlaylist">
-            <button @click="playerStore.previous" class="btn-control">⏮ 上一首</button>
-            <button @click="playerStore.togglePlay" class="btn-control btn-play">
-              {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
-            </button>
-            <button @click="playerStore.next" class="btn-control">下一首 ⏭</button>
+            <div class="playback-controls">
+              <button @click="playerStore.previous" class="btn-control">⏮ 上一首</button>
+              <button @click="playerStore.togglePlay" class="btn-control btn-play">
+                {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
+              </button>
+              <button @click="playerStore.next" class="btn-control">下一首 ⏭</button>
+            </div>
+            <div class="mode-controls">
+              <button
+                @click.stop="playerStore.toggleLoopMode"
+                class="btn-mode"
+                :class="{ active: playerStore.loopMode !== 'playlist' }"
+                :title="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+              >
+                {{ playerStore.loopMode === 'playlist' ? '🔁 清單循環' : '🔂 單曲循環' }}
+              </button>
+              <button
+                @click.stop="playerStore.toggleShuffle"
+                class="btn-mode"
+                :class="{ active: playerStore.shuffleEnabled }"
+                title="隨機播放"
+              >
+                🔀 {{ playerStore.shuffleEnabled ? '隨機' : '順序' }}
+              </button>
+            </div>
             <div class="track-info">
               {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
             </div>
@@ -204,9 +242,15 @@ const initPlayer = async (videoId) => {
       onStateChange: (event) => {
         console.log('FloatingPlayer: YouTube state changed:', event.data)
         if (event.data === window.YT.PlayerState.ENDED) {
-          console.log('FloatingPlayer: Video ended')
+          console.log('FloatingPlayer: Video ended, loopMode:', playerStore.loopMode, 'shuffleEnabled:', playerStore.shuffleEnabled)
           if (playerStore.hasPlaylist) {
+            // next() function will handle loop mode and shuffle
             playerStore.next()
+          } else {
+            // Single video - replay it
+            console.log('FloatingPlayer: Single video ended, replaying')
+            ytPlayer.seekTo(0)
+            ytPlayer.playVideo()
           }
         } else if (event.data === window.YT.PlayerState.PLAYING) {
           console.log('FloatingPlayer: Video playing, calling playerStore.play()')
@@ -564,11 +608,25 @@ onUnmounted(() => {
 
 .player-controls {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   padding: 8px 12px;
   background: #fafafa;
   border-top: 1px solid #e0e0e0;
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.mode-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 .player-controls .btn-control {
@@ -579,6 +637,7 @@ onUnmounted(() => {
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  flex: 1;
 }
 
 .player-controls .btn-control:hover {
@@ -596,10 +655,44 @@ onUnmounted(() => {
   background: #1565c0;
 }
 
+.btn-mode {
+  padding: 4px 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.btn-mode:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.btn-mode.active {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.btn-mode-mini {
+  background: white;
+  border: 1px solid #ddd;
+}
+
+.btn-mode-mini.active {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
 .track-info {
   margin-left: auto;
   font-size: 12px;
   color: #757575;
+  text-align: center;
 }
 
 /* 響應式 */
