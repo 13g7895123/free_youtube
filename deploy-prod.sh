@@ -137,8 +137,10 @@ if [ ! -f ".env.prod" ]; then
     fi
 fi
 
-# 載入環境變數
+# 載入環境變數並自動 export（讓 docker compose 能夠訪問）
+set -a  # 自動 export 所有變數
 source .env.prod
+set +a  # 關閉自動 export
 
 # 驗證必要的環境變數
 REQUIRED_VARS=("MYSQL_ROOT_PASSWORD" "MYSQL_PASSWORD")
@@ -177,7 +179,7 @@ if docker volume ls | grep -q "free_youtube.*mariadb_prod_data"; then
         BACKUP_FILE="${BACKUP_DIR}/db_backup_$(date +%Y%m%d_%H%M%S).sql"
 
         echo "Creating database backup..."
-        docker compose -f docker-compose.prod.yml exec -T mariadb \
+        docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T mariadb \
             mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" \
             --all-databases > "$BACKUP_FILE" 2>/dev/null || echo "Backup skipped (database not running)"
 
@@ -195,9 +197,9 @@ fi
 echo ""
 echo -e "${BLUE}📋 Step 4: 停止現有服務${NC}"
 
-if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+if docker compose --env-file .env.prod -f docker-compose.prod.yml ps | grep -q "Up"; then
     echo "Stopping running containers..."
-    docker compose -f docker-compose.prod.yml down
+    docker compose --env-file .env.prod -f docker-compose.prod.yml down
     echo -e "${GREEN}✅ Containers stopped${NC}"
 else
     echo "No running containers found."
@@ -213,7 +215,7 @@ if [ "$DEPLOY_MODE" = "restart" ]; then
     echo -e "${YELLOW}ℹ️  重啟模式：跳過鏡像構建${NC}"
 elif [ "$DEPLOY_MODE" = "full" ]; then
     echo "完全重建模式：構建鏡像（不使用緩存，這可能需要較長時間）..."
-    if docker compose -f docker-compose.prod.yml build --no-cache; then
+    if docker compose --env-file .env.prod -f docker-compose.prod.yml build --no-cache; then
         echo -e "${GREEN}✅ Docker images built successfully${NC}"
     else
         echo -e "${RED}❌ Error: Failed to build Docker images${NC}"
@@ -221,7 +223,7 @@ elif [ "$DEPLOY_MODE" = "full" ]; then
     fi
 else
     echo "快速部署模式：構建鏡像（使用緩存）..."
-    if docker compose -f docker-compose.prod.yml build; then
+    if docker compose --env-file .env.prod -f docker-compose.prod.yml build; then
         echo -e "${GREEN}✅ Docker images built successfully${NC}"
     else
         echo -e "${RED}❌ Error: Failed to build Docker images${NC}"
@@ -236,7 +238,7 @@ echo ""
 echo -e "${BLUE}📋 Step 6: 啟動生產環境服務${NC}"
 
 echo "Starting production services..."
-if docker compose -f docker-compose.prod.yml up -d; then
+if docker compose --env-file .env.prod -f docker-compose.prod.yml up -d; then
     echo -e "${GREEN}✅ Services started${NC}"
 else
     echo -e "${RED}❌ Error: Failed to start services${NC}"
@@ -254,8 +256,8 @@ WAIT_TIME=60
 ELAPSED=0
 
 while [ $ELAPSED -lt $WAIT_TIME ]; do
-    HEALTHY_COUNT=$(docker compose -f docker-compose.prod.yml ps | grep -c "healthy" || echo "0")
-    RUNNING_COUNT=$(docker compose -f docker-compose.prod.yml ps | grep -c "Up" || echo "0")
+    HEALTHY_COUNT=$(docker compose --env-file .env.prod -f docker-compose.prod.yml ps | grep -c "healthy" || echo "0")
+    RUNNING_COUNT=$(docker compose --env-file .env.prod -f docker-compose.prod.yml ps | grep -c "Up" || echo "0")
 
     echo "Services running: ${RUNNING_COUNT}, Healthy: ${HEALTHY_COUNT}"
 
@@ -271,7 +273,7 @@ done
 # 顯示容器狀態
 echo ""
 echo "Current container status:"
-docker compose -f docker-compose.prod.yml ps
+docker compose --env-file .env.prod -f docker-compose.prod.yml ps
 
 # ========================================
 # 8. 驗證部署
@@ -309,12 +311,12 @@ echo "  - Backend API: http://localhost:${BACKEND_PORT}"
 echo "  - phpMyAdmin:  http://localhost:${PHPMYADMIN_PORT:-8081}"
 echo ""
 echo "📊 Useful Commands:"
-echo "  - View logs:           docker compose -f docker-compose.prod.yml logs -f"
-echo "  - View backend logs:   docker compose -f docker-compose.prod.yml logs -f backend"
-echo "  - View frontend logs:  docker compose -f docker-compose.prod.yml logs -f frontend"
-echo "  - Check status:        docker compose -f docker-compose.prod.yml ps"
-echo "  - Stop services:       docker compose -f docker-compose.prod.yml down"
-echo "  - Restart services:    docker compose -f docker-compose.prod.yml restart"
+echo "  - View logs:           docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f"
+echo "  - View backend logs:   docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f backend"
+echo "  - View frontend logs:  docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f frontend"
+echo "  - Check status:        docker compose --env-file .env.prod -f docker-compose.prod.yml ps"
+echo "  - Stop services:       docker compose --env-file .env.prod -f docker-compose.prod.yml down"
+echo "  - Restart services:    docker compose --env-file .env.prod -f docker-compose.prod.yml restart"
 echo ""
 echo "🚀 Deployment Modes:"
 echo "  - Quick deploy:        ./deploy-prod.sh           (uses cache, 1-3 min)"
