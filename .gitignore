@@ -60,3 +60,12 @@ tests/coverage/
 # Misc
 TODO
 .turbo/
+
+# Production environment specific
+backups/
+*.sql
+*.sql.gz
+
+# Docker volumes
+mariadb_data/
+mariadb_prod_data/

@@ -12,3 +12,4 @@ npm warn EBADENGINE   package: 'whatwg-url@15.1.0',
 npm warn EBADENGINE   required: { node: '>=20' },
 npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
 npm warn EBADENGINE }
+7. 你幫我另外寫好了，針對正式環境，完整寫一個docker與部署相關的部分，目前的部分我在wsl還可以用，就不要調整了

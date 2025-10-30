@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # MariaDB 資料庫服務 - 正式環境
+  mariadb:
+    image: mariadb:10.6
+    container_name: free_youtube_db_prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Taipei
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mariadb_prod_data:/var/lib/mysql
+      - ./backend/database/migrations.sql:/docker-entrypoint-initdb.d/migrations.sql:ro
+    networks:
+      - app_network_prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend 服務 - 正式環境 (Nginx + 靜態文件)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        NODE_VERSION: 22
+    container_name: free_youtube_frontend_prod
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - app_network_prod
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API 服務 - 正式環境
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: free_youtube_backend_prod
+    ports:
+      - "${BACKEND_PORT:-8080}:8000"
+    environment:
+      CI_ENVIRONMENT: production
+      MYSQL_HOST: mariadb
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network_prod
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "php", "-r", "file_get_contents('http://localhost:8000/health') or exit(1);"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # phpMyAdmin 資料庫管理工具 - 正式環境
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: free_youtube_phpmyadmin_prod
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      UPLOAD_LIMIT: 100M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 600
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network_prod
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mariadb_prod_data:
+    driver: local
+
+networks:
+  app_network_prod:
+    driver: bridge
