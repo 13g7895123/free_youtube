@@ -37,6 +37,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         NODE_VERSION: 22
+        VITE_API_URL: ${VITE_API_URL:-/api}
     container_name: free_youtube_frontend_prod
     ports:
       - "${FRONTEND_PORT:-80}:80"

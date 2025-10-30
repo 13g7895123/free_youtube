@@ -14,6 +14,12 @@ RUN npm ci --only=production --ignore-scripts
 # 複製前端源碼
 COPY frontend/ .
 
+# 定義構建時環境變數（用於前端 API URL 配置）
+ARG VITE_API_URL=/api
+
+# 設置環境變數供 Vite 構建使用
+ENV VITE_API_URL=${VITE_API_URL}
+
 # 構建前端靜態文件
 RUN npm run build
 
