@@ -43,7 +43,8 @@
       "Bash(python3:*)",
       "Bash(docker exec:*)",
       "Bash(composer install:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

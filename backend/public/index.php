@@ -30,11 +30,35 @@ require realpath($pathsConfig) ?: $pathsConfig;
 
 $paths = new Config\Paths();
 
-// Location of the framework bootstrap file.
-require rtrim($paths->systemDirectory, '\\/ ') . DIRECTORY_SEPARATOR . 'bootstrap.php';
+// Location of the autoloader
+$autoloader = $paths->systemDirectory . '/../autoload.php';
+if (!file_exists($autoloader)) {
+    $autoloader = $paths->systemDirectory . '/../../autoload.php';
+}
+require realpath($autoloader) ?: $autoloader;
 
-// Load environment bootstrap for global functions and constants
-require $paths->appDirectory . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'Boot' . DIRECTORY_SEPARATOR . 'development.php';
+// Load environment settings
+require_once $paths->systemDirectory . '/Config/DotEnv.php';
+(new CodeIgniter\Config\DotEnv($paths->appDirectory . '/../'))->load();
+
+// Define ENVIRONMENT
+if (!defined('ENVIRONMENT')) {
+    define('ENVIRONMENT', env('CI_ENVIRONMENT', 'production'));
+}
+
+// Load path constants
+$pathsConfig = $paths->systemDirectory . '/Config/Paths.php';
+require realpath($pathsConfig) ?: $pathsConfig;
+
+// Load common functions
+$common = $paths->systemDirectory . '/Common.php';
+require_once realpath($common) ?: $common;
+
+// Load environment-specific boot file
+$bootFile = $paths->appDirectory . '/Config/Boot/' . ENVIRONMENT . '.php';
+if (is_file($bootFile)) {
+    require $bootFile;
+}
 
 /*
  * ---------------------------------------------------------------
