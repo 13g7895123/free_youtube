@@ -140,10 +140,30 @@ if [ ! -d "frontend/node_modules" ]; then
 fi
 
 echo "📦 Step 1: Installing/updating frontend dependencies..."
-if ! (cd frontend && npm ci && cd ..); then
-    echo -e "${YELLOW}⚠️  npm ci failed, trying npm install...${NC}"
-    if ! (cd frontend && npm install && cd ..); then
-        echo -e "${RED}❌ Error: Failed to install frontend dependencies${NC}"
+
+# 檢查是否有 npm 可用
+if command -v npm &> /dev/null; then
+    echo "Using local npm installation..."
+    if ! (cd frontend && npm ci && cd ..); then
+        echo -e "${YELLOW}⚠️  npm ci failed, trying npm install...${NC}"
+        if ! (cd frontend && npm install && cd ..); then
+            echo -e "${RED}❌ Error: Failed to install frontend dependencies with local npm${NC}"
+            exit 1
+        fi
+    fi
+else
+    # 如果沒有 npm，使用 Docker 容器來安裝
+    echo "npm not found locally. Using Docker to install dependencies..."
+    if ! docker run --rm \
+        -v "$(pwd)/frontend:/app" \
+        -w /app \
+        node:18-alpine \
+        npm ci || docker run --rm \
+        -v "$(pwd)/frontend:/app" \
+        -w /app \
+        node:18-alpine \
+        npm install; then
+        echo -e "${RED}❌ Error: Failed to install frontend dependencies with Docker${NC}"
         exit 1
     fi
 fi
@@ -155,9 +175,24 @@ if [ -d "frontend/dist" ]; then
     rm -rf frontend/dist
 fi
 
-if ! (cd frontend && npm run build && cd ..); then
-    echo -e "${RED}❌ Error: Frontend build command failed${NC}"
-    exit 1
+# 檢查是否有 npm 可用來執行 build
+if command -v npm &> /dev/null; then
+    echo "Using local npm for build..."
+    if ! (cd frontend && npm run build && cd ..); then
+        echo -e "${RED}❌ Error: Frontend build command failed with local npm${NC}"
+        exit 1
+    fi
+else
+    # 使用 Docker 來執行 build
+    echo "Using Docker for build..."
+    if ! docker run --rm \
+        -v "$(pwd)/frontend:/app" \
+        -w /app \
+        node:18-alpine \
+        npm run build; then
+        echo -e "${RED}❌ Error: Frontend build command failed with Docker${NC}"
+        exit 1
+    fi
 fi
 
 # Verify build output
