@@ -28,8 +28,12 @@ COPY . .
 # 完成 composer 安裝
 RUN composer dump-autoload --optimize
 
-# 設定權限
-RUN chmod -R 777 /var/www/html/writable
+# 創建並設定 writable 目錄權限 (CI4 需要此目錄用於緩存、日誌、會話等)
+RUN mkdir -p /var/www/html/writable/cache \
+    /var/www/html/writable/logs \
+    /var/www/html/writable/session \
+    /var/www/html/writable/uploads \
+    && chmod -R 777 /var/www/html/writable
 
 # 複製並設定啟動腳本權限
 COPY docker-entrypoint.sh /docker-entrypoint.sh
