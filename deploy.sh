@@ -86,16 +86,24 @@ fi
 if [ ! -d "backend/vendor" ]; then
     echo -e "${YELLOW}⚠️  backend/vendor not found. Installing Composer dependencies...${NC}"
 
-    # 檢查是否有 composer
-    if ! command -v composer &> /dev/null; then
-        echo -e "${RED}❌ Error: Composer is not installed${NC}"
-        echo "Please install Composer: https://getcomposer.org/download/"
-        exit 1
-    fi
-
-    if ! (cd backend && composer install --no-dev --optimize-autoloader && cd ..); then
-        echo -e "${RED}❌ Error: Failed to install backend dependencies${NC}"
-        exit 1
+    # 嘗試使用本地 composer (如果有安裝)
+    if command -v composer &> /dev/null; then
+        echo "Using local Composer installation..."
+        if ! (cd backend && composer install --no-dev --optimize-autoloader && cd ..); then
+            echo -e "${RED}❌ Error: Failed to install backend dependencies with local Composer${NC}"
+            exit 1
+        fi
+    else
+        # 如果沒有 composer，使用 Docker 容器來安裝
+        echo "Composer not found locally. Using Docker to install dependencies..."
+        if ! docker run --rm \
+            -v "$(pwd)/backend:/app" \
+            -w /app \
+            composer:2 \
+            install --no-dev --optimize-autoloader --ignore-platform-reqs; then
+            echo -e "${RED}❌ Error: Failed to install backend dependencies with Docker${NC}"
+            exit 1
+        fi
     fi
     echo -e "${GREEN}✅ Backend dependencies installed${NC}"
 else
