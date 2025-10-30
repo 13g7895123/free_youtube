@@ -154,15 +154,24 @@ if command -v npm &> /dev/null; then
 else
     # 如果沒有 npm，使用 Docker 容器來安裝
     echo "npm not found locally. Using Docker to install dependencies..."
+
+    # 清理可能存在的權限問題的 node_modules
+    if [ -d "frontend/node_modules" ]; then
+        echo "Cleaning existing node_modules to avoid permission issues..."
+        rm -rf frontend/node_modules || sudo rm -rf frontend/node_modules
+    fi
+
+    # 獲取當前使用者的 UID 和 GID
+    USER_ID=$(id -u)
+    GROUP_ID=$(id -g)
+
+    # 使用 Docker 安裝依賴，並設定正確的使用者權限
     if ! docker run --rm \
+        -u "${USER_ID}:${GROUP_ID}" \
         -v "$(pwd)/frontend:/app" \
         -w /app \
         node:22-alpine \
-        npm ci || docker run --rm \
-        -v "$(pwd)/frontend:/app" \
-        -w /app \
-        node:22-alpine \
-        npm install; then
+        sh -c "npm ci || npm install"; then
         echo -e "${RED}❌ Error: Failed to install frontend dependencies with Docker${NC}"
         exit 1
     fi
@@ -185,7 +194,13 @@ if command -v npm &> /dev/null; then
 else
     # 使用 Docker 來執行 build
     echo "Using Docker for build..."
+
+    # 獲取當前使用者的 UID 和 GID
+    USER_ID=$(id -u)
+    GROUP_ID=$(id -g)
+
     if ! docker run --rm \
+        -u "${USER_ID}:${GROUP_ID}" \
         -v "$(pwd)/frontend:/app" \
         -w /app \
         node:22-alpine \
