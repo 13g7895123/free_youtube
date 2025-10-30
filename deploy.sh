@@ -157,11 +157,11 @@ else
     if ! docker run --rm \
         -v "$(pwd)/frontend:/app" \
         -w /app \
-        node:18-alpine \
+        node:22-alpine \
         npm ci || docker run --rm \
         -v "$(pwd)/frontend:/app" \
         -w /app \
-        node:18-alpine \
+        node:22-alpine \
         npm install; then
         echo -e "${RED}❌ Error: Failed to install frontend dependencies with Docker${NC}"
         exit 1
@@ -188,7 +188,7 @@ else
     if ! docker run --rm \
         -v "$(pwd)/frontend:/app" \
         -w /app \
-        node:18-alpine \
+        node:22-alpine \
         npm run build; then
         echo -e "${RED}❌ Error: Frontend build command failed with Docker${NC}"
         exit 1

@@ -6,3 +6,9 @@
 ./deploy.sh: line 143: npm: command not found
 ⚠️  npm ci failed, trying npm install...
 ./deploy.sh: line 145: npm: command not found
+6. 為甚麼CICD會出現以下錯誤，前端的docker我不是改22版的node了嗎
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'whatwg-url@15.1.0',
+npm warn EBADENGINE   required: { node: '>=20' },
+npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+npm warn EBADENGINE }
