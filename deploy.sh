@@ -11,15 +11,41 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Get the script directory and change to project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 echo "================================================"
 echo "YouTube Loop Player - Production Deployment"
 echo "================================================"
+echo "Working directory: $(pwd)"
+echo "Script location: ${BASH_SOURCE[0]}"
+echo ""
+
+# Debug: List directory contents
+echo "📂 Project structure:"
+ls -la | head -15
 echo ""
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
     echo -e "${RED}❌ Error: Docker is not running${NC}"
     echo "Please start Docker and try again"
+    exit 1
+fi
+
+# Verify project structure
+if [ ! -d "frontend" ]; then
+    echo -e "${RED}❌ Error: frontend directory not found${NC}"
+    echo "Current directory: $(pwd)"
+    echo "Directory contents:"
+    ls -la
+    exit 1
+fi
+
+if [ ! -d "backend" ]; then
+    echo -e "${RED}❌ Error: backend directory not found${NC}"
+    echo "Current directory: $(pwd)"
     exit 1
 fi
 
@@ -46,11 +72,12 @@ if [ ! -d "frontend/node_modules" ]; then
 fi
 
 echo "📦 Step 1: Installing/updating frontend dependencies..."
-if ! (cd frontend && npm ci); then
+if ! (cd frontend && npm ci && cd ..); then
     echo -e "${YELLOW}⚠️  npm ci failed, trying npm install...${NC}"
-    cd frontend && npm install && cd ..
-else
-    cd .. > /dev/null 2>&1
+    if ! (cd frontend && npm install && cd ..); then
+        echo -e "${RED}❌ Error: Failed to install frontend dependencies${NC}"
+        exit 1
+    fi
 fi
 
 echo ""
@@ -59,7 +86,11 @@ if [ -d "frontend/dist" ]; then
     echo "Cleaning previous build..."
     rm -rf frontend/dist
 fi
-cd frontend && npm run build && cd ..
+
+if ! (cd frontend && npm run build && cd ..); then
+    echo -e "${RED}❌ Error: Frontend build command failed${NC}"
+    exit 1
+fi
 
 # Verify build output
 if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then
