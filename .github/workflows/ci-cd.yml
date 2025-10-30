@@ -257,46 +257,13 @@ jobs:
             set -e  # Exit on any error
             
             echo "🚀 Starting deployment..."
-            cd /home/jarvis/project/idea/project_management
+            cd /home/jarvis/project/idea/free_youtube
             
             echo "📥 Pulling latest changes..."
             git pull
-            
-            echo "🐳 Building and starting containers..."
-            docker compose down || true
-            # Force rebuild without cache to ensure fresh build
-            docker compose build --no-cache
-            docker compose up -d
-            
-            # Wait for containers to be ready
-            echo "⏳ Waiting for containers to start..."
-            sleep 15
-            
-            echo "🗄️ Running database setup..."
-            # Use -T flag to disable TTY allocation for non-interactive commands
-            docker compose exec -T backend php artisan migrate --force || echo "❌ Migration failed"
-            docker compose exec -T backend php artisan db:seed --force || echo "ℹ️ Seeding skipped (might already exist)"
-            
-            echo "🧹 Cleaning up users (keeping only admin)..."
-            docker compose exec -T backend php artisan users:cleanup --force || echo "ℹ️ User cleanup completed or skipped"
-            
-            echo "🧪 Running production health checks..."
-            docker compose exec -T backend php artisan migrate:status || echo "Migration status check failed"
-            
-            echo "⚡ Optimizing application..."
-            docker compose exec -T backend php artisan config:cache || echo "Config cache failed"
-            docker compose exec -T backend php artisan route:cache || echo "Route cache failed"
-            docker compose exec -T backend php artisan view:cache || echo "View cache failed"
-            
-            echo "🔍 Verifying deployment..."
-            docker ps | grep project_management || echo "Container status check"
-            
-            # Basic smoke test
-            echo "🌐 Running smoke tests..."
-            # Try multiple endpoints to ensure the system is working
-            docker compose exec -T backend curl -f http://localhost:8000/api/health || echo "Health check failed"
-            docker compose exec -T backend curl -f http://localhost:8000/api/test || echo "Test endpoint failed"
-            
+
+            ./deploy.sh
+                        
             echo "✅ Deployment completed successfully!"
           EOF
 
