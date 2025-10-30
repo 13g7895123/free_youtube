@@ -28,8 +28,6 @@ COPY . .
 # 完成 composer 安裝
 RUN composer dump-autoload --optimize
 
-RUN mkdir /var/www/html/writable
-
 # 設定權限
 RUN chmod -R 777 /var/www/html/writable
 

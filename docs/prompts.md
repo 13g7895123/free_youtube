@@ -2,5 +2,7 @@
 2. 幫我加入匯出匯入的按鈕，可以匯出影片庫的資料與播放清單的資料，且匯入要可以用
 3. 幫我建立cicd flow，用github action
 4. 幫我在deploy.sh檔案中，執行後端部屬的時候，先確認沒有被git追蹤的檔案與資料夾，例如vendor、writable、.env，.env看是不是加入從.env.example複製，另外兩個如果要composer安裝就安裝，writable應該可以直接mkdir，幫我完整看過一遍再進行調整修正
-5. 承4，backend/vendor not found. Installing Composer dependencies...
-❌ Error: Composer is not installed，幫我修正這個錯誤
+5. 承4，📦 Step 1: Installing/updating frontend dependencies...
+./deploy.sh: line 143: npm: command not found
+⚠️  npm ci failed, trying npm install...
+./deploy.sh: line 145: npm: command not found
