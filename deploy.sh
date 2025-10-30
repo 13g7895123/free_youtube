@@ -66,6 +66,66 @@ fi
 source .env
 BACKEND_PORT=${BACKEND_PORT:-8080}
 
+echo ""
+echo "📋 Checking backend dependencies and configuration..."
+
+# 檢查後端 .env 文件
+if [ ! -f "backend/.env" ]; then
+    echo -e "${YELLOW}⚠️  backend/.env not found. Creating from backend/.env.example...${NC}"
+    if [ ! -f "backend/.env.example" ]; then
+        echo -e "${RED}❌ Error: backend/.env.example not found${NC}"
+        exit 1
+    fi
+    cp backend/.env.example backend/.env
+    echo -e "${GREEN}✅ Created backend/.env file${NC}"
+else
+    echo -e "${GREEN}✅ backend/.env exists${NC}"
+fi
+
+# 檢查 vendor 目錄 (Composer dependencies)
+if [ ! -d "backend/vendor" ]; then
+    echo -e "${YELLOW}⚠️  backend/vendor not found. Installing Composer dependencies...${NC}"
+
+    # 檢查是否有 composer
+    if ! command -v composer &> /dev/null; then
+        echo -e "${RED}❌ Error: Composer is not installed${NC}"
+        echo "Please install Composer: https://getcomposer.org/download/"
+        exit 1
+    fi
+
+    if ! (cd backend && composer install --no-dev --optimize-autoloader && cd ..); then
+        echo -e "${RED}❌ Error: Failed to install backend dependencies${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✅ Backend dependencies installed${NC}"
+else
+    echo -e "${GREEN}✅ backend/vendor exists${NC}"
+fi
+
+# 檢查 writable 目錄
+if [ ! -d "backend/writable" ]; then
+    echo -e "${YELLOW}⚠️  backend/writable not found. Creating directory...${NC}"
+    mkdir -p backend/writable
+    mkdir -p backend/writable/cache
+    mkdir -p backend/writable/logs
+    mkdir -p backend/writable/session
+    mkdir -p backend/writable/uploads
+
+    # 設置權限 (對於 Linux/Unix 系統)
+    if [ "$(uname)" != "Darwin" ]; then
+        chmod -R 777 backend/writable
+    fi
+
+    echo -e "${GREEN}✅ backend/writable directory created${NC}"
+else
+    echo -e "${GREEN}✅ backend/writable exists${NC}"
+
+    # 確保權限正確
+    if [ "$(uname)" != "Darwin" ]; then
+        chmod -R 777 backend/writable 2>/dev/null || true
+    fi
+fi
+
 # Check if node_modules exists in frontend
 if [ ! -d "frontend/node_modules" ]; then
     echo -e "${YELLOW}⚠️  Frontend dependencies not found. Will install them...${NC}"
