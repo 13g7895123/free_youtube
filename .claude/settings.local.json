@@ -42,7 +42,8 @@
       "Bash(curl:*)",
       "Bash(python3:*)",
       "Bash(docker exec:*)",
-      "Bash(composer install:*)"
+      "Bash(composer install:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

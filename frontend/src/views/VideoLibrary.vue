@@ -2,14 +2,31 @@
   <div class="video-library">
     <div class="header">
       <h1>📺 影片庫</h1>
-      <div class="search-bar">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜尋影片..."
-          @input="handleSearch"
-          class="search-input"
-        />
+      <div class="header-actions">
+        <div class="search-bar">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜尋影片..."
+            @input="handleSearch"
+            class="search-input"
+          />
+        </div>
+        <div class="export-import-buttons">
+          <button @click="handleExport" class="btn-export" title="匯出影片庫">
+            📤 匯出
+          </button>
+          <button @click="triggerImport" class="btn-import" title="匯入影片庫">
+            📥 匯入
+          </button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".json"
+            @change="handleImport"
+            style="display: none"
+          />
+        </div>
       </div>
     </div>
 
@@ -90,6 +107,7 @@ const globalPlayerStore = useGlobalPlayerStore()
 const searchQuery = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref(null)
+const fileInput = ref(null)
 let searchTimeout = null
 
 const videos = computed(() => videoStore.videos)
@@ -145,6 +163,36 @@ const addToPlaylist = async (playlistId) => {
   }
 }
 
+const handleExport = async () => {
+  try {
+    const result = await videoStore.exportVideos()
+    alert(`成功匯出 ${result.count} 個影片`)
+  } catch (err) {
+    alert('匯出失敗: ' + err.message)
+  }
+}
+
+const triggerImport = () => {
+  fileInput.value.click()
+}
+
+const handleImport = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (confirm('確定要匯入影片資料嗎？已存在的影片將會被略過。')) {
+    try {
+      const result = await videoStore.importVideos(file)
+      alert(`匯入完成！\n成功: ${result.successCount}\n略過: ${result.failCount}\n總計: ${result.total}`)
+    } catch (err) {
+      alert('匯入失敗: ' + err.message)
+    }
+  }
+
+  // Reset file input
+  event.target.value = ''
+}
+
 onMounted(() => {
   fetchVideos()
 })
@@ -166,7 +214,14 @@ onMounted(() => {
   font-size: 28px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .search-bar {
+  flex: 1;
   display: flex;
 }
 
@@ -176,6 +231,40 @@ onMounted(() => {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+}
+
+.export-import-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-export,
+.btn-import {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-export {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-export:hover {
+  background: #45a049;
+}
+
+.btn-import {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-import:hover {
+  background: #0b7dda;
 }
 
 .loading,

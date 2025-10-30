@@ -148,6 +148,104 @@ export const useVideoStore = defineStore('video', () => {
     error.value = null
   }
 
+  /**
+   * 匯出所有影片資料為 JSON 檔案
+   */
+  const exportVideos = () => {
+    try {
+      const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        totalVideos: videos.value.length,
+        videos: videos.value.map(v => ({
+          video_id: v.video_id,
+          title: v.title,
+          description: v.description,
+          youtube_url: v.youtube_url,
+          thumbnail_url: v.thumbnail_url,
+          duration: v.duration,
+          channel_name: v.channel_name,
+          channel_id: v.channel_id,
+          published_at: v.published_at
+        }))
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `videos-export-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      return { success: true, count: videos.value.length }
+    } catch (err) {
+      console.error('Error exporting videos:', err)
+      error.value = '匯出失敗'
+      throw err
+    }
+  }
+
+  /**
+   * 匯入影片資料從 JSON 檔案
+   */
+  const importVideos = async (file) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const text = await file.text()
+      const importData = JSON.parse(text)
+
+      // 驗證資料格式
+      if (!importData.videos || !Array.isArray(importData.videos)) {
+        throw new Error('無效的匯入檔案格式')
+      }
+
+      let successCount = 0
+      let failCount = 0
+      const errors = []
+
+      // 逐一匯入影片
+      for (const videoData of importData.videos) {
+        try {
+          // 檢查影片是否已存在
+          const exists = await checkVideoExists(videoData.video_id)
+          if (!exists) {
+            await createVideo(videoData)
+            successCount++
+          } else {
+            console.log('Video already exists:', videoData.video_id)
+            failCount++
+          }
+        } catch (err) {
+          console.error('Error importing video:', videoData.video_id, err)
+          failCount++
+          errors.push({ video_id: videoData.video_id, error: err.message })
+        }
+      }
+
+      // 重新載入影片列表
+      await fetchVideos()
+
+      return {
+        success: true,
+        successCount,
+        failCount,
+        total: importData.videos.length,
+        errors
+      }
+    } catch (err) {
+      console.error('Error importing videos:', err)
+      error.value = err.message || '匯入失敗'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     videos,
     selectedVideo,
@@ -167,5 +265,7 @@ export const useVideoStore = defineStore('video', () => {
     deleteVideo,
     checkVideoExists,
     clearError,
+    exportVideos,
+    importVideos,
   }
 })

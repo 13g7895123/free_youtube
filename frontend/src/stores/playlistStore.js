@@ -161,6 +161,150 @@ export const usePlaylistStore = defineStore('playlist', () => {
     error.value = null
   }
 
+  /**
+   * 匯出所有播放清單資料為 JSON 檔案
+   */
+  const exportPlaylists = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      // 取得所有播放清單的完整資料（包含項目）
+      const playlistsWithItems = []
+      for (const playlist of playlists.value) {
+        const fullPlaylist = await getPlaylist(playlist.id)
+        if (fullPlaylist) {
+          playlistsWithItems.push({
+            name: fullPlaylist.name,
+            description: fullPlaylist.description,
+            is_active: fullPlaylist.is_active,
+            items: fullPlaylist.items.map(item => ({
+              video_id: item.video_id,
+              title: item.title,
+              youtube_url: item.youtube_url,
+              thumbnail_url: item.thumbnail_url,
+              duration: item.duration
+            }))
+          })
+        }
+      }
+
+      const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        totalPlaylists: playlistsWithItems.length,
+        playlists: playlistsWithItems
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `playlists-export-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      return { success: true, count: playlistsWithItems.length }
+    } catch (err) {
+      console.error('Error exporting playlists:', err)
+      error.value = '匯出失敗'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 匯入播放清單資料從 JSON 檔案
+   */
+  const importPlaylists = async (file, videoStore) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const text = await file.text()
+      const importData = JSON.parse(text)
+
+      // 驗證資料格式
+      if (!importData.playlists || !Array.isArray(importData.playlists)) {
+        throw new Error('無效的匯入檔案格式')
+      }
+
+      let successCount = 0
+      let failCount = 0
+      const errors = []
+
+      // 逐一匯入播放清單
+      for (const playlistData of importData.playlists) {
+        try {
+          // 建立播放清單
+          const newPlaylist = await createPlaylist({
+            name: playlistData.name,
+            description: playlistData.description,
+            is_active: playlistData.is_active !== false
+          })
+
+          // 匯入播放清單中的影片
+          if (playlistData.items && Array.isArray(playlistData.items)) {
+            for (const item of playlistData.items) {
+              try {
+                // 確保影片存在於影片庫中
+                let videoExists = await videoStore.checkVideoExists(item.video_id)
+
+                if (!videoExists) {
+                  // 如果影片不存在，先建立影片
+                  await videoStore.createVideo({
+                    video_id: item.video_id,
+                    title: item.title,
+                    youtube_url: item.youtube_url,
+                    thumbnail_url: item.thumbnail_url,
+                    duration: item.duration
+                  })
+                }
+
+                // 然後加入到播放清單
+                // 需要先取得影片的 ID (資料庫 ID，不是 video_id)
+                const videos = await videoStore.searchVideos(item.title)
+                const video = videos.data.data.find(v => v.video_id === item.video_id)
+
+                if (video) {
+                  await addItemToPlaylist(newPlaylist.id, video.id)
+                }
+              } catch (itemErr) {
+                console.error('Error adding item to playlist:', item.video_id, itemErr)
+              }
+            }
+          }
+
+          successCount++
+        } catch (err) {
+          console.error('Error importing playlist:', playlistData.name, err)
+          failCount++
+          errors.push({ name: playlistData.name, error: err.message })
+        }
+      }
+
+      // 重新載入播放清單
+      await fetchPlaylists()
+
+      return {
+        success: true,
+        successCount,
+        failCount,
+        total: importData.playlists.length,
+        errors
+      }
+    } catch (err) {
+      console.error('Error importing playlists:', err)
+      error.value = err.message || '匯入失敗'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     playlists,
     selectedPlaylist,
@@ -180,5 +324,7 @@ export const usePlaylistStore = defineStore('playlist', () => {
     removeItemFromPlaylist,
     reorderItems,
     clearError,
+    exportPlaylists,
+    importPlaylists,
   }
 })

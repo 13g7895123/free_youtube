@@ -2,9 +2,26 @@
   <div class="playlist-manager">
     <div class="header">
       <h1>📋 播放清單管理</h1>
-      <button @click="showCreateModal = true" class="btn btn-primary">
-        新建播放清單
-      </button>
+      <div class="header-actions">
+        <div class="export-import-buttons">
+          <button @click="handleExport" class="btn-export" title="匯出播放清單">
+            📤 匯出
+          </button>
+          <button @click="triggerImport" class="btn-import" title="匯入播放清單">
+            📥 匯入
+          </button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".json"
+            @change="handleImport"
+            style="display: none"
+          />
+        </div>
+        <button @click="showCreateModal = true" class="btn btn-primary">
+          新建播放清單
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading">
@@ -107,13 +124,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
+import { useVideoStore } from '@/stores/videoStore'
 
 const router = useRouter()
 const playlistStore = usePlaylistStore()
+const videoStore = useVideoStore()
 
 const showCreateModal = ref(false)
 const editingPlaylist = ref(null)
 const formData = ref({ name: '', description: '', is_active: true })
+const fileInput = ref(null)
 
 const playlists = computed(() => playlistStore.playlists)
 const loading = computed(() => playlistStore.loading)
@@ -162,6 +182,36 @@ const savePlaylist = async () => {
   }
 }
 
+const handleExport = async () => {
+  try {
+    const result = await playlistStore.exportPlaylists()
+    alert(`成功匯出 ${result.count} 個播放清單`)
+  } catch (err) {
+    alert('匯出失敗: ' + err.message)
+  }
+}
+
+const triggerImport = () => {
+  fileInput.value.click()
+}
+
+const handleImport = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (confirm('確定要匯入播放清單資料嗎？這將會建立新的播放清單。')) {
+    try {
+      const result = await playlistStore.importPlaylists(file, videoStore)
+      alert(`匯入完成！\n成功: ${result.successCount}\n失敗: ${result.failCount}\n總計: ${result.total}`)
+    } catch (err) {
+      alert('匯入失敗: ' + err.message)
+    }
+  }
+
+  // Reset file input
+  event.target.value = ''
+}
+
 onMounted(() => {
   fetchPlaylists()
 })
@@ -184,6 +234,46 @@ onMounted(() => {
 .header h1 {
   margin: 0;
   font-size: 28px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.export-import-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-export,
+.btn-import {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-export {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-export:hover {
+  background: #45a049;
+}
+
+.btn-import {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-import:hover {
+  background: #0b7dda;
 }
 
 .btn-primary {
