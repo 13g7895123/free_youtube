@@ -70,13 +70,13 @@ echo -e "${GREEN}✅ Project structure verified${NC}"
 echo ""
 echo -e "${BLUE}📋 Step 2: 環境配置檢查${NC}"
 
-# 檢查 .env 文件
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}⚠️  .env file not found.${NC}"
+# 檢查 .env.prod 文件
+if [ ! -f ".env.prod" ]; then
+    echo -e "${YELLOW}⚠️  .env.prod file not found.${NC}"
     if [ -f ".env.example" ]; then
-        echo "Creating .env from .env.example..."
-        cp .env.example .env
-        echo -e "${RED}❌ Please configure .env file with production settings before deploying!${NC}"
+        echo "Creating .env.prod from .env.example..."
+        cp .env.example .env.prod
+        echo -e "${RED}❌ Please configure .env.prod file with production settings before deploying!${NC}"
         echo "Required settings:"
         echo "  - MYSQL_ROOT_PASSWORD (strong password)"
         echo "  - MYSQL_PASSWORD (strong password)"
@@ -89,13 +89,13 @@ if [ ! -f ".env" ]; then
 fi
 
 # 載入環境變數
-source .env
+source .env.prod
 
 # 驗證必要的環境變數
 REQUIRED_VARS=("MYSQL_ROOT_PASSWORD" "MYSQL_PASSWORD")
 for VAR in "${REQUIRED_VARS[@]}"; do
     if [ -z "${!VAR}" ]; then
-        echo -e "${RED}❌ Error: ${VAR} is not set in .env${NC}"
+        echo -e "${RED}❌ Error: ${VAR} is not set in .env.prod${NC}"
         exit 1
     fi
 done
