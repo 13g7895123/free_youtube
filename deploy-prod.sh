@@ -5,6 +5,12 @@
 # ========================================
 # 此腳本專門用於正式環境的部署
 # 使用 docker-compose.prod.yml 和相關的生產環境配置
+#
+# 使用方式:
+#   ./deploy-prod.sh           - 快速部署（使用緩存，適合代碼更新）
+#   ./deploy-prod.sh --full    - 完全重建（不使用緩存，適合依賴更新）
+#   ./deploy-prod.sh --restart - 僅重啟（不重建，適合配置更新）
+#   ./deploy-prod.sh --help    - 顯示幫助信息
 
 set -e  # 遇到錯誤時立即退出
 
@@ -14,6 +20,48 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# 部署模式（默認為快速部署）
+DEPLOY_MODE="quick"
+
+# 使用說明
+show_usage() {
+    echo "使用方式: $0 [選項]"
+    echo ""
+    echo "選項:"
+    echo "  (無參數)    快速部署模式（默認）- 使用 Docker 緩存，適合代碼更新"
+    echo "  --full      完全重建模式 - 不使用緩存，適合依賴更新或環境變更"
+    echo "  --restart   僅重啟模式 - 不重建鏡像，僅重啟容器，適合配置更新"
+    echo "  --help      顯示此幫助信息"
+    echo ""
+    echo "範例:"
+    echo "  $0              # 快速部署（1-3分鐘）"
+    echo "  $0 --full       # 完全重建（5-15分鐘）"
+    echo "  $0 --restart    # 僅重啟（10-30秒）"
+    echo ""
+    exit 0
+}
+
+# 解析參數
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --full)
+            DEPLOY_MODE="full"
+            shift
+            ;;
+        --restart)
+            DEPLOY_MODE="restart"
+            shift
+            ;;
+        --help|-h)
+            show_usage
+            ;;
+        *)
+            echo -e "${RED}❌ 未知參數: $1${NC}"
+            show_usage
+            ;;
+    esac
+done
 
 # 獲取腳本目錄並切換到專案根目錄
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -27,6 +75,7 @@ echo "========================================================"
 echo "Working directory: $(pwd)"
 echo "Script location: ${BASH_SOURCE[0]}"
 echo "Deployment time: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Deployment mode: ${DEPLOY_MODE}"
 echo ""
 
 # ========================================
@@ -160,12 +209,24 @@ fi
 echo ""
 echo -e "${BLUE}📋 Step 5: 構建 Docker 鏡像${NC}"
 
-echo "Building production images (this may take a few minutes)..."
-if docker compose -f docker-compose.prod.yml build --no-cache; then
-    echo -e "${GREEN}✅ Docker images built successfully${NC}"
+if [ "$DEPLOY_MODE" = "restart" ]; then
+    echo -e "${YELLOW}ℹ️  重啟模式：跳過鏡像構建${NC}"
+elif [ "$DEPLOY_MODE" = "full" ]; then
+    echo "完全重建模式：構建鏡像（不使用緩存，這可能需要較長時間）..."
+    if docker compose -f docker-compose.prod.yml build --no-cache; then
+        echo -e "${GREEN}✅ Docker images built successfully${NC}"
+    else
+        echo -e "${RED}❌ Error: Failed to build Docker images${NC}"
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ Error: Failed to build Docker images${NC}"
-    exit 1
+    echo "快速部署模式：構建鏡像（使用緩存）..."
+    if docker compose -f docker-compose.prod.yml build; then
+        echo -e "${GREEN}✅ Docker images built successfully${NC}"
+    else
+        echo -e "${RED}❌ Error: Failed to build Docker images${NC}"
+        exit 1
+    fi
 fi
 
 # ========================================
@@ -254,6 +315,11 @@ echo "  - View frontend logs:  docker compose -f docker-compose.prod.yml logs -f
 echo "  - Check status:        docker compose -f docker-compose.prod.yml ps"
 echo "  - Stop services:       docker compose -f docker-compose.prod.yml down"
 echo "  - Restart services:    docker compose -f docker-compose.prod.yml restart"
+echo ""
+echo "🚀 Deployment Modes:"
+echo "  - Quick deploy:        ./deploy-prod.sh           (uses cache, 1-3 min)"
+echo "  - Full rebuild:        ./deploy-prod.sh --full    (no cache, 5-15 min)"
+echo "  - Restart only:        ./deploy-prod.sh --restart (fastest, 10-30 sec)"
 echo ""
 echo "🔒 Security Reminders:"
 echo "  - Change default passwords in production"
