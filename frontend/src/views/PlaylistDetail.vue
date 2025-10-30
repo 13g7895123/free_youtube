@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
@@ -86,18 +86,34 @@ const globalPlayerStore = useGlobalPlayerStore()
 const loading = ref(true)
 const playlist = ref(null)
 const items = ref([])
-const currentIndex = ref(0)
-const isPlaying = ref(false)
+
+// 使用 computed 從 globalPlayerStore 取得狀態，而不是本地 ref
+const currentIndex = computed(() => globalPlayerStore.currentIndex)
+const isPlaying = computed(() => globalPlayerStore.isPlaying)
 
 const currentItem = computed(() => items.value[currentIndex.value])
 
+// 監聽 globalPlayerStore 的變化，同步到本地顯示
+watch(() => globalPlayerStore.currentVideo, (newVideo) => {
+  console.log('PlaylistDetail: globalPlayerStore.currentVideo changed', newVideo?.title)
+})
+
 onMounted(async () => {
   const playlistId = route.params.id
+  console.log('PlaylistDetail: onMounted, playlistId:', playlistId)
+  console.log('PlaylistDetail: Current globalPlayerStore state:', {
+    isVisible: globalPlayerStore.isVisible,
+    isPlaying: globalPlayerStore.isPlaying,
+    currentVideo: globalPlayerStore.currentVideo?.title,
+    hasPlaylist: globalPlayerStore.hasPlaylist
+  })
+
   try {
     const playlistData = await playlistStore.getPlaylist(playlistId)
     if (playlistData) {
       playlist.value = playlistData
       items.value = playlistData.items || []
+      console.log('PlaylistDetail: Loaded playlist:', playlistData.name, 'with', items.value.length, 'items')
     }
     loading.value = false
   } catch (error) {
@@ -107,10 +123,8 @@ onMounted(async () => {
 })
 
 const selectVideo = (index) => {
-  currentIndex.value = index
-  isPlaying.value = true
-
   // Play the playlist using global player store
+  // 不需要設置本地狀態，globalPlayerStore 會自動更新
   if (playlist.value && items.value.length > 0) {
     globalPlayerStore.playPlaylist({
       id: playlist.value.id,
@@ -121,22 +135,12 @@ const selectVideo = (index) => {
 }
 
 const playNext = () => {
-  if (currentIndex.value < items.value.length - 1) {
-    currentIndex.value++
-  } else {
-    currentIndex.value = 0
-  }
-  isPlaying.value = true
+  // 直接調用 globalPlayerStore，不需要本地狀態管理
   globalPlayerStore.next()
 }
 
 const playPrevious = () => {
-  if (currentIndex.value > 0) {
-    currentIndex.value--
-  } else {
-    currentIndex.value = items.value.length - 1
-  }
-  isPlaying.value = true
+  // 直接調用 globalPlayerStore，不需要本地狀態管理
   globalPlayerStore.previous()
 }
 
@@ -151,7 +155,7 @@ const togglePlayback = () => {
   } else {
     globalPlayerStore.togglePlay()
   }
-  isPlaying.value = !isPlaying.value
+  // 不需要設置本地 isPlaying，computed 會自動從 store 取得
 }
 
 const removeVideo = async (videoId) => {

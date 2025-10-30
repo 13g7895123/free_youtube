@@ -105,8 +105,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
 
+const router = useRouter()
 const playlistStore = usePlaylistStore()
 
 const showCreateModal = ref(false)
@@ -141,8 +143,8 @@ const handleDelete = (playlist) => {
 }
 
 const handleViewItems = (playlist) => {
-  // Navigate to playlist detail page
-  window.location.href = `/playlists/${playlist.id}`
+  // Navigate to playlist detail page using Vue Router (SPA navigation)
+  router.push(`/playlists/${playlist.id}`)
 }
 
 const savePlaylist = async () => {

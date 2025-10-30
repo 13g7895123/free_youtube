@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div v-if="playerStore.isVisible && playerStore.currentVideo" class="floating-player-container">
       <!-- Minimized View -->
-      <div v-if="playerStore.isMinimized" class="floating-player minimized">
+      <div v-show="playerStore.isMinimized" class="floating-player minimized">
         <div class="minimized-content">
           <div class="video-info">
             <div class="thumbnail">
@@ -35,13 +35,20 @@
             </button>
           </div>
         </div>
+        <!-- Hidden YouTube Player for minimized mode -->
+        <div class="hidden-player">
+          <div id="floating-youtube-player-minimized" class="youtube-container-minimized"></div>
+        </div>
       </div>
 
       <!-- Expanded View -->
-      <div v-else class="floating-player expanded">
+      <div v-show="!playerStore.isMinimized" class="floating-player expanded" :class="{ 'fullscreen': isFullscreen }">
         <div class="player-header">
           <h3>{{ playerStore.currentVideo.title }}</h3>
           <div class="header-actions">
+            <button @click="toggleFullscreen" class="btn-icon" :title="isFullscreen ? '退出滿版' : '滿版'">
+              {{ isFullscreen ? '⊡' : '⛶' }}
+            </button>
             <button @click="playerStore.minimize" class="btn-icon" title="最小化">⬇</button>
             <button @click="playerStore.close" class="btn-icon" title="關閉">✕</button>
           </div>
@@ -49,15 +56,24 @@
         <div class="player-body">
           <div id="floating-youtube-player" class="youtube-container"></div>
         </div>
-        <div class="player-controls" v-if="playerStore.hasPlaylist">
-          <button @click="playerStore.previous" class="btn-control">⏮ 上一首</button>
-          <button @click="playerStore.togglePlay" class="btn-control btn-play">
-            {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
-          </button>
-          <button @click="playerStore.next" class="btn-control">下一首 ⏭</button>
-          <div class="track-info">
-            {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
-          </div>
+        <div class="player-controls">
+          <!-- 播放列表控制 -->
+          <template v-if="playerStore.hasPlaylist">
+            <button @click="playerStore.previous" class="btn-control">⏮ 上一首</button>
+            <button @click="playerStore.togglePlay" class="btn-control btn-play">
+              {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
+            </button>
+            <button @click="playerStore.next" class="btn-control">下一首 ⏭</button>
+            <div class="track-info">
+              {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
+            </div>
+          </template>
+          <!-- 單一影片控制 -->
+          <template v-else>
+            <button @click="playerStore.togglePlay" class="btn-control btn-play">
+              {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -65,10 +81,11 @@
 </template>
 
 <script setup>
-import { watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 
 const playerStore = useGlobalPlayerStore()
+const isFullscreen = ref(false)
 
 // Debug logging
 watch(() => playerStore.isVisible, (val) => {
@@ -83,6 +100,11 @@ console.log('FloatingPlayer: Component mounted')
 
 let ytPlayer = null
 let apiReady = false
+
+// 全螢幕切換
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+}
 
 // 載入 YouTube IFrame API
 const loadYouTubeAPI = () => {
@@ -174,19 +196,28 @@ const initPlayer = async (videoId) => {
     },
     events: {
       onReady: (event) => {
+        console.log('FloatingPlayer: YouTube player ready, isPlaying:', playerStore.isPlaying)
         if (playerStore.isPlaying) {
           event.target.playVideo()
         }
       },
       onStateChange: (event) => {
+        console.log('FloatingPlayer: YouTube state changed:', event.data)
         if (event.data === window.YT.PlayerState.ENDED) {
+          console.log('FloatingPlayer: Video ended')
           if (playerStore.hasPlaylist) {
             playerStore.next()
           }
         } else if (event.data === window.YT.PlayerState.PLAYING) {
+          console.log('FloatingPlayer: Video playing, calling playerStore.play()')
+          isUpdatingFromYouTube = true
           playerStore.play()
+          setTimeout(() => { isUpdatingFromYouTube = false }, 50)
         } else if (event.data === window.YT.PlayerState.PAUSED) {
+          console.log('FloatingPlayer: Video paused, calling playerStore.pause()')
+          isUpdatingFromYouTube = true
           playerStore.pause()
+          setTimeout(() => { isUpdatingFromYouTube = false }, 50)
         }
       }
     }
@@ -194,32 +225,101 @@ const initPlayer = async (videoId) => {
 }
 
 // 監聽當前影片變化
-watch(() => playerStore.currentVideo, (newVideo) => {
-  if (newVideo && !playerStore.isMinimized) {
+watch(() => playerStore.currentVideo, (newVideo, oldVideo) => {
+  console.log('FloatingPlayer: currentVideo changed', {
+    newVideo: newVideo?.title,
+    oldVideo: oldVideo?.title,
+    newVideoId: newVideo?.video_id,
+    oldVideoId: oldVideo?.video_id
+  })
+
+  if (newVideo) {
     const videoId = newVideo.video_id || extractVideoId(newVideo.youtube_url)
+    console.log('FloatingPlayer: Extracted video ID:', videoId, 'ytPlayer exists:', !!ytPlayer)
+
     if (videoId) {
-      initPlayer(videoId)
+      // 無論是否最小化都要更新影片
+      if (ytPlayer) {
+        // 如果播放器已存在，直接載入新影片
+        console.log('FloatingPlayer: Loading new video', videoId)
+        try {
+          ytPlayer.loadVideoById(videoId)
+          if (playerStore.isPlaying) {
+            console.log('FloatingPlayer: Auto-playing after load')
+            ytPlayer.playVideo()
+          }
+        } catch (error) {
+          console.error('FloatingPlayer: Error loading video:', error)
+        }
+      } else if (!playerStore.isMinimized) {
+        // 只有在展開狀態且播放器不存在時才初始化
+        console.log('FloatingPlayer: Initializing new player')
+        initPlayer(videoId)
+      }
     }
   }
-})
+}, { deep: true })
+
+// 防止循環更新的標記
+let isUpdatingFromYouTube = false
 
 // 監聽播放狀態變化
 watch(() => playerStore.isPlaying, (isPlaying) => {
-  if (ytPlayer && ytPlayer.playVideo && ytPlayer.pauseVideo) {
-    if (isPlaying) {
-      ytPlayer.playVideo()
-    } else {
-      ytPlayer.pauseVideo()
+  console.log('FloatingPlayer: isPlaying changed to', isPlaying, 'ytPlayer exists:', !!ytPlayer, 'isUpdatingFromYouTube:', isUpdatingFromYouTube)
+
+  // 如果是 YouTube 播放器觸發的狀態變化，不要再次控制播放器
+  if (isUpdatingFromYouTube) {
+    console.log('FloatingPlayer: Skipping control because update came from YouTube')
+    return
+  }
+
+  if (ytPlayer) {
+    try {
+      if (isPlaying) {
+        console.log('FloatingPlayer: Calling playVideo()')
+        ytPlayer.playVideo()
+      } else {
+        console.log('FloatingPlayer: Calling pauseVideo()')
+        ytPlayer.pauseVideo()
+      }
+    } catch (error) {
+      console.error('FloatingPlayer: Error controlling player:', error)
     }
+  } else {
+    console.log('FloatingPlayer: Cannot control playback, ytPlayer not initialized')
   }
 })
 
 // 監聽最小化狀態
-watch(() => playerStore.isMinimized, (minimized) => {
-  if (!minimized && playerStore.currentVideo) {
-    const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
-    if (videoId) {
-      nextTick(() => initPlayer(videoId))
+watch(() => playerStore.isMinimized, async (minimized) => {
+  await nextTick()
+
+  const playerContainer = document.getElementById('floating-youtube-player')
+  const minimizedContainer = document.getElementById('floating-youtube-player-minimized')
+
+  if (minimized) {
+    // 縮小時：移動播放器到隱藏容器
+    if (playerContainer && minimizedContainer && !minimizedContainer.contains(playerContainer.querySelector('iframe'))) {
+      const iframe = playerContainer.querySelector('iframe')
+      if (iframe) {
+        minimizedContainer.appendChild(iframe)
+      }
+    }
+  } else {
+    // 展開時：移動播放器回到可見容器
+    if (playerContainer && minimizedContainer) {
+      const iframe = minimizedContainer.querySelector('iframe')
+      if (iframe) {
+        playerContainer.appendChild(iframe)
+      }
+    }
+
+    // 只有當播放器不存在時才重新初始化
+    if (!ytPlayer && playerStore.currentVideo) {
+      const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
+      if (videoId) {
+        initPlayer(videoId)
+      }
     }
   }
 })
@@ -273,6 +373,29 @@ onUnmounted(() => {
   bottom: 20px;
   right: 20px;
   z-index: 9999;
+}
+
+/* Hidden player for minimized mode */
+.hidden-player {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.youtube-container-minimized {
+  width: 100%;
+  height: 100%;
+}
+
+.youtube-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .floating-player.minimized {
@@ -362,7 +485,7 @@ onUnmounted(() => {
 }
 
 .floating-player.expanded {
-  width: 480px;
+  width: 320px;
   max-width: calc(100vw - 40px);
   background: white;
   border-radius: 12px;
@@ -370,18 +493,42 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+/* 滿版樣式 */
+.floating-player.expanded.fullscreen {
+  position: fixed;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  z-index: 10000;
+}
+
+.floating-player.expanded.fullscreen .player-body {
+  padding-bottom: 0;
+  height: calc(100vh - 50px - 60px); /* 減去 header 和 controls 的高度 */
+}
+
+.floating-player.expanded.fullscreen .player-body .youtube-container {
+  position: static;
+  height: 100%;
+}
+
 .player-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 8px 12px;
   background: #f5f5f5;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .player-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #212121;
   flex: 1;
@@ -411,33 +558,25 @@ onUnmounted(() => {
 
 .player-body {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 150px; /* 更矮的固定高度 */
   background: #000;
-}
-
-.youtube-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
 }
 
 .player-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 8px 12px;
   background: #fafafa;
   border-top: 1px solid #e0e0e0;
 }
 
 .player-controls .btn-control {
-  padding: 6px 12px;
+  padding: 4px 8px;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }

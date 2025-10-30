@@ -32,15 +32,15 @@ cd frontend && npm run build && cd ..
 
 echo ""
 echo "🐳 Step 3: Stopping existing containers..."
-docker-compose down
+docker compose down
 
 echo ""
 echo "🐳 Step 4: Building Docker image..."
-docker-compose build
+docker compose build
 
 echo ""
 echo "🚀 Step 5: Starting production server..."
-docker-compose up -d
+docker compose up -d
 
 echo ""
 echo "================================================"
@@ -50,7 +50,7 @@ echo ""
 echo "🌐 Application is running at: http://localhost:${BACKEND_PORT}"
 echo ""
 echo "Useful commands:"
-echo "  - View logs:        docker-compose logs -f"
-echo "  - Stop server:      docker-compose down"
-echo "  - Restart server:   docker-compose restart"
+echo "  - View logs:        docker compose logs -f"
+echo "  - Stop server:      docker compose down"
+echo "  - Restart server:   docker compose restart"
 echo ""
