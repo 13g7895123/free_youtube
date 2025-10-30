@@ -1,6 +1,9 @@
 #!/usr/bin/env php
 <?php
 
+use CodeIgniter\Boot;
+use Config\Paths;
+
 /*
  * --------------------------------------------------------------------
  * CodeIgniter command-line tools
@@ -14,6 +17,10 @@ if (strpos(PHP_SAPI, 'cgi') === 0) {
     exit("The CLI tool is not supported when running php-cgi. It needs php-cli to function!\n\n");
 }
 
+// We want errors to be shown when using it from the CLI.
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 // Path to the front controller (public directory)
 define('FCPATH', __DIR__ . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR);
 
@@ -24,51 +31,19 @@ chdir(FCPATH);
  *---------------------------------------------------------------
  * BOOTSTRAP THE APPLICATION
  *---------------------------------------------------------------
+ * This process sets up the path constants, loads and registers
+ * our autoloader, along with Composer's, loads our constants
+ * and fires up an environment-specific bootstrapping.
  */
 
-// Load our paths config file
+// LOAD OUR PATHS CONFIG FILE
+// This is the line that might need to be changed, depending on your folder structure.
 require FCPATH . '../app/Config/Paths.php';
+// ^^^ Change this line if you move your application folder
 
-$paths = new Config\Paths();
+$paths = new Paths();
 
-// Location of the autoloader
-$autoloader = $paths->systemDirectory . '/../autoload.php';
-if (!file_exists($autoloader)) {
-    $autoloader = $paths->systemDirectory . '/../../autoload.php';
-}
-require realpath($autoloader) ?: $autoloader;
+// LOAD THE FRAMEWORK BOOTSTRAP FILE
+require $paths->systemDirectory . '/Boot.php';
 
-// Load environment settings
-require_once $paths->systemDirectory . '/Config/DotEnv.php';
-(new CodeIgniter\Config\DotEnv($paths->appDirectory . '/../'))->load();
-
-// Define ENVIRONMENT
-if (!defined('ENVIRONMENT')) {
-    define('ENVIRONMENT', env('CI_ENVIRONMENT', 'production'));
-}
-
-// Load path constants
-$pathsConfig = $paths->systemDirectory . '/Config/Paths.php';
-require realpath($pathsConfig) ?: $pathsConfig;
-
-// Load common functions
-$common = $paths->systemDirectory . '/Common.php';
-require_once realpath($common) ?: $common;
-
-/*
- *---------------------------------------------------------------
- * GRAB OUR CODEIGNITER INSTANCE
- *---------------------------------------------------------------
- */
-
-$app = Config\Services::codeigniter();
-$app->initialize();
-$app->setContext('php-cli');
-
-/*
- *---------------------------------------------------------------
- * LAUNCH THE APPLICATION
- *---------------------------------------------------------------
- */
-
-$app->run();
+exit(Boot::bootSpark($paths));

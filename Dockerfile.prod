@@ -8,8 +8,8 @@ WORKDIR /app
 # 複製前端依賴文件
 COPY frontend/package*.json ./
 
-# 安裝依賴
-RUN npm ci --only=production --ignore-scripts
+# 安裝依賴（包含 dev dependencies 用於構建）
+RUN npm ci --legacy-peer-deps
 
 # 複製前端源碼
 COPY frontend/ .

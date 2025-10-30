@@ -44,7 +44,9 @@
       "Bash(docker exec:*)",
       "Bash(composer install:*)",
       "Bash(tree:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

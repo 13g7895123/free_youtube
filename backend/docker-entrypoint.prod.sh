@@ -89,6 +89,11 @@ if [ ! -f "spark" ]; then
         -d error_log=/var/www/html/writable/logs/php-error.log
 fi
 
-# 使用 spark serve 啟動（CI4 官方推薦方式）
-echo "🚀 Starting with spark serve (Production Mode)..."
-exec php spark serve --host 0.0.0.0 --port 8000
+# 使用 PHP 內建伺服器啟動（更穩定的方式）
+echo "🚀 Starting with PHP built-in server (Production Mode)..."
+cd /var/www/html/public
+exec php -S 0.0.0.0:8000 \
+    -d display_errors=1 \
+    -d error_reporting=E_ALL \
+    -d log_errors=1 \
+    -d error_log=/var/www/html/writable/logs/php-error.log
