@@ -46,11 +46,21 @@ services:
     volumes:
       - ./backend:/var/www/html
     environment:
-      CI_ENVIRONMENT: development
+      CI_ENVIRONMENT: ${APP_ENV:-development}
+      # MySQL 環境變數（用於 docker-entrypoint.sh）
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
       MYSQL_USER: ${MYSQL_USER:-app_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app_password}
+      # CI4 資料庫環境變數（用於 Database.php）
+      database.default.hostname: mariadb
+      database.default.database: ${MYSQL_DATABASE:-free_youtube}
+      database.default.username: ${MYSQL_USER:-root}
+      database.default.password: ${MYSQL_ROOT_PASSWORD:-secret}
+      database.default.DBDriver: MySQLi
+      database.default.port: 3306
+      database.default.charset: utf8mb4
+      database.default.DBCollat: utf8mb4_unicode_ci
     depends_on:
       mariadb:
         condition: service_healthy

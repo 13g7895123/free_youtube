@@ -68,16 +68,27 @@ echo "✅ Cache cleaned!"
 # 顯示啟動信息
 echo ""
 echo "================================"
-echo "🚀 Starting PHP Server"
+echo "🚀 Starting CodeIgniter 4"
 echo "================================"
 echo "Listening on: 0.0.0.0:8000"
-echo "Document root: /var/www/html/public"
+echo "Environment: ${CI_ENVIRONMENT:-production}"
 echo ""
 
-# 啟動 PHP 內建伺服器
-cd /var/www/html/public
-exec php -S 0.0.0.0:8000 \
-    -d display_errors=0 \
-    -d error_reporting=E_ALL \
-    -d log_errors=1 \
-    -d error_log=/var/www/html/writable/logs/php-error.log
+# 切換到應用根目錄
+cd /var/www/html
+
+# 檢查 spark 是否存在
+if [ ! -f "spark" ]; then
+    echo "⚠️  Warning: spark file not found!"
+    echo "Falling back to PHP built-in server..."
+    cd /var/www/html/public
+    exec php -S 0.0.0.0:8000 \
+        -d display_errors=0 \
+        -d error_reporting=E_ALL \
+        -d log_errors=1 \
+        -d error_log=/var/www/html/writable/logs/php-error.log
+fi
+
+# 使用 spark serve 啟動（CI4 官方推薦方式）
+echo "🚀 Starting with spark serve (Production Mode)..."
+exec php spark serve --host 0.0.0.0 --port 8000
