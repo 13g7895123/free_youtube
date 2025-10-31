@@ -239,6 +239,7 @@ console.log('FloatingPlayer: Component mounted')
 
 let ytPlayer = null
 let apiReady = false
+let playerReady = false
 
 // 全螢幕切換
 const toggleFullscreen = () => {
@@ -315,14 +316,17 @@ const initPlayer = async (videoId) => {
         // 播放器不在 DOM 中，需要重新創建
         console.log('FloatingPlayer: Player not in DOM, recreating...')
         ytPlayer = null
+        playerReady = false
       }
     } catch (error) {
       console.error('FloatingPlayer: Error updating player, will recreate:', error)
       ytPlayer = null
+      playerReady = false
     }
   }
 
   console.log('FloatingPlayer: Creating new YouTube player with video', videoId)
+  playerReady = false
   ytPlayer = new window.YT.Player('floating-youtube-player', {
     height: '100%',
     width: '100%',
@@ -336,6 +340,7 @@ const initPlayer = async (videoId) => {
     events: {
       onReady: (event) => {
         console.log('FloatingPlayer: YouTube player ready, isPlaying:', playerStore.isPlaying)
+        playerReady = true
         if (playerStore.isPlaying) {
           event.target.playVideo()
         }
@@ -384,9 +389,9 @@ watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
 
     if (videoId) {
       // 無論是否最小化都要更新影片
-      if (ytPlayer) {
-        // 如果播放器已存在，直接載入新影片
-        console.log('FloatingPlayer: Loading new video', videoId)
+      if (ytPlayer && playerReady) {
+        // 如果播放器已存在且準備好，直接載入新影片
+        console.log('FloatingPlayer: Loading new video', videoId, 'playerReady:', playerReady)
         try {
           ytPlayer.loadVideoById(videoId)
           if (playerStore.isPlaying) {
@@ -397,8 +402,33 @@ watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
           console.error('FloatingPlayer: Error loading video:', error)
           // 如果載入失敗，可能是播放器實例有問題，嘗試重新初始化
           ytPlayer = null
+          playerReady = false
           initPlayer(videoId)
         }
+      } else if (ytPlayer && !playerReady) {
+        // 播放器存在但尚未準備好，等待一下再重試
+        console.log('FloatingPlayer: Player exists but not ready, waiting...')
+        setTimeout(() => {
+          if (playerReady) {
+            console.log('FloatingPlayer: Player now ready, loading video', videoId)
+            try {
+              ytPlayer.loadVideoById(videoId)
+              if (playerStore.isPlaying) {
+                ytPlayer.playVideo()
+              }
+            } catch (error) {
+              console.error('FloatingPlayer: Error loading video after wait:', error)
+              ytPlayer = null
+              playerReady = false
+              initPlayer(videoId)
+            }
+          } else {
+            console.log('FloatingPlayer: Player still not ready after wait, reinitializing')
+            ytPlayer = null
+            playerReady = false
+            initPlayer(videoId)
+          }
+        }, 1000)
       } else {
         // 播放器不存在時，初始化播放器（無論是否最小化）
         console.log('FloatingPlayer: Initializing new player (minimized:', playerStore.isMinimized, ')')

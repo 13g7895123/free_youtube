@@ -1,1 +1,1 @@
-1. 如果影片庫中有資料，請建立一個預設的播放清單，不可被刪除與編輯，項目為所有影片庫的項目，這個播放清單為甚麼點查看項目會跑到影片庫去，播放清單的列表多一個點了直接播放清單的按鈕
+1. 部屬後的浮窗上一首與下一首出現FloatingPlayer: Error loading video: TypeError: o.loadVideoById is not a function
