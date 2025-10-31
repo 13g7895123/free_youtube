@@ -73,13 +73,24 @@
               {{ playlist.is_active ? '啟用' : '停用' }}
             </span>
           </div>
-          <BaseButton
-            variant="secondary"
-            aria-label="查看播放清單項目"
-            @click="handleViewItems(playlist)"
-          >
-            查看項目
-          </BaseButton>
+          <div class="card-actions">
+            <BaseButton
+              variant="primary"
+              :icon="PlayIcon"
+              aria-label="直接播放"
+              :disabled="playlist.item_count === 0"
+              @click="handlePlayPlaylist(playlist)"
+            >
+              播放
+            </BaseButton>
+            <BaseButton
+              variant="secondary"
+              aria-label="查看播放清單項目"
+              @click="handleViewItems(playlist)"
+            >
+              查看項目
+            </BaseButton>
+          </div>
         </div>
       </div>
 
@@ -187,6 +198,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
 import { useVideoStore } from '@/stores/videoStore'
+import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import { useToast } from '@/composables/useToast'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ExportImportButtons from '@/components/ExportImportButtons.vue'
@@ -197,12 +209,14 @@ import {
   PencilIcon,
   TrashIcon,
   FilmIcon,
-  XMarkIcon
+  XMarkIcon,
+  PlayIcon
 } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const playlistStore = usePlaylistStore()
 const videoStore = useVideoStore()
+const globalPlayerStore = useGlobalPlayerStore()
 const toast = useToast()
 
 const showCreateModal = ref(false)
@@ -278,12 +292,56 @@ const cancelDelete = () => {
 }
 
 const handleViewItems = (playlist) => {
-  // 對於系統播放清單，導向影片庫頁面
-  if (playlist.is_system && playlist.id === 'all-videos') {
-    router.push('/library')
-  } else {
-    // Navigate to playlist detail page using Vue Router (SPA navigation)
-    router.push(`/playlists/${playlist.id}`)
+  // 統一導向播放清單詳情頁面
+  router.push(`/playlists/${playlist.id}`)
+}
+
+const handlePlayPlaylist = async (playlist) => {
+  if (playlist.item_count === 0) {
+    toast.warning('此播放清單沒有影片')
+    return
+  }
+
+  try {
+    // 特殊處理「所有影片」系統播放清單
+    if (playlist.id === 'all-videos') {
+      // 從 videoStore 獲取所有影片
+      if (!videoStore.videos || videoStore.videos.length === 0) {
+        await videoStore.fetchVideos()
+      }
+
+      // 將 videos 轉換為 playlist items 格式
+      const items = (videoStore.videos || []).map((video, index) => ({
+        id: `all-videos-item-${video.id}`,
+        video_id: video.video_id || video.id,
+        title: video.title,
+        duration: video.duration,
+        thumbnail_url: video.thumbnail_url,
+        youtube_url: video.youtube_url,
+        position: index
+      }))
+
+      globalPlayerStore.playPlaylist({
+        id: playlist.id,
+        name: playlist.name,
+        items: items
+      }, 0)
+    } else {
+      // 一般播放清單：獲取完整的播放清單數據和項目
+      const playlistData = await playlistStore.getPlaylist(playlist.id)
+      if (playlistData && playlistData.items && playlistData.items.length > 0) {
+        globalPlayerStore.playPlaylist({
+          id: playlistData.id,
+          name: playlistData.name,
+          items: playlistData.items
+        }, 0)
+      } else {
+        toast.warning('播放清單沒有影片')
+      }
+    }
+  } catch (error) {
+    console.error('Failed to play playlist:', error)
+    toast.error('播放播放清單失敗: ' + error.message)
   }
 }
 
@@ -484,6 +542,16 @@ onMounted(async () => {
   gap: var(--space-3);
   margin-bottom: var(--space-3);
   font-size: var(--font-size-sm);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.card-actions > * {
+  flex: 1;
 }
 
 .stat-item {

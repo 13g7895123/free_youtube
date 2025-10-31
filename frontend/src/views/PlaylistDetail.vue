@@ -75,7 +75,7 @@
                 {{ formatDuration(item.duration) }}
               </p>
             </div>
-            <div class="video-actions">
+            <div class="video-actions" v-if="!isSystemPlaylist">
               <button
                 @click.stop="removeVideo(item.video_id)"
                 class="btn-remove"
@@ -118,6 +118,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlaylistStore } from '@/stores/playlistStore'
+import { useVideoStore } from '@/stores/videoStore'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import { useToast } from '@/composables/useToast'
 import PlaylistControls from '@/components/PlaylistControls.vue'
@@ -134,12 +135,16 @@ import {
 
 const route = useRoute()
 const playlistStore = usePlaylistStore()
+const videoStore = useVideoStore()
 const globalPlayerStore = useGlobalPlayerStore()
 const toast = useToast()
 
 const loading = ref(true)
 const playlist = ref(null)
 const items = ref([])
+
+// 檢查是否為系統播放清單
+const isSystemPlaylist = computed(() => playlist.value?.is_system === true)
 
 // 使用 computed 從 globalPlayerStore 取得狀態，而不是本地 ref
 const currentIndex = computed(() => globalPlayerStore.currentIndex)
@@ -163,11 +168,41 @@ onMounted(async () => {
   })
 
   try {
-    const playlistData = await playlistStore.getPlaylist(playlistId)
-    if (playlistData) {
-      playlist.value = playlistData
-      items.value = playlistData.items || []
-      console.log('PlaylistDetail: Loaded playlist:', playlistData.name, 'with', items.value.length, 'items')
+    // 特殊處理「所有影片」系統播放清單
+    if (playlistId === 'all-videos') {
+      // 從 videoStore 獲取所有影片
+      await videoStore.fetchVideos()
+
+      playlist.value = {
+        id: 'all-videos',
+        name: '所有影片',
+        description: '影片庫中的所有影片',
+        item_count: videoStore.videos?.length || 0,
+        is_active: true,
+        is_system: true,
+        created_at: new Date().toISOString()
+      }
+
+      // 將 videos 轉換為 playlist items 格式
+      items.value = (videoStore.videos || []).map((video, index) => ({
+        id: `all-videos-item-${video.id}`,
+        video_id: video.video_id || video.id,
+        title: video.title,
+        duration: video.duration,
+        thumbnail_url: video.thumbnail_url,
+        youtube_url: video.youtube_url,
+        position: index
+      }))
+
+      console.log('PlaylistDetail: Loaded system playlist "所有影片" with', items.value.length, 'items')
+    } else {
+      // 一般播放清單的處理
+      const playlistData = await playlistStore.getPlaylist(playlistId)
+      if (playlistData) {
+        playlist.value = playlistData
+        items.value = playlistData.items || []
+        console.log('PlaylistDetail: Loaded playlist:', playlistData.name, 'with', items.value.length, 'items')
+      }
     }
     loading.value = false
   } catch (error) {
