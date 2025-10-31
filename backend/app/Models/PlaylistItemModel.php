@@ -61,6 +61,7 @@ class PlaylistItemModel extends Model
         // 取得最大位置
         $maxPosition = $this->where('playlist_id', $playlistId)
                             ->selectMax('position')
+                            ->asArray()
                             ->first();
 
         $position = ($maxPosition && $maxPosition['position']) ? $maxPosition['position'] + 1 : 0;
