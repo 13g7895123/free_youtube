@@ -268,18 +268,18 @@ const initPlayer = async (videoId) => {
   })
 }
 
-// 監聽當前影片變化
-watch(() => playerStore.currentVideo, (newVideo, oldVideo) => {
-  console.log('FloatingPlayer: currentVideo changed', {
-    newVideo: newVideo?.title,
-    oldVideo: oldVideo?.title,
-    newVideoId: newVideo?.video_id,
-    oldVideoId: oldVideo?.video_id
+// 監聽當前影片的 video_id 變化（更精確的監聽）
+watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
+  console.log('FloatingPlayer: currentVideo.video_id changed', {
+    newVideoId,
+    oldVideoId,
+    currentVideo: playerStore.currentVideo?.title
   })
 
-  if (newVideo) {
-    const videoId = newVideo.video_id || extractVideoId(newVideo.youtube_url)
-    console.log('FloatingPlayer: Extracted video ID:', videoId, 'ytPlayer exists:', !!ytPlayer)
+  // 只有當 video_id 真的改變時才更新
+  if (newVideoId && newVideoId !== oldVideoId) {
+    const videoId = newVideoId || extractVideoId(playerStore.currentVideo?.youtube_url)
+    console.log('FloatingPlayer: Extracted video ID:', videoId, 'ytPlayer exists:', !!ytPlayer, 'isMinimized:', playerStore.isMinimized)
 
     if (videoId) {
       // 無論是否最小化都要更新影片
@@ -294,15 +294,18 @@ watch(() => playerStore.currentVideo, (newVideo, oldVideo) => {
           }
         } catch (error) {
           console.error('FloatingPlayer: Error loading video:', error)
+          // 如果載入失敗，可能是播放器實例有問題，嘗試重新初始化
+          ytPlayer = null
+          initPlayer(videoId)
         }
-      } else if (!playerStore.isMinimized) {
-        // 只有在展開狀態且播放器不存在時才初始化
-        console.log('FloatingPlayer: Initializing new player')
+      } else {
+        // 播放器不存在時，初始化播放器（無論是否最小化）
+        console.log('FloatingPlayer: Initializing new player (minimized:', playerStore.isMinimized, ')')
         initPlayer(videoId)
       }
     }
   }
-}, { deep: true })
+})
 
 // 防止循環更新的標記
 let isUpdatingFromYouTube = false
