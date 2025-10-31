@@ -56,7 +56,8 @@
       "Bash(then cp \"$file\" \"$dest\")",
       "Bash(done)",
       "Bash(docker cp:*)",
-      "Read(//tmp/ci4_config/**)"
+      "Read(//tmp/ci4_config/**)",
+      "Bash(/tmp/floating_player_script.vue)"
     ],
     "deny": [],
     "ask": []

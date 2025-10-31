@@ -88,7 +88,7 @@ import { PlayCircleIcon } from '@heroicons/vue/24/solid'
   color: #616161;
   font-weight: 500;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   transition: all 0.2s;
 }
 

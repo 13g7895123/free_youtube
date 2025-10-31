@@ -100,7 +100,7 @@ function handleToggle() {
   width: 44px;
   height: 24px;
   background-color: #e0e0e0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   transition: background-color 0.2s ease;
   flex-shrink: 0;
 }

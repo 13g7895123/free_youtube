@@ -14,6 +14,15 @@
         <ClockIcon class="duration-icon" />
         {{ formatDuration(video.duration) }}
       </div>
+      <button
+        v-if="showDelete"
+        @click.stop="handleDelete"
+        class="btn-delete-corner"
+        v-tooltip="'刪除影片'"
+        aria-label="刪除影片"
+      >
+        <TrashIcon class="icon" />
+      </button>
     </div>
 
     <div class="video-info">
@@ -21,31 +30,20 @@
       <p class="channel" v-if="video.channel_name">{{ video.channel_name }}</p>
       <p class="description" v-if="video.description">{{ truncateText(video.description, 100) }}</p>
       <div class="actions">
-        <button
-          @click="handlePlay"
-          class="btn btn-primary"
-          v-tooltip="'播放影片'"
+        <BaseButton
+          variant="primary"
+          icon-only
+          :icon="PlayIcon"
           aria-label="播放影片"
-        >
-          <PlayIcon class="icon" />
-        </button>
-        <button
-          @click="handleAddToPlaylist"
-          class="btn btn-secondary"
-          v-tooltip="'加入播放清單'"
+          @click="handlePlay"
+        />
+        <BaseButton
+          variant="secondary"
+          icon-only
+          :icon="PlusIcon"
           aria-label="加入播放清單"
-        >
-          <PlusIcon class="icon" />
-        </button>
-        <button
-          v-if="showDelete"
-          @click="handleDelete"
-          class="btn btn-danger"
-          v-tooltip="'刪除影片'"
-          aria-label="刪除影片"
-        >
-          <TrashIcon class="icon" />
-        </button>
+          @click="handleAddToPlaylist"
+        />
       </div>
     </div>
   </div>
@@ -53,6 +51,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue'
+import BaseButton from '@/components/BaseButton.vue'
 import {
   VideoCameraIcon,
   ClockIcon,
@@ -173,6 +172,44 @@ const handleDelete = () => {
 .duration-icon {
   width: 12px;
   height: 12px;
+}
+
+.btn-delete-corner {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(244, 67, 54, 0.9);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: white;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transform: scale(0.8);
+  z-index: 10;
+}
+
+.video-card:hover .btn-delete-corner {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.btn-delete-corner:hover {
+  background: rgba(211, 47, 47, 1);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-delete-corner .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .video-info {

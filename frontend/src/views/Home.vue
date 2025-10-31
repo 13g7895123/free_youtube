@@ -343,7 +343,7 @@ onMounted(async () => {
   text-align: center;
   padding: 4rem 2rem;
   background-color: #ffffff;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 

@@ -166,7 +166,7 @@ function handleMuteToggle() {
   gap: 1.5rem;
   padding: 1rem 1.5rem;
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -239,7 +239,7 @@ function handleMuteToggle() {
   flex: 1;
   height: 6px;
   background-color: #e0e0e0;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
@@ -298,7 +298,7 @@ function handleMuteToggle() {
   left: 0;
   height: 100%;
   background-color: #ff0000;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   transition: width 0.1s ease;
   pointer-events: none;
   z-index: 1;

@@ -353,14 +353,14 @@ const formatDuration = (seconds) => {
 
 .player-section {
   background: white;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 24px;
   margin-bottom: 24px;
 }
 
 .player-placeholder {
   background: #333;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 60px 20px;
   text-align: center;
   margin-bottom: 20px;
@@ -426,7 +426,7 @@ const formatDuration = (seconds) => {
   gap: 12px;
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -447,7 +447,7 @@ const formatDuration = (seconds) => {
   align-items: center;
   justify-content: center;
   background: #f0f0f0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
 }
 

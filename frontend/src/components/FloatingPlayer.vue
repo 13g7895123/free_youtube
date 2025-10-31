@@ -548,7 +548,7 @@ onUnmounted(() => {
 
 .floating-player.minimized {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   width: 350px;
@@ -573,7 +573,7 @@ onUnmounted(() => {
 .thumbnail {
   width: 60px;
   height: 45px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -662,7 +662,7 @@ onUnmounted(() => {
   width: 320px;
   max-width: calc(100vw - 40px);
   background: white;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }

@@ -78,7 +78,7 @@ const statusText = computed(() => {
   position: relative;
   width: 100%;
   background-color: #000;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
   /* 讓容器根據內容自適應高度 */
@@ -145,7 +145,7 @@ const statusText = computed(() => {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
   background-color: #f5f5f5;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .status-indicator {
@@ -197,7 +197,7 @@ const statusText = computed(() => {
 /* 響應式設計 */
 @media (max-width: 768px) {
   .player-wrapper {
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   .loading-spinner {

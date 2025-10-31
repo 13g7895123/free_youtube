@@ -17,31 +17,11 @@
             aria-label="搜尋影片"
           />
         </div>
-        <div class="export-import-buttons">
-          <button
-            @click="handleExport"
-            class="btn btn-success"
-            aria-label="匯出影片庫"
-          >
-            <ArrowUpTrayIcon class="icon" />
-            <span>匯出</span>
-          </button>
-          <button
-            @click="triggerImport"
-            class="btn btn-info"
-            aria-label="匯入影片庫"
-          >
-            <ArrowDownTrayIcon class="icon" />
-            <span>匯入</span>
-          </button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            @change="handleImport"
-            style="display: none"
-          />
-        </div>
+        <ExportImportButtons
+          :can-export="videos.length > 0"
+          @export="handleExport"
+          @import="handleImportFile"
+        />
       </div>
     </div>
 
@@ -62,27 +42,29 @@
           v-for="video in videos"
           :key="video.id"
           :video="video"
+          :show-delete="true"
           @play="handlePlayVideo"
           @add-to-playlist="handleAddToPlaylist"
+          @delete="handleDeleteVideo"
         />
       </div>
 
       <div class="pagination" v-if="totalPages > 1">
-        <button
-          @click="currentPage > 1 && fetchVideos(currentPage - 1)"
+        <BaseButton
+          variant="secondary"
           :disabled="currentPage === 1"
-          class="btn"
+          @click="fetchVideos(currentPage - 1)"
         >
           上一頁
-        </button>
+        </BaseButton>
         <span>第 {{ currentPage }} / {{ totalPages }} 頁</span>
-        <button
-          @click="currentPage < totalPages && fetchVideos(currentPage + 1)"
+        <BaseButton
+          variant="secondary"
           :disabled="currentPage === totalPages"
-          class="btn"
+          @click="fetchVideos(currentPage + 1)"
         >
           下一頁
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -93,14 +75,13 @@
           <div class="modal" @click.stop role="dialog" aria-labelledby="modal-playlist-title">
             <div class="modal-header">
               <h2 id="modal-playlist-title">加入播放清單</h2>
-              <button
-                @click="showPlaylistModal = false"
-                class="btn-close-icon"
-                v-tooltip="'關閉'"
+              <BaseButton
+                variant="ghost"
+                icon-only
+                :icon="XMarkIcon"
                 aria-label="關閉"
-              >
-                <XMarkIcon class="icon" />
-              </button>
+                @click="showPlaylistModal = false"
+              />
             </div>
             <div class="playlist-list">
               <button
@@ -129,8 +110,26 @@
               <p>確定要匯入影片資料嗎？已存在的影片將會被略過。</p>
             </div>
             <div class="modal-footer">
-              <button @click="cancelImport" class="btn btn-secondary">取消</button>
-              <button @click="confirmImport" class="btn btn-primary">確認匯入</button>
+              <BaseButton variant="secondary" @click="cancelImport">取消</BaseButton>
+              <BaseButton variant="primary" @click="confirmImport">確認匯入</BaseButton>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Confirm Delete Modal -->
+      <Transition name="modal">
+        <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
+          <div class="modal confirm-modal" @click.stop role="dialog">
+            <div class="modal-header">
+              <h2>確認刪除</h2>
+            </div>
+            <div class="modal-body">
+              <p v-if="videoToDelete">確定要刪除影片「{{ videoToDelete.title }}」嗎？此操作無法復原。</p>
+            </div>
+            <div class="modal-footer">
+              <BaseButton variant="secondary" @click="cancelDelete">取消</BaseButton>
+              <BaseButton variant="danger" @click="confirmDelete">確認刪除</BaseButton>
             </div>
           </div>
         </div>
@@ -147,11 +146,11 @@ import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import { useToast } from '@/composables/useToast'
 import VideoCard from '@/components/VideoCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import ExportImportButtons from '@/components/ExportImportButtons.vue'
+import BaseButton from '@/components/BaseButton.vue'
 import {
   FilmIcon,
   MagnifyingGlassIcon,
-  ArrowUpTrayIcon,
-  ArrowDownTrayIcon,
   XMarkIcon,
   QueueListIcon,
   ChevronRightIcon
@@ -161,6 +160,8 @@ const toast = useToast()
 
 const showConfirmModal = ref(false)
 const pendingImportFile = ref(null)
+const showDeleteModal = ref(false)
+const videoToDelete = ref(null)
 
 const videoStore = useVideoStore()
 const playlistStore = usePlaylistStore()
@@ -169,7 +170,6 @@ const globalPlayerStore = useGlobalPlayerStore()
 const searchQuery = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref(null)
-const fileInput = ref(null)
 let searchTimeout = null
 
 const videos = computed(() => videoStore.videos)
@@ -226,6 +226,11 @@ const addToPlaylist = async (playlistId) => {
 }
 
 const handleExport = async () => {
+  if (videos.value.length === 0) {
+    toast.warning('沒有影片可以匯出')
+    return
+  }
+
   try {
     const result = await videoStore.exportVideos()
     toast.success(`成功匯出 ${result.count} 個影片`)
@@ -234,17 +239,11 @@ const handleExport = async () => {
   }
 }
 
-const triggerImport = () => {
-  fileInput.value.click()
-}
-
-const handleImport = async (event) => {
-  const file = event.target.files[0]
+const handleImportFile = (file) => {
   if (!file) return
 
   pendingImportFile.value = file
   showConfirmModal.value = true
-  event.target.value = ''
 }
 
 const confirmImport = async () => {
@@ -263,6 +262,32 @@ const confirmImport = async () => {
 const cancelImport = () => {
   showConfirmModal.value = false
   pendingImportFile.value = null
+}
+
+const handleDeleteVideo = (videoId) => {
+  const video = videos.value.find(v => v.id === videoId)
+  if (video) {
+    videoToDelete.value = video
+    showDeleteModal.value = true
+  }
+}
+
+const confirmDelete = async () => {
+  if (!videoToDelete.value) return
+
+  showDeleteModal.value = false
+  try {
+    await videoStore.deleteVideo(videoToDelete.value.id)
+    toast.success('影片已刪除')
+  } catch (err) {
+    toast.error('刪除失敗: ' + err.message)
+  }
+  videoToDelete.value = null
+}
+
+const cancelDelete = () => {
+  showDeleteModal.value = false
+  videoToDelete.value = null
 }
 
 onMounted(() => {
@@ -333,11 +358,6 @@ onMounted(() => {
   box-shadow: 0 0 0 3px var(--color-info-alpha);
 }
 
-.export-import-buttons {
-  display: flex;
-  gap: var(--space-2);
-}
-
 .error,
 .empty {
   text-align: center;
@@ -347,7 +367,7 @@ onMounted(() => {
 
 .error {
   background: #fee;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 24px;
 }
 
@@ -357,7 +377,7 @@ onMounted(() => {
   background: #667eea;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -381,7 +401,7 @@ onMounted(() => {
   background: #667eea;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 

@@ -10,14 +10,15 @@
           aria-label="YouTube 網址輸入"
           :disabled="isLoading"
         />
-        <button
+        <BaseButton
+          variant="primary"
           type="submit"
-          class="btn btn-primary"
-          :disabled="!urlInput.trim() || isLoading"
+          :disabled="!urlInput.trim()"
+          :loading="isLoading"
           aria-label="載入影片"
         >
-          {{ isLoading ? '載入中...' : '播放' }}
-        </button>
+          播放
+        </BaseButton>
       </div>
       <p v-if="validationError" class="validation-error" role="alert">
         {{ validationError }}
@@ -28,6 +29,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import BaseButton from '@/components/BaseButton.vue'
 
 const props = defineProps({
   isLoading: {
@@ -84,7 +86,7 @@ function handleSubmit() {
   color: #d32f2f;
   background-color: #ffebee;
   border-left: 4px solid #d32f2f;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 @media (max-width: 640px) {

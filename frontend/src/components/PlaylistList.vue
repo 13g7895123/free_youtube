@@ -107,7 +107,7 @@ const onSavePlaylist = async (playlistData) => {
 .btn {
   padding: 10px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
   transition: background 0.2s;

@@ -82,7 +82,7 @@ function handleClose() {
   padding: 1rem;
   background-color: #ffebee;
   border-left: 4px solid #d32f2f;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -126,7 +126,7 @@ function handleClose() {
   border: none;
   color: #d32f2f;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: background-color 0.2s ease, transform 0.1s ease;
 }
 

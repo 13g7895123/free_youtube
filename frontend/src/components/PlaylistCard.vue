@@ -68,7 +68,7 @@ const formatDate = (date) => {
 .playlist-card {
   background: white;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 16px;
   margin-bottom: 12px;
   transition: box-shadow 0.2s;
@@ -104,7 +104,7 @@ const formatDate = (date) => {
   cursor: pointer;
   color: #666;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: background 0.2s;
 }
 
@@ -142,7 +142,7 @@ const formatDate = (date) => {
 .btn {
   padding: 8px 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
   transition: background 0.2s;

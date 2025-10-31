@@ -6,40 +6,19 @@
         播放清單管理
       </h1>
       <div class="header-actions">
-        <div class="export-import-buttons">
-          <button
-            @click="handleExport"
-            class="btn btn-success"
-            aria-label="匯出播放清單"
-          >
-            <ArrowUpTrayIcon class="icon" />
-            <span>匯出</span>
-          </button>
-          <button
-            @click="triggerImport"
-            class="btn btn-info"
-            aria-label="匯入播放清單"
-          >
-            <ArrowDownTrayIcon class="icon" />
-            <span>匯入</span>
-          </button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            @change="handleImport"
-            style="display: none"
-          />
-        </div>
-        <button
-          @click="showCreateModal = true"
-          class="btn btn-primary"
-          v-tooltip="'建立新的播放清單'"
+        <ExportImportButtons
+          :can-export="playlists.length > 0"
+          @export="handleExport"
+          @import="handleImportFile"
+        />
+        <BaseButton
+          variant="primary"
+          :icon="PlusIcon"
           aria-label="新建播放清單"
+          @click="showCreateModal = true"
         >
-          <PlusIcon class="icon" />
           新建播放清單
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -50,16 +29,19 @@
       <button @click="fetchPlaylists" class="btn-retry">重新載入</button>
     </div>
 
-    <div v-else-if="playlists.length === 0" class="empty">
+    <div v-else-if="allPlaylists.length === 0" class="empty">
       <p>沒有播放清單</p>
     </div>
 
     <div v-else>
       <div class="playlist-grid">
-        <div v-for="playlist in playlists" :key="playlist.id" class="playlist-card">
+        <div v-for="playlist in allPlaylists" :key="playlist.id" class="playlist-card">
           <div class="playlist-header">
-            <h3>{{ playlist.name }}</h3>
-            <div class="actions">
+            <h3>
+              {{ playlist.name }}
+              <span v-if="playlist.is_system" class="system-badge">系統</span>
+            </h3>
+            <div class="actions" v-if="!playlist.is_system">
               <button
                 @click="handleEdit(playlist)"
                 class="btn-icon"
@@ -91,33 +73,32 @@
               {{ playlist.is_active ? '啟用' : '停用' }}
             </span>
           </div>
-          <button
-            @click="handleViewItems(playlist)"
-            class="btn btn-secondary"
-            v-tooltip="'查看播放清單內容'"
+          <BaseButton
+            variant="secondary"
             aria-label="查看播放清單項目"
+            @click="handleViewItems(playlist)"
           >
             查看項目
-          </button>
+          </BaseButton>
         </div>
       </div>
 
       <div class="pagination" v-if="totalPages > 1">
-        <button
-          @click="currentPage > 1 && fetchPlaylists(currentPage - 1)"
+        <BaseButton
+          variant="secondary"
           :disabled="currentPage === 1"
-          class="btn"
+          @click="fetchPlaylists(currentPage - 1)"
         >
           上一頁
-        </button>
+        </BaseButton>
         <span>第 {{ currentPage }} / {{ totalPages }} 頁</span>
-        <button
-          @click="currentPage < totalPages && fetchPlaylists(currentPage + 1)"
+        <BaseButton
+          variant="secondary"
           :disabled="currentPage === totalPages"
-          class="btn"
+          @click="fetchPlaylists(currentPage + 1)"
         >
           下一頁
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -128,14 +109,13 @@
           <div class="modal" @click.stop role="dialog" aria-labelledby="modal-title">
             <div class="modal-header">
               <h2 id="modal-title">{{ editingPlaylist ? '編輯播放清單' : '新建播放清單' }}</h2>
-              <button
-                @click="showCreateModal = false"
-                class="btn-close-icon"
-                v-tooltip="'關閉'"
+              <BaseButton
+                variant="ghost"
+                icon-only
+                :icon="XMarkIcon"
                 aria-label="關閉"
-              >
-                <XMarkIcon class="icon" />
-              </button>
+                @click="showCreateModal = false"
+              />
             </div>
             <form @submit.prevent="savePlaylist">
               <div class="form-group">
@@ -153,10 +133,10 @@
                 </label>
               </div>
               <div class="form-actions">
-                <button type="submit" class="btn btn-primary">儲存</button>
-                <button @click="showCreateModal = false" type="button" class="btn btn-secondary">
+                <BaseButton variant="primary" type="submit">儲存</BaseButton>
+                <BaseButton variant="secondary" type="button" @click="showCreateModal = false">
                   取消
-                </button>
+                </BaseButton>
               </div>
             </form>
           </div>
@@ -174,8 +154,8 @@
               <p>確定要刪除 "{{ deletingPlaylist?.name }}" 嗎？此操作無法復原。</p>
             </div>
             <div class="modal-footer">
-              <button @click="cancelDelete" class="btn btn-secondary">取消</button>
-              <button @click="confirmDelete" class="btn btn-danger">刪除</button>
+              <BaseButton variant="secondary" @click="cancelDelete">取消</BaseButton>
+              <BaseButton variant="danger" @click="confirmDelete">刪除</BaseButton>
             </div>
           </div>
         </div>
@@ -192,8 +172,8 @@
               <p>確定要匯入播放清單資料嗎？這將會建立新的播放清單。</p>
             </div>
             <div class="modal-footer">
-              <button @click="cancelImport" class="btn btn-secondary">取消</button>
-              <button @click="confirmImport" class="btn btn-primary">確認匯入</button>
+              <BaseButton variant="secondary" @click="cancelImport">取消</BaseButton>
+              <BaseButton variant="primary" @click="confirmImport">確認匯入</BaseButton>
             </div>
           </div>
         </div>
@@ -209,10 +189,10 @@ import { usePlaylistStore } from '@/stores/playlistStore'
 import { useVideoStore } from '@/stores/videoStore'
 import { useToast } from '@/composables/useToast'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import ExportImportButtons from '@/components/ExportImportButtons.vue'
+import BaseButton from '@/components/BaseButton.vue'
 import {
   QueueListIcon,
-  ArrowUpTrayIcon,
-  ArrowDownTrayIcon,
   PlusIcon,
   PencilIcon,
   TrashIcon,
@@ -232,13 +212,32 @@ const editingPlaylist = ref(null)
 const deletingPlaylist = ref(null)
 const pendingImportFile = ref(null)
 const formData = ref({ name: '', description: '', is_active: true })
-const fileInput = ref(null)
 
 const playlists = computed(() => playlistStore.playlists)
 const loading = computed(() => playlistStore.loading)
 const error = computed(() => playlistStore.error)
 const currentPage = computed(() => playlistStore.currentPage)
 const totalPages = computed(() => playlistStore.totalPages)
+
+// 虛擬的「所有影片」播放清單
+const allVideosPlaylist = computed(() => ({
+  id: 'all-videos',
+  name: '所有影片',
+  description: '影片庫中的所有影片',
+  item_count: videoStore.videos?.length || 0,
+  is_active: true,
+  is_system: true, // 標記為系統播放清單
+  created_at: new Date().toISOString()
+}))
+
+// 合併系統播放清單和使用者播放清單
+const allPlaylists = computed(() => {
+  const hasVideos = videoStore.videos && videoStore.videos.length > 0
+  if (hasVideos) {
+    return [allVideosPlaylist.value, ...playlists.value]
+  }
+  return playlists.value
+})
 
 const truncateText = (text, length) => {
   if (!text) return ''
@@ -279,8 +278,13 @@ const cancelDelete = () => {
 }
 
 const handleViewItems = (playlist) => {
-  // Navigate to playlist detail page using Vue Router (SPA navigation)
-  router.push(`/playlists/${playlist.id}`)
+  // 對於系統播放清單，導向影片庫頁面
+  if (playlist.is_system && playlist.id === 'all-videos') {
+    router.push('/library')
+  } else {
+    // Navigate to playlist detail page using Vue Router (SPA navigation)
+    router.push(`/playlists/${playlist.id}`)
+  }
 }
 
 const savePlaylist = async () => {
@@ -301,6 +305,11 @@ const savePlaylist = async () => {
 }
 
 const handleExport = async () => {
+  if (playlists.value.length === 0) {
+    toast.warning('沒有播放清單可以匯出')
+    return
+  }
+
   try {
     const result = await playlistStore.exportPlaylists()
     toast.success(`成功匯出 ${result.count} 個播放清單`)
@@ -309,17 +318,11 @@ const handleExport = async () => {
   }
 }
 
-const triggerImport = () => {
-  fileInput.value.click()
-}
-
-const handleImport = async (event) => {
-  const file = event.target.files[0]
+const handleImportFile = (file) => {
   if (!file) return
 
   pendingImportFile.value = file
   showConfirmModal.value = true
-  event.target.value = ''
 }
 
 const confirmImport = async () => {
@@ -342,8 +345,12 @@ const cancelImport = () => {
   pendingImportFile.value = null
 }
 
-onMounted(() => {
-  fetchPlaylists()
+onMounted(async () => {
+  await fetchPlaylists()
+  // 載入影片數據以顯示「所有影片」播放清單
+  if (!videoStore.videos || videoStore.videos.length === 0) {
+    await videoStore.fetchVideos()
+  }
 })
 </script>
 
@@ -382,12 +389,8 @@ onMounted(() => {
   align-items: center;
 }
 
-.export-import-buttons {
-  display: flex;
-  gap: var(--space-2);
-}
-
 /* 使用全域統一的 .btn 和 .btn-primary 樣式 */
+/* export-import-buttons 樣式移至共用元件 */
 
 .error,
 .empty {
@@ -406,7 +409,7 @@ onMounted(() => {
 .playlist-card {
   background: white;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -422,6 +425,22 @@ onMounted(() => {
 .playlist-header h3 {
   margin: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.system-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-info-alpha);
+  color: var(--color-info);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .actions {
@@ -502,7 +521,7 @@ onMounted(() => {
   background: #e0e0e0;
   color: #333;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -694,7 +713,7 @@ onMounted(() => {
   background: #667eea;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
