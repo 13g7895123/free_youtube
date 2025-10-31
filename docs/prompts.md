@@ -1,1 +1,1 @@
-1. 目前匯入功能會出現Error importing playlists: Error: 無效的匯入檔案格式，然後同步確認一下loading的動畫，很醜
+1. 目前/playlists這個頁面的匯入功能，只有匯入清單，清單底下的項目沒有正常被匯入 

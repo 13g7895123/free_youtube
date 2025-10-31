@@ -173,9 +173,13 @@ class VideoController extends ResourceController
                 return $this->fail('缺少 video_id 參數', 400);
             }
 
-            $exists = $this->model->exists($videoId);
+            $video = $this->model->findByYoutubeId($videoId);
+            $exists = $video !== null;
 
-            return $this->respond(api_success(['exists' => $exists], '檢查完成'), 200);
+            return $this->respond(api_success([
+                'exists' => $exists,
+                'video' => $video
+            ], '檢查完成'), 200);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage(), 500);
         }

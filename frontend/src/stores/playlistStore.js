@@ -253,10 +253,14 @@ export const usePlaylistStore = defineStore('playlist', () => {
       let successCount = 0
       let failCount = 0
       const errors = []
+      let totalItemsImported = 0
+      let totalItemsFailed = 0
 
       // 逐一匯入播放清單
       for (const playlistData of importData.playlists) {
         try {
+          console.log(`Importing playlist: ${playlistData.name}`)
+
           // 建立播放清單
           const newPlaylist = await createPlaylist({
             name: playlistData.name,
@@ -264,45 +268,65 @@ export const usePlaylistStore = defineStore('playlist', () => {
             is_active: playlistData.is_active !== false
           })
 
+          console.log(`Created playlist: ${newPlaylist.name} (ID: ${newPlaylist.id})`)
+
           // 匯入播放清單中的影片
           if (playlistData.items && Array.isArray(playlistData.items)) {
+            console.log(`Importing ${playlistData.items.length} items for playlist: ${playlistData.name}`)
+
             for (const item of playlistData.items) {
               try {
-                // 確保影片存在於影片庫中
-                let videoExists = await videoStore.checkVideoExists(item.video_id)
+                if (!item.video_id) {
+                  console.warn('Item missing video_id, skipping:', item)
+                  totalItemsFailed++
+                  continue
+                }
 
-                if (!videoExists) {
+                // 先嘗試取得影片
+                let video = await videoStore.getVideoByYoutubeId(item.video_id)
+
+                if (!video) {
                   // 如果影片不存在，先建立影片
-                  await videoStore.createVideo({
+                  console.log(`Creating new video: ${item.video_id} - ${item.title}`)
+                  video = await videoStore.createVideo({
                     video_id: item.video_id,
-                    title: item.title,
+                    title: item.title || 'Untitled',
                     youtube_url: item.youtube_url,
                     thumbnail_url: item.thumbnail_url,
                     duration: item.duration
                   })
+                  console.log(`Video created with ID: ${video.id}`)
+                } else {
+                  console.log(`Video already exists: ${item.video_id} (ID: ${video.id})`)
                 }
 
-                // 然後加入到播放清單
-                // 需要先取得影片的 ID (資料庫 ID，不是 video_id)
-                const videos = await videoStore.searchVideos(item.title)
-                const video = videos.data.data.find(v => v.video_id === item.video_id)
-
-                if (video) {
+                // 然後加入到播放清單 (使用資料庫 ID)
+                if (video && video.id) {
+                  console.log(`Adding video ${video.id} to playlist ${newPlaylist.id}`)
                   await addItemToPlaylist(newPlaylist.id, video.id)
+                  totalItemsImported++
+                  console.log(`Successfully added item ${totalItemsImported}`)
+                } else {
+                  console.error('Video object missing ID:', item.video_id, video)
+                  totalItemsFailed++
                 }
               } catch (itemErr) {
-                console.error('Error adding item to playlist:', item.video_id, itemErr)
+                console.error(`Error adding item to playlist (${item.video_id}):`, itemErr)
+                totalItemsFailed++
               }
             }
           }
 
           successCount++
+          console.log(`Playlist import complete: ${playlistData.name}`)
         } catch (err) {
           console.error('Error importing playlist:', playlistData.name, err)
           failCount++
           errors.push({ name: playlistData.name, error: err.message })
         }
       }
+
+      console.log(`Import summary: ${successCount} playlists, ${totalItemsImported} items imported, ${totalItemsFailed} items failed`)
 
       // 重新載入播放清單
       await fetchPlaylists()
@@ -312,6 +336,8 @@ export const usePlaylistStore = defineStore('playlist', () => {
         successCount,
         failCount,
         total: importData.playlists.length,
+        totalItemsImported,
+        totalItemsFailed,
         errors
       }
     } catch (err) {

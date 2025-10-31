@@ -203,7 +203,12 @@ const handleImport = async (event) => {
   if (confirm('確定要匯入播放清單資料嗎？這將會建立新的播放清單。')) {
     try {
       const result = await playlistStore.importPlaylists(file, videoStore)
-      alert(`匯入完成！\n成功: ${result.successCount}\n失敗: ${result.failCount}\n總計: ${result.total}`)
+      const message = [
+        '匯入完成！',
+        `播放清單 - 成功: ${result.successCount}, 失敗: ${result.failCount}, 總計: ${result.total}`,
+        `項目 - 成功: ${result.totalItemsImported || 0}, 失敗: ${result.totalItemsFailed || 0}`
+      ].join('\n')
+      alert(message)
     } catch (err) {
       alert('匯入失敗: ' + err.message)
     }

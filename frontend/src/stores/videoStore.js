@@ -47,7 +47,7 @@ export const useVideoStore = defineStore('video', () => {
   const searchVideos = async (query) => {
     if (query.length < 2) {
       videos.value = []
-      return
+      return { data: { data: [] } }
     }
     searchQuery.value = query
     loading.value = true
@@ -55,9 +55,11 @@ export const useVideoStore = defineStore('video', () => {
     try {
       const response = await videoService.searchVideos(query)
       videos.value = response.data.data
+      return response
     } catch (err) {
       error.value = err.message || '搜尋失敗'
       console.error('Error searching videos:', err)
+      return { data: { data: [] } }
     } finally {
       loading.value = false
     }
@@ -141,6 +143,23 @@ export const useVideoStore = defineStore('video', () => {
     } catch (err) {
       console.error('Error checking video:', err)
       return false
+    }
+  }
+
+  /**
+   * Get video by YouTube video_id
+   * Returns the video object if it exists, null otherwise
+   */
+  const getVideoByYoutubeId = async (videoId) => {
+    try {
+      const response = await videoService.checkVideoExists(videoId)
+      if (response.data.data.exists && response.data.data.video) {
+        return response.data.data.video
+      }
+      return null
+    } catch (err) {
+      console.error('Error getting video by YouTube ID:', err)
+      return null
     }
   }
 
@@ -264,6 +283,7 @@ export const useVideoStore = defineStore('video', () => {
     updateVideo,
     deleteVideo,
     checkVideoExists,
+    getVideoByYoutubeId,
     clearError,
     exportVideos,
     importVideos,
