@@ -59,7 +59,7 @@ class PlaylistModel extends Model
 
         if ($playlist) {
             $itemModel = new PlaylistItemModel();
-            $playlist->items = $itemModel->getPlaylistItems($id);
+            $playlist->items = $itemModel->getPlaylistVideos($id);
         }
 
         return $playlist;
