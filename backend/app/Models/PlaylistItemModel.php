@@ -64,7 +64,11 @@ class PlaylistItemModel extends Model
                             ->asArray()
                             ->first();
 
-        $position = ($maxPosition && $maxPosition['position']) ? $maxPosition['position'] + 1 : 0;
+        // 修正邏輯：正確處理 position 為 0 的情況
+        // 使用 !== null 判斷而不是 truthy 判斷，因為 0 也是有效的 position
+        $position = ($maxPosition && $maxPosition['position'] !== null)
+            ? $maxPosition['position'] + 1
+            : 0;
 
         return $this->insert([
             'playlist_id' => $playlistId,

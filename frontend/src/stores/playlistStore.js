@@ -311,8 +311,14 @@ export const usePlaylistStore = defineStore('playlist', () => {
                   totalItemsFailed++
                 }
               } catch (itemErr) {
-                console.error(`Error adding item to playlist (${item.video_id}):`, itemErr)
-                totalItemsFailed++
+                // 409 表示影片已在播放清單中，這是可接受的（跳過重複項目）
+                if (itemErr.response?.status === 409) {
+                  console.warn(`Video already in playlist, skipping: ${item.video_id}`)
+                  totalItemsFailed++
+                } else {
+                  console.error(`Error adding item to playlist (${item.video_id}):`, itemErr)
+                  totalItemsFailed++
+                }
               }
             }
           }
