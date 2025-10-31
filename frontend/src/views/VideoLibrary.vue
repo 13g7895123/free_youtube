@@ -31,6 +31,7 @@
     </div>
 
     <div v-if="loading" class="loading">
+      <div class="spinner"></div>
       <p>載入中...</p>
     </div>
 
@@ -272,6 +273,33 @@ onMounted(() => {
 .empty {
   text-align: center;
   padding: 48px 24px;
+  color: #666;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading p {
+  margin: 0;
+  font-size: 16px;
   color: #666;
 }
 

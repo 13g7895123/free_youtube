@@ -21,7 +21,10 @@
         </div>
 
         <div class="modal-body">
-          <div v-if="loadingPlaylists" class="loading">載入中...</div>
+          <div v-if="loadingPlaylists" class="loading">
+            <div class="spinner"></div>
+            <p>載入中...</p>
+          </div>
 
           <div v-else-if="playlists.length === 0" class="empty">
             <p>還沒有播放清單</p>
@@ -340,6 +343,33 @@ watch(showPlaylistModal, (newValue) => {
 .empty {
   text-align: center;
   padding: 40px 20px;
+  color: #666;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading p {
+  margin: 0;
+  font-size: 14px;
   color: #666;
 }
 

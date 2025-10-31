@@ -1,1 +1,1 @@
-1. 現在/playlists/1這個頁面的項目列表資訊顯示錯誤，沒有正確顯示出項目的資訊，我目前看API沒有回傳相關title或是用於前端的資訊，另外，點了也沒有音樂播放
+1. 目前匯入功能會出現Error importing playlists: Error: 無效的匯入檔案格式，然後同步確認一下loading的動畫，很醜

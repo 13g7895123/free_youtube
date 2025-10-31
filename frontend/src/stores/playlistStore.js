@@ -225,11 +225,29 @@ export const usePlaylistStore = defineStore('playlist', () => {
 
     try {
       const text = await file.text()
-      const importData = JSON.parse(text)
+
+      let importData
+      try {
+        importData = JSON.parse(text)
+      } catch (parseError) {
+        throw new Error('無效的 JSON 格式：' + parseError.message)
+      }
 
       // 驗證資料格式
-      if (!importData.playlists || !Array.isArray(importData.playlists)) {
-        throw new Error('無效的匯入檔案格式')
+      if (!importData || typeof importData !== 'object') {
+        throw new Error('無效的匯入檔案格式：檔案內容必須是有效的 JSON 物件')
+      }
+
+      if (!importData.playlists) {
+        throw new Error('無效的匯入檔案格式：缺少 playlists 屬性')
+      }
+
+      if (!Array.isArray(importData.playlists)) {
+        throw new Error('無效的匯入檔案格式：playlists 必須是陣列')
+      }
+
+      if (importData.playlists.length === 0) {
+        throw new Error('匯入檔案中沒有播放清單資料')
       }
 
       let successCount = 0

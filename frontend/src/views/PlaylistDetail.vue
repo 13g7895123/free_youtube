@@ -68,7 +68,10 @@
       </div>
     </div>
 
-    <div v-else class="loading">Loading...</div>
+    <div v-else class="loading">
+      <div class="spinner"></div>
+      <p>載入中...</p>
+    </div>
   </div>
 </template>
 
@@ -366,9 +369,32 @@ const formatDuration = (seconds) => {
 }
 
 .loading {
-  text-align: center;
-  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  min-height: 300px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading p {
+  margin: 0;
   font-size: 16px;
-  color: #999;
+  color: #666;
 }
 </style>
