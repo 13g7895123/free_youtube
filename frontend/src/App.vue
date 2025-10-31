@@ -3,7 +3,7 @@
     <nav class="navbar">
       <div class="nav-container">
         <router-link to="/" class="nav-brand">
-          <span class="brand-icon">▶️</span>
+          <PlayCircleIcon class="brand-icon" />
           YouTube Loop Player
         </router-link>
         <div class="nav-links">
@@ -15,11 +15,14 @@
     </nav>
     <router-view />
     <FloatingPlayer />
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import FloatingPlayer from '@/components/FloatingPlayer.vue'
+import Toast from '@/components/Toast.vue'
+import { PlayCircleIcon } from '@heroicons/vue/24/solid'
 </script>
 
 <style>
@@ -61,10 +64,18 @@ import FloatingPlayer from '@/components/FloatingPlayer.vue'
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.nav-brand:hover {
+  color: #ff0000;
 }
 
 .brand-icon {
-  font-size: 1.75rem;
+  width: 32px;
+  height: 32px;
+  color: #ff0000;
+  flex-shrink: 0;
 }
 
 .nav-links {

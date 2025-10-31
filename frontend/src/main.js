@@ -4,8 +4,14 @@ import App from './App.vue'
 import router from './router'
 import './style.css'
 
+// Import directives
+import tooltip from './directives/tooltip'
+
 const app = createApp(App)
 const pinia = createPinia()
+
+// Register directives
+app.directive('tooltip', tooltip)
 
 app.use(pinia)
 app.use(router)

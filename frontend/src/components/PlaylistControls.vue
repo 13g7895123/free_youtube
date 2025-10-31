@@ -1,26 +1,51 @@
 <template>
-  <div class="playlist-controls">
+  <div class="playlist-controls" role="region" aria-label="播放清單控制">
     <div class="controls-info">
-      <span class="play-status">{{ currentIndex + 1 }} / {{ totalItems }}</span>
-      <span v-if="isPlaying" class="status-indicator">● Playing</span>
-      <span v-else class="status-indicator paused">⏸ Paused</span>
+      <span class="play-status" aria-live="polite">{{ currentIndex + 1 }} / {{ totalItems }}</span>
+      <span v-if="isPlaying" class="status-indicator">
+        <PlayIcon class="status-icon" />
+        播放中
+      </span>
+      <span v-else class="status-indicator paused">
+        <PauseIcon class="status-icon" />
+        已暫停
+      </span>
     </div>
 
     <div class="controls-buttons">
-      <button @click="$emit('prev')" class="btn-control" title="Previous">
-        ⏮ Prev
+      <button
+        @click="$emit('prev')"
+        class="btn-control"
+        v-tooltip="'上一首'"
+        aria-label="上一首"
+      >
+        <BackwardIcon class="icon" />
       </button>
-      <button @click="$emit('play')" :class="['btn-control', 'btn-play', isPlaying ? 'playing' : '']" title="Play/Pause">
-        {{ isPlaying ? '⏸ Pause' : '▶ Play' }}
+      <button
+        @click="$emit('play')"
+        :class="['btn-control', 'btn-play', isPlaying ? 'playing' : '']"
+        v-tooltip="isPlaying ? '暫停' : '播放'"
+        :aria-label="isPlaying ? '暫停' : '播放'"
+        :aria-pressed="isPlaying"
+      >
+        <PauseIcon v-if="isPlaying" class="icon" />
+        <PlayIcon v-else class="icon" />
       </button>
-      <button @click="$emit('next')" class="btn-control" title="Next">
-        Next ⏭
+      <button
+        @click="$emit('next')"
+        class="btn-control"
+        v-tooltip="'下一首'"
+        aria-label="下一首"
+      >
+        <ForwardIcon class="icon" />
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
+import { PlayIcon, PauseIcon, BackwardIcon, ForwardIcon } from '@heroicons/vue/24/solid'
+
 defineProps({
   currentIndex: {
     type: Number,
@@ -43,73 +68,99 @@ defineEmits(['prev', 'next', 'play'])
 .playlist-controls {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 4px;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
   align-items: center;
 }
 
 .controls-info {
   display: flex;
   align-items: center;
-  gap: 20px;
-  font-size: 14px;
-  color: #666;
+  gap: var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .play-status {
-  font-weight: 600;
-  color: #333;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .status-indicator {
-  color: #4caf50;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.status-indicator .status-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .status-indicator.paused {
-  color: #ff9800;
+  color: var(--color-warning);
 }
 
 .controls-buttons {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
   max-width: 400px;
   justify-content: center;
 }
 
 .btn-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  padding: 10px 16px;
+  min-height: var(--touch-target-comfortable);
+  padding: var(--space-3);
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
 }
 
 .btn-control:hover {
-  background: #f0f0f0;
-  border-color: #999;
+  background: var(--color-neutral-100);
+  border-color: var(--border-color-hover);
+}
+
+.btn-control:active {
+  transform: scale(0.98);
+}
+
+.btn-control .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 .btn-play {
-  background: #1976d2;
+  background: var(--color-info);
   color: white;
-  border-color: #1976d2;
+  border-color: var(--color-info);
 }
 
 .btn-play:hover {
-  background: #1565c0;
-  border-color: #1565c0;
+  background: var(--color-info-dark);
+  border-color: var(--color-info-dark);
 }
 
 .btn-play.playing {
-  background: #ff9800;
-  border-color: #ff9800;
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.btn-play.playing:hover {
+  background: var(--color-warning-dark);
+  border-color: var(--color-warning-dark);
 }
 </style>

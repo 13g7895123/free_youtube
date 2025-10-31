@@ -12,7 +12,7 @@
         />
         <button
           type="submit"
-          class="submit-button"
+          class="btn btn-primary"
           :disabled="!urlInput.trim() || isLoading"
           aria-label="載入影片"
         >
@@ -72,48 +72,9 @@ function handleSubmit() {
 
 .url-input {
   flex: 1;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.url-input:focus {
-  border-color: #ff0000;
-  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
-}
-
-.url-input:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.submit-button {
-  padding: 0.75rem 2rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  background-color: #ff0000;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  white-space: nowrap;
-}
-
-.submit-button:hover:not(:disabled) {
-  background-color: #cc0000;
-}
-
-.submit-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.submit-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+  /* 使用統一的 input 樣式，額外的自訂在這裡覆蓋 */
+  font-size: var(--font-size-base);
+  padding: var(--space-3) var(--space-4);
 }
 
 .validation-error {

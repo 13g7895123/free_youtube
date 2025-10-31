@@ -2,11 +2,11 @@
   <Teleport to="body">
     <div v-if="playerStore.isVisible && playerStore.currentVideo" class="floating-player-container">
       <!-- Minimized View -->
-      <div v-show="playerStore.isMinimized" class="floating-player minimized">
+      <div v-show="playerStore.isMinimized" class="floating-player minimized" role="region" aria-label="播放器控制">
         <div class="minimized-content">
-          <div class="video-info">
+          <div class="video-info" @click="playerStore.maximize" role="button" tabindex="0" @keypress.enter="playerStore.maximize">
             <div class="thumbnail">
-              <img :src="playerStore.currentVideo.thumbnail_url" alt="thumbnail" />
+              <img :src="playerStore.currentVideo.thumbnail_url" :alt="playerStore.currentVideo.title" />
             </div>
             <div class="info">
               <div class="title">{{ truncateTitle(playerStore.currentVideo.title, 30) }}</div>
@@ -18,38 +18,72 @@
             </div>
           </div>
           <div class="controls">
-            <button @click="playerStore.previous" v-if="playerStore.hasPlaylist" class="btn-control" title="上一首">
-              ⏮
-            </button>
-            <button @click="playerStore.togglePlay" class="btn-control btn-play" :title="playerStore.isPlaying ? '暫停' : '播放'">
-              {{ playerStore.isPlaying ? '⏸' : '▶' }}
-            </button>
-            <button @click="playerStore.next" v-if="playerStore.hasPlaylist" class="btn-control" title="下一首">
-              ⏭
+            <button
+              v-if="playerStore.hasPlaylist"
+              @click="playerStore.previous"
+              class="btn-control"
+              v-tooltip="'上一首'"
+              aria-label="上一首"
+            >
+              <BackwardIcon class="icon" />
             </button>
             <button
-              @click.stop="playerStore.toggleLoopMode"
+              @click="playerStore.togglePlay"
+              class="btn-control btn-play"
+              v-tooltip="playerStore.isPlaying ? '暫停' : '播放'"
+              :aria-label="playerStore.isPlaying ? '暫停' : '播放'"
+              :aria-pressed="playerStore.isPlaying"
+            >
+              <PauseIcon v-if="playerStore.isPlaying" class="icon" />
+              <PlayIcon v-else class="icon" />
+            </button>
+            <button
               v-if="playerStore.hasPlaylist"
+              @click="playerStore.next"
+              class="btn-control"
+              v-tooltip="'下一首'"
+              aria-label="下一首"
+            >
+              <ForwardIcon class="icon" />
+            </button>
+            <button
+              v-if="playerStore.hasPlaylist"
+              @click.stop="playerStore.toggleLoopMode"
               class="btn-control btn-mode-mini"
               :class="{ active: playerStore.loopMode !== 'playlist' }"
-              :title="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+              v-tooltip="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+              :aria-label="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+              :aria-pressed="playerStore.loopMode !== 'playlist'"
             >
-              {{ playerStore.loopMode === 'playlist' ? '🔁' : '🔂' }}
+              <ArrowPathIcon v-if="playerStore.loopMode === 'playlist'" class="icon" />
+              <ArrowPathRoundedSquareIcon v-else class="icon" />
             </button>
             <button
-              @click.stop="playerStore.toggleShuffle"
               v-if="playerStore.hasPlaylist"
+              @click.stop="playerStore.toggleShuffle"
               class="btn-control btn-mode-mini"
               :class="{ active: playerStore.shuffleEnabled }"
-              title="隨機播放"
+              v-tooltip="'隨機播放'"
+              aria-label="隨機播放"
+              :aria-pressed="playerStore.shuffleEnabled"
             >
-              🔀
+              <ArrowsRightLeftIcon class="icon" />
             </button>
-            <button @click="playerStore.maximize" class="btn-control" title="展開">
-              ⬆
+            <button
+              @click="playerStore.maximize"
+              class="btn-control"
+              v-tooltip="'展開'"
+              aria-label="展開播放器"
+            >
+              <ChevronUpIcon class="icon" />
             </button>
-            <button @click="playerStore.close" class="btn-control btn-close" title="關閉">
-              ✕
+            <button
+              @click="playerStore.close"
+              class="btn-control btn-close"
+              v-tooltip="'關閉'"
+              aria-label="關閉播放器"
+            >
+              <XMarkIcon class="icon" />
             </button>
           </div>
         </div>
@@ -60,15 +94,35 @@
       </div>
 
       <!-- Expanded View -->
-      <div v-show="!playerStore.isMinimized" class="floating-player expanded" :class="{ 'fullscreen': isFullscreen }">
+      <div v-show="!playerStore.isMinimized" class="floating-player expanded" :class="{ 'fullscreen': isFullscreen }" role="region" aria-label="展開的播放器">
         <div class="player-header">
           <h3>{{ playerStore.currentVideo.title }}</h3>
           <div class="header-actions">
-            <button @click="toggleFullscreen" class="btn-icon" :title="isFullscreen ? '退出滿版' : '滿版'">
-              {{ isFullscreen ? '⊡' : '⛶' }}
+            <button
+              @click="toggleFullscreen"
+              class="btn-icon"
+              v-tooltip="isFullscreen ? '退出滿版' : '滿版'"
+              :aria-label="isFullscreen ? '退出滿版' : '滿版'"
+            >
+              <ArrowsPointingInIcon v-if="isFullscreen" class="icon-sm" />
+              <ArrowsPointingOutIcon v-else class="icon-sm" />
             </button>
-            <button @click="playerStore.minimize" class="btn-icon" title="最小化">⬇</button>
-            <button @click="playerStore.close" class="btn-icon" title="關閉">✕</button>
+            <button
+              @click="playerStore.minimize"
+              class="btn-icon"
+              v-tooltip="'最小化'"
+              aria-label="最小化播放器"
+            >
+              <ChevronDownIcon class="icon-sm" />
+            </button>
+            <button
+              @click="playerStore.close"
+              class="btn-icon"
+              v-tooltip="'關閉'"
+              aria-label="關閉播放器"
+            >
+              <XMarkIcon class="icon-sm" />
+            </button>
           </div>
         </div>
         <div class="player-body">
@@ -78,38 +132,71 @@
           <!-- 播放列表控制 -->
           <template v-if="playerStore.hasPlaylist">
             <div class="playback-controls">
-              <button @click="playerStore.previous" class="btn-control">⏮ 上一首</button>
-              <button @click="playerStore.togglePlay" class="btn-control btn-play">
-                {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
+              <button
+                @click="playerStore.previous"
+                class="btn-control"
+                v-tooltip="'上一首'"
+                aria-label="上一首"
+              >
+                <BackwardIcon class="icon" />
               </button>
-              <button @click="playerStore.next" class="btn-control">下一首 ⏭</button>
+              <button
+                @click="playerStore.togglePlay"
+                class="btn-control btn-play"
+                v-tooltip="playerStore.isPlaying ? '暫停' : '播放'"
+                :aria-label="playerStore.isPlaying ? '暫停' : '播放'"
+                :aria-pressed="playerStore.isPlaying"
+              >
+                <PauseIcon v-if="playerStore.isPlaying" class="icon" />
+                <PlayIcon v-else class="icon" />
+              </button>
+              <button
+                @click="playerStore.next"
+                class="btn-control"
+                v-tooltip="'下一首'"
+                aria-label="下一首"
+              >
+                <ForwardIcon class="icon" />
+              </button>
             </div>
             <div class="mode-controls">
               <button
                 @click.stop="playerStore.toggleLoopMode"
                 class="btn-mode"
                 :class="{ active: playerStore.loopMode !== 'playlist' }"
-                :title="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+                v-tooltip="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+                :aria-label="playerStore.loopMode === 'playlist' ? '清單循環' : '單曲循環'"
+                :aria-pressed="playerStore.loopMode !== 'playlist'"
               >
-                {{ playerStore.loopMode === 'playlist' ? '🔁 清單循環' : '🔂 單曲循環' }}
+                <ArrowPathIcon v-if="playerStore.loopMode === 'playlist'" class="icon" />
+                <ArrowPathRoundedSquareIcon v-else class="icon" />
               </button>
               <button
                 @click.stop="playerStore.toggleShuffle"
                 class="btn-mode"
                 :class="{ active: playerStore.shuffleEnabled }"
-                title="隨機播放"
+                v-tooltip="'隨機播放'"
+                aria-label="隨機播放"
+                :aria-pressed="playerStore.shuffleEnabled"
               >
-                🔀 {{ playerStore.shuffleEnabled ? '隨機' : '順序' }}
+                <ArrowsRightLeftIcon class="icon" />
               </button>
             </div>
-            <div class="track-info">
+            <div class="track-info" aria-live="polite">
               {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
             </div>
           </template>
           <!-- 單一影片控制 -->
           <template v-else>
-            <button @click="playerStore.togglePlay" class="btn-control btn-play">
-              {{ playerStore.isPlaying ? '⏸ 暫停' : '▶ 播放' }}
+            <button
+              @click="playerStore.togglePlay"
+              class="btn-control btn-play"
+              v-tooltip="playerStore.isPlaying ? '暫停' : '播放'"
+              :aria-label="playerStore.isPlaying ? '暫停' : '播放'"
+              :aria-pressed="playerStore.isPlaying"
+            >
+              <PauseIcon v-if="playerStore.isPlaying" class="icon-lg" />
+              <PlayIcon v-else class="icon-lg" />
             </button>
           </template>
         </div>
@@ -121,6 +208,20 @@
 <script setup>
 import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
+import {
+  PlayIcon,
+  PauseIcon,
+  BackwardIcon,
+  ForwardIcon,
+  ArrowPathIcon,
+  ArrowPathRoundedSquareIcon,
+  ArrowsRightLeftIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  XMarkIcon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon
+} from '@heroicons/vue/24/solid'
 
 const playerStore = useGlobalPlayerStore()
 const isFullscreen = ref(false)
@@ -505,30 +606,56 @@ onUnmounted(() => {
 
 .controls {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
 .btn-control {
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  font-size: 18px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
 }
 
 .btn-control:hover {
-  background: #f5f5f5;
+  background: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+
+.btn-control:active {
+  transform: scale(0.95);
+}
+
+.btn-control .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .btn-play {
-  color: #1976d2;
+  background: var(--color-info);
+  color: white;
+}
+
+.btn-play:hover {
+  background: var(--color-info-dark);
+  color: white;
 }
 
 .btn-close {
-  color: #f44336;
+  color: var(--color-error);
+}
+
+.btn-close:hover {
+  background: var(--color-error-alpha);
+  color: var(--color-error-dark);
 }
 
 .floating-player.expanded {
@@ -590,17 +717,30 @@ onUnmounted(() => {
 }
 
 .btn-icon {
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  font-size: 16px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
 }
 
 .btn-icon:hover {
-  background: #e0e0e0;
+  background: var(--color-neutral-200);
+  color: var(--text-primary);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
+}
+
+.btn-icon .icon-sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .player-body {
@@ -633,62 +773,102 @@ onUnmounted(() => {
 }
 
 .player-controls .btn-control {
-  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   flex: 1;
+  min-height: var(--touch-target-comfortable);
+  color: var(--text-primary);
 }
 
 .player-controls .btn-control:hover {
-  background: #f5f5f5;
-  border-color: #bbb;
+  background: var(--color-neutral-100);
+  border-color: var(--border-color-hover);
+}
+
+.player-controls .btn-control:active {
+  transform: scale(0.98);
+}
+
+.player-controls .btn-control .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.player-controls .btn-control .icon-lg {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
 }
 
 .player-controls .btn-play {
-  background: #1976d2;
+  background: var(--color-info);
   color: white;
-  border-color: #1976d2;
+  border-color: var(--color-info);
 }
 
 .player-controls .btn-play:hover {
-  background: #1565c0;
+  background: var(--color-info-dark);
+  border-color: var(--color-info-dark);
 }
 
 .btn-mode {
-  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   flex: 1;
+  color: var(--text-secondary);
 }
 
 .btn-mode:hover {
-  background: #f5f5f5;
-  border-color: #bbb;
+  background: var(--color-neutral-100);
+  border-color: var(--border-color-hover);
+  color: var(--text-primary);
+}
+
+.btn-mode:active {
+  transform: scale(0.98);
+}
+
+.btn-mode .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .btn-mode.active {
-  background: #4caf50;
+  background: var(--color-success);
   color: white;
-  border-color: #4caf50;
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-alpha);
+}
+
+.btn-mode.active:hover {
+  background: var(--color-success-dark);
+  border-color: var(--color-success-dark);
 }
 
 .btn-mode-mini {
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
 }
 
 .btn-mode-mini.active {
-  background: #4caf50;
+  background: var(--color-success);
   color: white;
-  border-color: #4caf50;
+  border-color: var(--color-success);
 }
 
 .track-info {

@@ -1,66 +1,116 @@
 <template>
   <div class="save-actions">
-    <div class="actions-container">
-      <button @click="saveToLibrary" class="btn btn-library" :disabled="saving">
-        <span class="btn-icon">📚</span>
-        <span class="btn-text">加入影片庫</span>
+    <!-- 主加入按鈕 -->
+    <div class="add-button-container">
+      <button
+        @click="toggleMenu"
+        class="btn-add"
+        :disabled="saving"
+        v-tooltip="'加入影片'"
+        aria-label="加入影片"
+        aria-haspopup="true"
+        :aria-expanded="showMenu"
+      >
+        <PlusIcon class="icon" />
+        <span class="btn-text">加入</span>
+        <ChevronDownIcon class="icon-chevron" :class="{ 'rotate': showMenu }" />
       </button>
 
-      <button @click="showPlaylistModal = true" class="btn btn-playlist" :disabled="saving">
-        <span class="btn-icon">📋</span>
-        <span class="btn-text">加入播放清單</span>
-      </button>
+      <!-- 下拉選單 -->
+      <Transition name="menu">
+        <div v-if="showMenu" class="dropdown-menu" role="menu">
+          <button
+            @click="saveToLibrary"
+            class="menu-item"
+            role="menuitem"
+            :disabled="saving"
+          >
+            <FilmIcon class="menu-icon" />
+            <span>加入影片庫</span>
+          </button>
+          <button
+            @click="openPlaylistModal"
+            class="menu-item"
+            role="menuitem"
+            :disabled="saving"
+          >
+            <QueueListIcon class="menu-icon" />
+            <span>加入播放清單</span>
+            <ChevronRightIcon class="menu-arrow" />
+          </button>
+        </div>
+      </Transition>
     </div>
 
     <!-- 播放清單選擇 Modal -->
-    <div v-if="showPlaylistModal" class="modal-overlay" @click="showPlaylistModal = false">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <h3>選擇播放清單</h3>
-          <button @click="showPlaylistModal = false" class="btn-close">✕</button>
-        </div>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showPlaylistModal" class="modal-overlay" @click="showPlaylistModal = false">
+          <div class="modal" @click.stop role="dialog" aria-labelledby="modal-title" aria-modal="true">
+            <div class="modal-header">
+              <h3 id="modal-title">選擇播放清單</h3>
+              <button
+                @click="showPlaylistModal = false"
+                class="btn-close"
+                v-tooltip="'關閉'"
+                aria-label="關閉"
+              >
+                <XMarkIcon class="icon-close" />
+              </button>
+            </div>
 
-        <div class="modal-body">
-          <div v-if="loadingPlaylists" class="loading">
-            <div class="spinner"></div>
-            <p>載入中...</p>
-          </div>
+            <div class="modal-body">
+              <LoadingSpinner v-if="loadingPlaylists" size="medium" message="載入播放清單..." />
 
-          <div v-else-if="playlists.length === 0" class="empty">
-            <p>還沒有播放清單</p>
-            <button @click="goToPlaylistManager" class="btn btn-secondary">
-              建立播放清單
-            </button>
-          </div>
-
-          <div v-else class="playlist-list">
-            <div
-              v-for="playlist in playlists"
-              :key="playlist.id"
-              @click="addToPlaylist(playlist.id)"
-              class="playlist-item"
-            >
-              <div class="playlist-info">
-                <h4>{{ playlist.name }}</h4>
-                <p>{{ playlist.item_count }} 個影片</p>
+              <div v-else-if="playlists.length === 0" class="empty">
+                <FolderOpenIcon class="empty-icon" />
+                <p>還沒有播放清單</p>
+                <button @click="goToPlaylistManager" class="btn-secondary">
+                  <PlusCircleIcon class="icon-sm" />
+                  建立播放清單
+                </button>
               </div>
-              <div class="playlist-action">→</div>
+
+              <div v-else class="playlist-list">
+                <button
+                  v-for="playlist in playlists"
+                  :key="playlist.id"
+                  @click="addToPlaylist(playlist.id)"
+                  class="playlist-item"
+                >
+                  <div class="playlist-info">
+                    <QueueListIcon class="playlist-icon" />
+                    <div class="playlist-text">
+                      <h4>{{ playlist.name }}</h4>
+                      <p>{{ playlist.item_count }} 個影片</p>
+                    </div>
+                  </div>
+                  <ChevronRightIcon class="playlist-action" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 成功/錯誤訊息 Toast -->
-    <div v-if="message" :class="['toast', messageType]">
-      {{ message }}
-    </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { videoService, playlistService } from '@/services/api'
+import { useToast } from '@/composables/useToast'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import {
+  PlusIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FilmIcon,
+  QueueListIcon,
+  XMarkIcon,
+  FolderOpenIcon,
+  PlusCircleIcon
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
   getVideoInfo: {
@@ -69,12 +119,33 @@ const props = defineProps({
   }
 })
 
+const toast = useToast()
+const showMenu = ref(false)
 const showPlaylistModal = ref(false)
 const playlists = ref([])
 const loadingPlaylists = ref(false)
 const saving = ref(false)
-const message = ref('')
-const messageType = ref('success') // 'success' or 'error'
+
+// 切換選單
+const toggleMenu = () => {
+  showMenu.value = !showMenu.value
+}
+
+// 點擊外部關閉選單
+const handleClickOutside = (event) => {
+  const container = document.querySelector('.add-button-container')
+  if (container && !container.contains(event.target)) {
+    showMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 // 載入播放清單
 const loadPlaylists = async () => {
@@ -84,7 +155,7 @@ const loadPlaylists = async () => {
     playlists.value = response.data.data || []
   } catch (error) {
     console.error('Failed to load playlists:', error)
-    showMessage('載入播放清單失敗', 'error')
+    toast.error('載入播放清單失敗')
   } finally {
     loadingPlaylists.value = false
   }
@@ -92,9 +163,10 @@ const loadPlaylists = async () => {
 
 // 加入影片庫
 const saveToLibrary = async () => {
+  showMenu.value = false
   const videoInfo = props.getVideoInfo()
   if (!videoInfo) {
-    showMessage('無法取得影片資訊', 'error')
+    toast.error('無法取得影片資訊')
     return
   }
 
@@ -103,7 +175,7 @@ const saveToLibrary = async () => {
     // 檢查影片是否已存在
     const checkResponse = await videoService.checkVideoExists(videoInfo.videoId)
     if (checkResponse.data.data.exists) {
-      showMessage('此影片已在影片庫中', 'error')
+      toast.warning('此影片已在影片庫中')
       return
     }
 
@@ -117,24 +189,30 @@ const saveToLibrary = async () => {
       channel_name: videoInfo.author
     })
 
-    showMessage('成功加入影片庫！', 'success')
+    toast.success('成功加入影片庫！')
   } catch (error) {
     console.error('Failed to save video:', error)
     if (error.response?.status === 409) {
-      showMessage('此影片已在影片庫中', 'error')
+      toast.warning('此影片已在影片庫中')
     } else {
-      showMessage('加入影片庫失敗', 'error')
+      toast.error('加入影片庫失敗')
     }
   } finally {
     saving.value = false
   }
 }
 
+// 打開播放清單 Modal
+const openPlaylistModal = () => {
+  showMenu.value = false
+  showPlaylistModal.value = true
+}
+
 // 加入播放清單
 const addToPlaylist = async (playlistId) => {
   const videoInfo = props.getVideoInfo()
   if (!videoInfo) {
-    showMessage('無法取得影片資訊', 'error')
+    toast.error('無法取得影片資訊')
     return
   }
 
@@ -162,25 +240,25 @@ const addToPlaylist = async (playlistId) => {
       }
     } catch (error) {
       console.error('Failed to ensure video exists:', error)
-      showMessage('加入播放清單失敗', 'error')
+      toast.error('加入播放清單失敗')
       return
     }
 
     if (!videoDbId) {
-      showMessage('無法取得影片 ID', 'error')
+      toast.error('無法取得影片 ID')
       return
     }
 
     // 加入播放清單
     await playlistService.addItemToPlaylist(playlistId, videoDbId)
-    showMessage('成功加入播放清單！', 'success')
+    toast.success('成功加入播放清單！')
     showPlaylistModal.value = false
   } catch (error) {
     console.error('Failed to add to playlist:', error)
     if (error.response?.status === 409) {
-      showMessage('此影片已在播放清單中', 'error')
+      toast.warning('此影片已在播放清單中')
     } else {
-      showMessage('加入播放清單失敗', 'error')
+      toast.error('加入播放清單失敗')
     }
   } finally {
     saving.value = false
@@ -192,24 +270,7 @@ const goToPlaylistManager = () => {
   window.location.href = '/playlists'
 }
 
-// 顯示訊息
-const showMessage = (text, type = 'success') => {
-  message.value = text
-  messageType.value = type
-  setTimeout(() => {
-    message.value = ''
-  }, 3000)
-}
-
-// 當 modal 打開時載入播放清單
-const handleModalOpen = () => {
-  if (showPlaylistModal.value) {
-    loadPlaylists()
-  }
-}
-
 // 監聽 modal 開啟
-import { watch } from 'vue'
 watch(showPlaylistModal, (newValue) => {
   if (newValue) {
     loadPlaylists()
@@ -220,61 +281,129 @@ watch(showPlaylistModal, (newValue) => {
 <style scoped>
 .save-actions {
   position: relative;
-}
-
-.actions-container {
   display: flex;
-  gap: 12px;
   justify-content: center;
-  flex-wrap: wrap;
 }
 
-.btn {
+.add-button-container {
+  position: relative;
+}
+
+.btn-add {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-brand-primary);
+  color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  min-height: var(--touch-target-comfortable);
 }
 
-.btn:disabled {
-  opacity: 0.5;
+.btn-add:hover:not(:disabled) {
+  background: var(--color-brand-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-add:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-add:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
-.btn-library {
-  background: #4caf50;
-  color: white;
+.btn-add .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
-.btn-library:hover:not(:disabled) {
-  background: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+.btn-add .icon-chevron {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  transition: transform var(--transition-fast);
 }
 
-.btn-playlist {
-  background: #2196f3;
-  color: white;
-}
-
-.btn-playlist:hover:not(:disabled) {
-  background: #1976d2;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-}
-
-.btn-icon {
-  font-size: 18px;
+.btn-add .icon-chevron.rotate {
+  transform: rotate(180deg);
 }
 
 .btn-text {
   white-space: nowrap;
+}
+
+/* 下拉選單 */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+  z-index: var(--z-dropdown);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+  text-align: left;
+}
+
+.menu-item:hover:not(:disabled) {
+  background: var(--color-neutral-100);
+}
+
+.menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-item .menu-icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.menu-item .menu-arrow {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+/* 選單動畫 */
+.menu-enter-active,
+.menu-leave-active {
+  transition: all var(--transition-fast);
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 /* Modal */
@@ -284,208 +413,219 @@ watch(showPlaylistModal, (newValue) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--space-5);
 }
 
 .modal {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   max-width: 500px;
   width: 100%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-2xl);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .btn-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-  padding: 0;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
 }
 
 .btn-close:hover {
-  background: #f5f5f5;
+  background: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+
+.btn-close .icon-close {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .modal-body {
-  padding: 20px;
+  padding: var(--space-5);
   overflow-y: auto;
 }
 
-.loading,
 .empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-}
-
-.loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--text-secondary);
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading p {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-tertiary);
 }
 
 .empty p {
-  margin: 0 0 16px 0;
+  margin: 0;
+  font-size: var(--font-size-base);
 }
 
 .btn-secondary {
-  background: #757575;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-neutral-700);
   color: white;
-  padding: 10px 20px;
+  padding: var(--space-3) var(--space-5);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-fast);
 }
 
 .btn-secondary:hover {
-  background: #616161;
+  background: var(--color-neutral-800);
+}
+
+.btn-secondary .icon-sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .playlist-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .playlist-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  width: 100%;
+  padding: var(--space-4);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  text-align: left;
 }
 
 .playlist-item:hover {
-  background: #f5f5f5;
-  border-color: #2196f3;
+  background: var(--color-neutral-50);
+  border-color: var(--color-info);
+  transform: translateX(4px);
 }
 
-.playlist-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  color: #212121;
+.playlist-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.playlist-info p {
+.playlist-icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  color: var(--color-info);
+  flex-shrink: 0;
+}
+
+.playlist-text h4 {
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.playlist-text p {
   margin: 0;
-  font-size: 14px;
-  color: #757575;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .playlist-action {
-  font-size: 20px;
-  color: #2196f3;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--color-info);
+  flex-shrink: 0;
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 2000;
-  animation: slideUp 0.3s ease;
+/* Modal 動畫 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity var(--transition-base);
 }
 
-.toast.success {
-  background: #4caf50;
+.modal-enter-active .modal,
+.modal-leave-active .modal {
+  transition: transform var(--transition-base);
 }
 
-.toast.error {
-  background: #f44336;
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateX(-50%) translateY(100px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-  }
+.modal-enter-from .modal,
+.modal-leave-to .modal {
+  transform: scale(0.95) translateY(20px);
 }
 
 /* 響應式 */
 @media (max-width: 480px) {
-  .btn {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .btn-icon {
-    font-size: 16px;
+  .btn-add {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-sm);
   }
 
   .modal {
     max-height: 90vh;
   }
 
-  .modal-header {
-    padding: 16px;
+  .modal-header,
+  .modal-body {
+    padding: var(--space-4);
   }
 
-  .modal-body {
-    padding: 16px;
+  .playlist-item {
+    padding: var(--space-3);
+  }
+}
+
+@media (max-width: 360px) {
+  .btn-text {
+    display: none;
   }
 }
 </style>

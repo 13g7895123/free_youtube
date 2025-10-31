@@ -5,7 +5,8 @@
       class="loop-toggle-button"
       :class="{ 'is-enabled': isEnabled }"
       :aria-pressed="isEnabled"
-      aria-label="切換循環播放"
+      :aria-label="isEnabled ? '循環播放：開啟' : '循環播放：關閉'"
+      v-tooltip="isEnabled ? '循環播放：開啟' : '循環播放：關閉'"
       @click="handleToggle"
     >
       <!-- 循環圖示 -->
@@ -25,9 +26,6 @@
         <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
       </svg>
 
-      <span class="loop-text">
-        {{ isEnabled ? '循環播放：開啟' : '循環播放：關閉' }}
-      </span>
 
       <!-- 狀態指示器 -->
       <div class="toggle-indicator" :class="{ 'is-on': isEnabled }">
@@ -62,32 +60,28 @@ function handleToggle() {
 .loop-toggle-button {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
-  background-color: #ffffff;
-  border: 2px solid #e0e0e0;
-  border-radius: 50px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #616161;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  min-height: var(--touch-target-min);
 }
 
 .loop-toggle-button:hover {
-  border-color: #ff0000;
-  background-color: #fff5f5;
+  border-color: var(--color-brand-primary);
+  background-color: var(--color-brand-primary-alpha);
 }
 
 .loop-toggle-button.is-enabled {
-  border-color: #ff0000;
-  background-color: #fff5f5;
-  color: #ff0000;
-}
-
-.loop-toggle-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+  border-color: var(--color-brand-primary);
+  background-color: var(--color-brand-primary-alpha);
+  color: var(--color-brand-primary);
 }
 
 .loop-toggle-button:active {
@@ -97,10 +91,6 @@ function handleToggle() {
 .loop-icon {
   width: 20px;
   height: 20px;
-  flex-shrink: 0;
-}
-
-.loop-text {
   flex-shrink: 0;
 }
 
@@ -163,16 +153,6 @@ function handleToggle() {
   }
 }
 
-/* 簡化版本（僅圖示） */
-@media (max-width: 480px) {
-  .loop-text {
-    display: none;
-  }
-
-  .loop-toggle-button {
-    padding: 0.625rem 1rem;
-  }
-}
 
 /* 無障礙：減少動畫 */
 @media (prefers-reduced-motion: reduce) {

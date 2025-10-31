@@ -1,23 +1,38 @@
 <template>
   <div class="video-library">
     <div class="header">
-      <h1>📺 影片庫</h1>
+      <h1>
+        <FilmIcon class="header-icon" />
+        影片庫
+      </h1>
       <div class="header-actions">
         <div class="search-bar">
+          <MagnifyingGlassIcon class="search-icon" />
           <input
             v-model="searchQuery"
             type="text"
             placeholder="搜尋影片..."
             @input="handleSearch"
             class="search-input"
+            aria-label="搜尋影片"
           />
         </div>
         <div class="export-import-buttons">
-          <button @click="handleExport" class="btn-export" title="匯出影片庫">
-            📤 匯出
+          <button
+            @click="handleExport"
+            class="btn btn-success"
+            aria-label="匯出影片庫"
+          >
+            <ArrowUpTrayIcon class="icon" />
+            <span>匯出</span>
           </button>
-          <button @click="triggerImport" class="btn-import" title="匯入影片庫">
-            📥 匯入
+          <button
+            @click="triggerImport"
+            class="btn btn-info"
+            aria-label="匯入影片庫"
+          >
+            <ArrowDownTrayIcon class="icon" />
+            <span>匯入</span>
           </button>
           <input
             ref="fileInput"
@@ -30,10 +45,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>載入中...</p>
-    </div>
+    <LoadingSpinner v-if="loading" size="large" message="載入影片庫中..." />
 
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
@@ -75,22 +87,55 @@
     </div>
 
     <!-- Add to Playlist Modal -->
-    <div v-if="showPlaylistModal" class="modal-overlay" @click="showPlaylistModal = false">
-      <div class="modal" @click.stop>
-        <h2>加入播放清單</h2>
-        <div class="playlist-list">
-          <div
-            v-for="playlist in playlists"
-            :key="playlist.id"
-            @click="addToPlaylist(playlist.id)"
-            class="playlist-item"
-          >
-            {{ playlist.name }}
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showPlaylistModal" class="modal-overlay" @click="showPlaylistModal = false">
+          <div class="modal" @click.stop role="dialog" aria-labelledby="modal-playlist-title">
+            <div class="modal-header">
+              <h2 id="modal-playlist-title">加入播放清單</h2>
+              <button
+                @click="showPlaylistModal = false"
+                class="btn-close-icon"
+                v-tooltip="'關閉'"
+                aria-label="關閉"
+              >
+                <XMarkIcon class="icon" />
+              </button>
+            </div>
+            <div class="playlist-list">
+              <button
+                v-for="playlist in playlists"
+                :key="playlist.id"
+                @click="addToPlaylist(playlist.id)"
+                class="playlist-item"
+              >
+                <QueueListIcon class="playlist-icon" />
+                <span>{{ playlist.name }}</span>
+                <ChevronRightIcon class="arrow-icon" />
+              </button>
+            </div>
           </div>
         </div>
-        <button @click="showPlaylistModal = false" class="btn-close">關閉</button>
-      </div>
-    </div>
+      </Transition>
+
+      <!-- Confirm Import Modal -->
+      <Transition name="modal">
+        <div v-if="showConfirmModal" class="modal-overlay" @click="cancelImport">
+          <div class="modal confirm-modal" @click.stop role="dialog">
+            <div class="modal-header">
+              <h2>確認匯入</h2>
+            </div>
+            <div class="modal-body">
+              <p>確定要匯入影片資料嗎？已存在的影片將會被略過。</p>
+            </div>
+            <div class="modal-footer">
+              <button @click="cancelImport" class="btn btn-secondary">取消</button>
+              <button @click="confirmImport" class="btn btn-primary">確認匯入</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -99,7 +144,23 @@ import { ref, onMounted, computed } from 'vue'
 import { useVideoStore } from '@/stores/videoStore'
 import { usePlaylistStore } from '@/stores/playlistStore'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
+import { useToast } from '@/composables/useToast'
 import VideoCard from '@/components/VideoCard.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import {
+  FilmIcon,
+  MagnifyingGlassIcon,
+  ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
+  XMarkIcon,
+  QueueListIcon,
+  ChevronRightIcon
+} from '@heroicons/vue/24/outline'
+
+const toast = useToast()
+
+const showConfirmModal = ref(false)
+const pendingImportFile = ref(null)
 
 const videoStore = useVideoStore()
 const playlistStore = usePlaylistStore()
@@ -156,10 +217,10 @@ const addToPlaylist = async (playlistId) => {
   if (selectedVideo.value) {
     try {
       await playlistStore.addItemToPlaylist(playlistId, selectedVideo.value.id)
-      alert('已新增到播放清單')
+      toast.success('已新增到播放清單')
       showPlaylistModal.value = false
     } catch (err) {
-      alert('新增失敗: ' + err.message)
+      toast.error('新增失敗: ' + err.message)
     }
   }
 }
@@ -167,9 +228,9 @@ const addToPlaylist = async (playlistId) => {
 const handleExport = async () => {
   try {
     const result = await videoStore.exportVideos()
-    alert(`成功匯出 ${result.count} 個影片`)
+    toast.success(`成功匯出 ${result.count} 個影片`)
   } catch (err) {
-    alert('匯出失敗: ' + err.message)
+    toast.error('匯出失敗: ' + err.message)
   }
 }
 
@@ -181,17 +242,27 @@ const handleImport = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  if (confirm('確定要匯入影片資料嗎？已存在的影片將會被略過。')) {
-    try {
-      const result = await videoStore.importVideos(file)
-      alert(`匯入完成！\n成功: ${result.successCount}\n略過: ${result.failCount}\n總計: ${result.total}`)
-    } catch (err) {
-      alert('匯入失敗: ' + err.message)
-    }
-  }
-
-  // Reset file input
+  pendingImportFile.value = file
+  showConfirmModal.value = true
   event.target.value = ''
+}
+
+const confirmImport = async () => {
+  if (!pendingImportFile.value) return
+
+  showConfirmModal.value = false
+  try {
+    const result = await videoStore.importVideos(pendingImportFile.value)
+    toast.success(`匯入完成！成功: ${result.successCount}，略過: ${result.failCount}`)
+  } catch (err) {
+    toast.error('匯入失敗: ' + err.message)
+  }
+  pendingImportFile.value = null
+}
+
+const cancelImport = () => {
+  showConfirmModal.value = false
+  pendingImportFile.value = null
 }
 
 onMounted(() => {
@@ -211,8 +282,18 @@ onMounted(() => {
 }
 
 .header h1 {
-  margin: 0 0 16px 0;
-  font-size: 28px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--font-size-3xl);
+  color: var(--text-primary);
+}
+
+.header-icon {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  color: var(--color-brand-primary);
 }
 
 .header-actions {
@@ -224,82 +305,43 @@ onMounted(() => {
 .search-bar {
   flex: 1;
   display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: var(--space-3);
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--text-tertiary);
+  pointer-events: none;
 }
 
 .search-input {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-10);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px var(--color-info-alpha);
 }
 
 .export-import-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.btn-export,
-.btn-import {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-export {
-  background: #4caf50;
-  color: white;
-}
-
-.btn-export:hover {
-  background: #45a049;
-}
-
-.btn-import {
-  background: #2196f3;
-  color: white;
-}
-
-.btn-import:hover {
-  background: #0b7dda;
-}
-
-.loading,
 .error,
 .empty {
   text-align: center;
   padding: 48px 24px;
-  color: #666;
-}
-
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading p {
-  margin: 0;
-  font-size: 16px;
   color: #666;
 }
 
@@ -363,41 +405,168 @@ onMounted(() => {
 
 .modal {
   background: white;
-  border-radius: 8px;
-  padding: 24px;
-  max-width: 400px;
+  border-radius: var(--radius-xl);
+  max-width: 500px;
   width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-2xl);
 }
 
-.modal h2 {
-  margin-top: 0;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+}
+
+.btn-close-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.btn-close-icon:hover {
+  background: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+
+.btn-close-icon .icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .playlist-list {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
-  margin: 16px 0;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .playlist-item {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  margin-bottom: 8px;
-  transition: background-color 0.2s;
+  transition: all var(--transition-fast);
+  text-align: left;
 }
 
 .playlist-item:hover {
-  background-color: #f0f0f0;
+  background: var(--color-neutral-50);
+  border-color: var(--color-info);
+  transform: translateX(4px);
 }
 
-.btn-close {
-  width: 100%;
-  padding: 8px 16px;
-  background: #e0e0e0;
+.playlist-icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  color: var(--color-info);
+  flex-shrink: 0;
+}
+
+.playlist-item span {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.arrow-icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.confirm-modal .modal-body {
+  padding: var(--space-5);
+}
+
+.confirm-modal .modal-body p {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.modal-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-footer .btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary {
+  background: var(--color-neutral-200);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--color-neutral-300);
+}
+
+.btn-primary {
+  background: var(--color-brand-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--color-brand-primary-dark);
+}
+
+/* Modal 動畫 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity var(--transition-base);
+}
+
+.modal-enter-active .modal,
+.modal-leave-active .modal {
+  transition: transform var(--transition-base);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal,
+.modal-leave-to .modal {
+  transform: scale(0.95) translateY(20px);
 }
 </style>

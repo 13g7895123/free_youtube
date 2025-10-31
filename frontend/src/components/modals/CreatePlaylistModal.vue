@@ -15,7 +15,6 @@
             type="text"
             required
             placeholder="Enter playlist name"
-            class="form-input"
           />
         </div>
 
@@ -25,7 +24,6 @@
             id="description"
             v-model="formData.description"
             placeholder="Enter playlist description (optional)"
-            class="form-input"
             rows="4"
           ></textarea>
         </div>
@@ -139,31 +137,7 @@ const savePlaylist = () => {
   margin: 0;
 }
 
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: inherit;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
-}
+/* form-group 和 form-input 樣式移除，使用全域樣式 */
 
 .modal-actions {
   display: flex;
@@ -172,30 +146,5 @@ const savePlaylist = () => {
   margin-top: 24px;
 }
 
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-.btn-primary {
-  background: #1976d2;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #1565c0;
-}
-
-.btn-secondary {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.btn-secondary:hover {
-  background: #e0e0e0;
-}
+/* 按鈕樣式移除，使用全域 .btn .btn-primary .btn-secondary */
 </style>
