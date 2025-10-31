@@ -100,7 +100,7 @@ class Database extends Config
         $this->default['database'] = getenv('database.default.database') ?: $this->default['database'];
         $this->default['DBDriver'] = getenv('database.default.DBDriver') ?: $this->default['DBDriver'];
         $this->default['DBPrefix'] = getenv('database.default.DBPrefix') ?: $this->default['DBPrefix'];
-        $this->default['port']     = getenv('database.default.port') ?: $this->default['port'];
+        $this->default['port']     = (int)(getenv('database.default.port') ?: $this->default['port']);
         $this->default['charset']  = getenv('database.default.charset') ?: $this->default['charset'];
         $this->default['DBCollat'] = getenv('database.default.DBCollat') ?: $this->default['DBCollat'];
 

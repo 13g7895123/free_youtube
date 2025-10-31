@@ -46,7 +46,17 @@
       "Bash(tree:*)",
       "Bash(cat:*)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker inspect:*)",
+      "Bash(for file in vendor/codeigniter4/framework/app/Config/*.php)",
+      "Bash(if [ ! -f \"$dest\" ])",
+      "Bash(then cp \"$file\" \"$dest\")",
+      "Bash(done)",
+      "Bash(docker cp:*)",
+      "Read(//tmp/ci4_config/**)"
     ],
     "deny": [],
     "ask": []
