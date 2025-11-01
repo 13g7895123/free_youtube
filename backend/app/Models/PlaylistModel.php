@@ -15,6 +15,7 @@ class PlaylistModel extends Model
     protected $useSoftDeletes   = true;
 
     protected $allowedFields = [
+        'user_id',
         'name',
         'description',
         'is_active',
@@ -29,6 +30,16 @@ class PlaylistModel extends Model
     protected $validationRules    = [];
     protected $validationMessages = [];
     protected $skipValidation     = false;
+
+    /**
+     * 取得使用者的播放清單
+     */
+    public function getUserPlaylists(int $userId)
+    {
+        return $this->where('user_id', $userId)
+                    ->orderBy('created_at', 'DESC')
+                    ->findAll();
+    }
 
     /**
      * 取得所有活躍的播放清單

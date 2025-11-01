@@ -15,6 +15,7 @@ class Auth extends BaseController
 
     public function __construct()
     {
+        helper('cookie');
         $this->userModel = new UserModel();
         $this->tokenModel = new UserTokenModel();
         $this->guestSessionModel = new GuestSessionModel();
@@ -183,8 +184,9 @@ class Auth extends BaseController
             $this->tokenModel->revokeAllUserTokens($userId);
         }
 
-        // 清除 cookie
-        delete_cookie('access_token');
+        // 清除 cookie（需要與 set_cookie 時使用相同的參數）
+        $isProduction = env('CI_ENVIRONMENT') === 'production';
+        delete_cookie('access_token', '', '/', '', $isProduction);
 
         return $this->respond([
             'success' => true,
@@ -458,15 +460,96 @@ class Auth extends BaseController
     private function setAuthCookie(string $accessToken): void
     {
         $expiresSeconds = (int) env('TOKEN_EXPIRE_SECONDS', 2592000);
+        $isProduction = env('CI_ENVIRONMENT') === 'production';
 
         set_cookie([
             'name' => 'access_token',
             'value' => $accessToken,
             'expire' => $expiresSeconds,
             'path' => '/',
-            'secure' => true, // HTTPS only
+            'secure' => $isProduction, // HTTPS only in production
             'httponly' => true, // 防止 JavaScript 存取
             'samesite' => 'Lax' // CSRF 防護
         ]);
+    }
+
+    /**
+     * Mock 登入 (僅開發環境)
+     *
+     * @return ResponseInterface
+     */
+    public function mockLogin()
+    {
+        // 安全檢查：僅允許開發環境
+        if (env('CI_ENVIRONMENT') === 'production') {
+            return $this->fail('Mock 登入僅在開發環境可用', 403);
+        }
+
+        if (env('AUTH_MODE') !== 'mock') {
+            return $this->fail('Mock 模式未啟用', 403);
+        }
+
+        // 從環境變數讀取 Mock 使用者 ID
+        $mockUserId = (int) env('MOCK_USER_ID', 1);
+
+        try {
+            // 檢查 Mock 使用者是否存在
+            $user = $this->userModel->find($mockUserId);
+            if (!$user) {
+                return $this->fail("Mock 使用者不存在 (ID: {$mockUserId})，請先執行: php spark db:seed MockUserSeeder", 404);
+            }
+
+            // 檢查使用者是否為 soft deleted
+            if ($user['deleted_at'] !== null) {
+                return $this->fail('Mock 使用者已被刪除', 404);
+            }
+
+            // 生成 token (與 LINE Login 流程相同)
+            $appToken = $this->generateUserToken($mockUserId);
+            if (!$appToken) {
+                return $this->fail('無法生成認證憑證', 500);
+            }
+
+            // 設置 cookie (與 LINE Login 流程相同)
+            $this->setAuthCookie($appToken['access_token']);
+
+            log_message('info', "Mock login successful for user_id: {$mockUserId}");
+
+            // 返回 JSON (而非重定向，方便前端處理)
+            return $this->respond([
+                'success' => true,
+                'message' => 'Mock 登入成功',
+                'data' => [
+                    'user' => $user
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // 資料庫連線失敗時，返回假的 Mock 使用者資料（僅開發環境）
+            log_message('warning', "Mock login fallback (database unavailable): {$e->getMessage()}");
+
+            // 創建假的使用者資料
+            $mockUser = [
+                'id' => $mockUserId,
+                'line_user_id' => 'mock_line_user_001',
+                'display_name' => 'Mock 測試使用者',
+                'avatar_url' => 'https://via.placeholder.com/150/667eea/ffffff?text=MOCK',
+                'email' => 'mock@example.com',
+                'status' => 'active',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // 生成假的 token（不儲存到資料庫）
+            $fakeToken = bin2hex(random_bytes(32));
+            $this->setAuthCookie($fakeToken);
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Mock 登入成功（簡化模式，資料庫未連線）',
+                'data' => [
+                    'user' => $mockUser
+                ]
+            ]);
+        }
     }
 }

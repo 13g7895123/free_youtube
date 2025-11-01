@@ -66,7 +66,10 @@ services:
     ports:
       - "${BACKEND_PORT:-8080}:8000"
     environment:
-      CI_ENVIRONMENT: production
+      CI_ENVIRONMENT: ${APP_ENV:-production}
+      # 認證模式（從 .env.prod 讀取）
+      AUTH_MODE: ${AUTH_MODE:-line}
+      MOCK_USER_ID: ${MOCK_USER_ID:-1}
       # MySQL 環境變數（用於 docker-entrypoint.prod.sh）
       MYSQL_HOST: mariadb
       MYSQL_PORT: 3306
@@ -83,6 +86,12 @@ services:
       database.default.port: 3306
       database.default.charset: utf8mb4
       database.default.DBCollat: utf8mb4_unicode_ci
+      # LINE Login 環境變數
+      LINE_LOGIN_CHANNEL_ID: ${LINE_LOGIN_CHANNEL_ID:-}
+      LINE_LOGIN_CHANNEL_SECRET: ${LINE_LOGIN_CHANNEL_SECRET:-}
+      LINE_LOGIN_CALLBACK_URL: ${LINE_LOGIN_CALLBACK_URL:-}
+      TOKEN_EXPIRE_SECONDS: ${TOKEN_EXPIRE_SECONDS:-2592000}
+      FRONTEND_URL: ${FRONTEND_URL:-}
     depends_on:
       mariadb:
         condition: service_healthy

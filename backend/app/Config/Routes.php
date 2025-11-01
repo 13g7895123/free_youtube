@@ -19,6 +19,9 @@ $routes->group('api', static function ($routes) {
         $routes->get('line/login', 'Auth::lineLogin');
         $routes->get('line/callback', 'Auth::lineCallback');
 
+        // Mock Login（公開，僅開發環境）
+        $routes->post('mock/login', 'Auth::mockLogin');
+
         // 需要認證的路由
         $routes->group('', ['filter' => 'auth'], static function ($routes) {
             $routes->get('user', 'Auth::user');                    // 取得當前用戶

@@ -70,7 +70,16 @@
       "Bash(if [ -f \"backend/app/Config/Database.php\" ])",
       "Bash(php spark:*)",
       "Bash(docker ps:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(if [ -f \"/home/jarvis/project/idea/free_youtube/frontend/.env.development\" ])",
+      "Bash(docker-compose:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs:*)",
+      "Bash(if [ -f \".env\" ])",
+      "Bash(then cat .env)",
+      "Bash(else echo \"根目錄沒有 .env 檔案\")",
+      "Bash(git check-ignore:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

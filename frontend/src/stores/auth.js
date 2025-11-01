@@ -21,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function checkAuth() {
     isLoading.value = true
     try {
-      const response = await api.get('/api/auth/user')
+      const response = await api.get('/auth/user')
       if (response.data.success && response.data.data) {
         const wasGuest = !isAuthenticated.value
         user.value = response.data.data
@@ -44,12 +44,53 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * LINE Login 流程
-   * 重定向到後端的 LINE OAuth URL
+   * 登入流程
+   * - Mock 模式：呼叫 Mock API
+   * - LINE Login 模式：重定向到 LINE OAuth
    */
   function login() {
-    const apiUrl = import.meta.env.VITE_API_URL || ''
-    window.location.href = `${apiUrl}/api/auth/line/login`
+    const authMode = import.meta.env.VITE_AUTH_MODE || 'line'
+
+    if (authMode === 'mock') {
+      // Mock 模式：呼叫後端 Mock API
+      loginWithMock()
+    } else {
+      // LINE Login 模式：重定向到 LINE OAuth
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      window.location.href = `${apiUrl}/api/auth/line/login`
+    }
+  }
+
+  /**
+   * Mock 登入
+   * 僅在開發環境使用，直接呼叫後端 Mock API
+   */
+  async function loginWithMock() {
+    isLoading.value = true
+    try {
+      const response = await api.post('/auth/mock/login')
+      if (response.data.success) {
+        // 直接設置會員資訊
+        user.value = response.data.data.user
+        isAuthenticated.value = true
+
+        // 觸發訪客資料遷移
+        await migrateGuestData()
+
+        console.log('Mock 登入成功:', user.value.display_name)
+
+        // 重新整理以更新 UI
+        if (typeof window !== 'undefined') {
+          window.location.href = '/?login=success'
+        }
+      }
+    } catch (error) {
+      console.error('Mock 登入失敗:', error)
+      // 顯示錯誤訊息
+      alert('Mock 登入失敗：' + (error.response?.data?.message || error.message))
+    } finally {
+      isLoading.value = false
+    }
   }
 
   /**
@@ -58,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     isLoading.value = true
     try {
-      await api.post('/api/auth/logout')
+      await api.post('/auth/logout')
       user.value = null
       isAuthenticated.value = false
 
@@ -78,7 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function refreshToken() {
     try {
-      const response = await api.post('/api/auth/refresh')
+      const response = await api.post('/auth/refresh')
       if (response.data.success) {
         return true
       }
@@ -95,6 +136,15 @@ export const useAuthStore = defineStore('auth', () => {
   function handleUnauthorized() {
     user.value = null
     isAuthenticated.value = false
+
+    // 如果已經在 session expired 頁面，不要再次重定向
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('session') === 'expired') {
+        console.warn('Session 已過期')
+        return
+      }
+    }
 
     // 記錄當前路徑，方便登入後導回
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/'
@@ -134,7 +184,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // 呼叫遷移 API
-      const response = await api.post('/api/auth/migrate-guest-data', {
+      const response = await api.post('/auth/migrate-guest-data', {
         history: guestHistory
       })
 

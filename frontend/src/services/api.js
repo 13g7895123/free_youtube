@@ -91,7 +91,7 @@ export const videoLibraryService = {
    * 取得影片庫 (分頁)
    */
   getLibrary(page = 1, perPage = 20) {
-    return api.get('/api/video-library', {
+    return api.get('/video-library', {
       params: { page, per_page: perPage },
     })
   },
@@ -100,14 +100,14 @@ export const videoLibraryService = {
    * 新增影片到影片庫
    */
   addVideo(videoData) {
-    return api.post('/api/video-library', videoData)
+    return api.post('/video-library', videoData)
   },
 
   /**
    * 從影片庫移除影片
    */
   removeVideo(videoId) {
-    return api.delete(`/api/video-library/${videoId}`)
+    return api.delete(`/video-library/${videoId}`)
   },
 }
 
@@ -119,42 +119,42 @@ export const playlistService = {
    * 取得所有播放清單
    */
   getPlaylists() {
-    return api.get('/api/playlists')
+    return api.get('/playlists')
   },
 
   /**
    * 取得播放清單詳情及項目
    */
   getPlaylist(id) {
-    return api.get(`/api/playlists/${id}`)
+    return api.get(`/playlists/${id}`)
   },
 
   /**
    * 建立播放清單
    */
   createPlaylist(playlistData) {
-    return api.post('/api/playlists', playlistData)
+    return api.post('/playlists', playlistData)
   },
 
   /**
    * 更新播放清單
    */
   updatePlaylist(id, playlistData) {
-    return api.put(`/api/playlists/${id}`, playlistData)
+    return api.put(`/playlists/${id}`, playlistData)
   },
 
   /**
    * 刪除播放清單
    */
   deletePlaylist(id) {
-    return api.delete(`/api/playlists/${id}`)
+    return api.delete(`/playlists/${id}`)
   },
 
   /**
    * 新增影片到播放清單
    */
   addItemToPlaylist(playlistId, videoId) {
-    return api.post(`/api/playlists/${playlistId}/items`, {
+    return api.post(`/playlists/${playlistId}/items`, {
       video_id: videoId,
     })
   },
@@ -163,7 +163,7 @@ export const playlistService = {
    * 重新排序播放清單項目
    */
   reorderItems(playlistId, itemIds) {
-    return api.put(`/api/playlists/${playlistId}/reorder`, {
+    return api.put(`/playlists/${playlistId}/reorder`, {
       item_ids: itemIds,
     })
   },
@@ -172,7 +172,7 @@ export const playlistService = {
    * 從播放清單移除項目
    */
   removeItemFromPlaylist(playlistId, itemId) {
-    return api.delete(`/api/playlists/${playlistId}/items/${itemId}`)
+    return api.delete(`/playlists/${playlistId}/items/${itemId}`)
   },
 }
 
