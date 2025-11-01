@@ -57,7 +57,20 @@
       "Bash(done)",
       "Bash(docker cp:*)",
       "Read(//tmp/ci4_config/**)",
-      "Bash(/tmp/floating_player_script.vue)"
+      "Bash(/tmp/floating_player_script.vue)",
+      "Bash(if [ -d \"specs/003-line-login-auth\" ])",
+      "Bash(if [ -d \"specs/003-line-login-auth/checklists\" ])",
+      "Bash(then find specs/003-line-login-auth/checklists -name \"*.md\" -type f)",
+      "Bash(if [ -f \"backend/.env\" ])",
+      "Bash(if [ -f \"backend/.env.example\" ])",
+      "Bash(if [ -f \"frontend/.env\" ])",
+      "Bash(if [ -f \"frontend/.env.example\" ])",
+      "Bash(then cat frontend/.env.example)",
+      "Bash(else echo \"NO_EXAMPLE_FILE\")",
+      "Bash(if [ -f \"backend/app/Config/Database.php\" ])",
+      "Bash(php spark:*)",
+      "Bash(docker ps:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []

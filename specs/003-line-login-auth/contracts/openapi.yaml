@@ -1,0 +1,1059 @@
+openapi: 3.0.3
+info:
+  title: LINE Login 會員認證系統 API
+  description: |
+    YouTube Loop Player 的 LINE Login 會員認證與資料管理 API
+
+    ## 認證機制
+    - 使用 HTTP-only cookies 儲存 access token
+    - 每個請求自動攜帶 cookie,後端驗證 token 有效性
+    - Token 過期時返回 401,前端應引導使用者重新登入
+
+    ## 錯誤處理
+    所有錯誤回應遵循統一格式:
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "使用者友善的錯誤訊息"
+      }
+    }
+    ```
+
+  version: 1.0.0
+  contact:
+    name: API Support
+servers:
+  - url: http://localhost:8080/api
+    description: 開發環境
+  - url: https://yourdomain.com/api
+    description: 生產環境
+
+tags:
+  - name: Auth
+    description: 認證相關 API
+  - name: VideoLibrary
+    description: 影片庫管理
+  - name: Playlists
+    description: 播放清單管理
+  - name: GuestData
+    description: 訪客資料遷移
+
+paths:
+  /auth/line/login:
+    get:
+      tags:
+        - Auth
+      summary: 初始化 LINE Login 流程
+      description: |
+        產生 LINE OAuth 授權 URL 並重定向使用者到 LINE 登入頁面
+        - 生成 state 參數防止 CSRF
+        - 儲存 state 到 session
+        - 重定向到 LINE authorize endpoint
+      operationId: lineLoginInitiate
+      responses:
+        '302':
+          description: 重定向到 LINE Login 頁面
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=...
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/line/callback:
+    get:
+      tags:
+        - Auth
+      summary: LINE OAuth 回呼端點
+      description: |
+        處理 LINE OAuth 回呼,交換 authorization code 換取 access token
+        - 驗證 state 參數
+        - 交換 code 換取 token
+        - 建立或更新會員資料
+        - 設置 HTTP-only cookie
+        - 檢查是否有訪客資料需遷移
+      operationId: lineLoginCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: LINE 返回的 authorization code
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 防 CSRF 的 state 參數
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          description: LINE 返回的錯誤碼 (若使用者取消授權)
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 錯誤描述
+      responses:
+        '302':
+          description: 重定向回首頁 (登入成功)
+          headers:
+            Location:
+              schema:
+                type: string
+                example: /
+            Set-Cookie:
+              schema:
+                type: string
+                example: access_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000
+        '400':
+          description: 無效的 state 或 code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_STATE
+                  message: 無效的請求,請重新登入
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/user:
+    get:
+      tags:
+        - Auth
+      summary: 取得當前登入會員資訊
+      description: |
+        根據 cookie 中的 access token 取得會員資訊
+        - 驗證 token 有效性
+        - 返回會員基本資料
+      operationId: getCurrentUser
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 成功取得會員資訊
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 登出
+      description: |
+        清除當前會話
+        - 刪除 user_tokens 記錄
+        - 清除 HTTP-only cookie
+      operationId: logout
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 登出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: 更新 Access Token
+      description: |
+        使用 refresh token 更新 access token
+        - 僅在 token 即將過期時使用
+        - 實作 token rotation (輪換 refresh token)
+      operationId: refreshToken
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Token 更新成功
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: access_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token 已更新
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /video-library:
+    get:
+      tags:
+        - VideoLibrary
+      summary: 取得會員的影片庫
+      description: |
+        取得當前會員的所有收藏影片
+        - 支援分頁
+        - 按加入時間倒序排列
+      operationId: getVideoLibrary
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: 每頁筆數
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 偏移量
+      responses:
+        '200':
+          description: 成功取得影片庫
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      videos:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VideoLibraryItem'
+                      total:
+                        type: integer
+                        example: 150
+                      limit:
+                        type: integer
+                        example: 50
+                      offset:
+                        type: integer
+                        example: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - VideoLibrary
+      summary: 新增影片到影片庫
+      description: |
+        將 YouTube 影片加入會員的影片庫
+        - 檢查影片是否已存在
+        - 自動抓取影片資訊 (標題、縮圖、長度)
+      operationId: addVideoToLibrary
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube 影片 ID
+                  example: dQw4w9WgXcQ
+                  minLength: 11
+                  maxLength: 11
+      responses:
+        '201':
+          description: 影片已加入影片庫
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/VideoLibraryItem'
+        '400':
+          description: 無效的影片 ID 或影片已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: VIDEO_ALREADY_EXISTS
+                  message: 這個影片已經在您的影片庫中
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /video-library/{videoId}:
+    delete:
+      tags:
+        - VideoLibrary
+      summary: 從影片庫移除影片
+      description: |
+        從會員的影片庫中移除指定影片
+        - 驗證影片屬於當前會員
+      operationId: removeVideoFromLibrary
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: YouTube 影片 ID
+          example: dQw4w9WgXcQ
+      responses:
+        '200':
+          description: 影片已移除
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 影片已從影片庫移除
+        '404':
+          description: 影片不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: VIDEO_NOT_FOUND
+                  message: 影片不存在於您的影片庫中
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /playlists:
+    get:
+      tags:
+        - Playlists
+      summary: 取得會員的所有播放清單
+      description: |
+        取得當前會員建立的所有播放清單
+        - 不包含播放清單項目 (僅基本資訊)
+        - 按建立時間倒序排列
+      operationId: getUserPlaylists
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 成功取得播放清單
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Playlist'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Playlists
+      summary: 建立新播放清單
+      description: |
+        建立一個新的播放清單
+        - 名稱不可重複 (同一會員)
+      operationId: createPlaylist
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: 播放清單名稱
+                  example: 我的最愛
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  description: 播放清單描述
+                  example: 收藏的經典歌曲
+                  nullable: true
+                isPublic:
+                  type: boolean
+                  description: 是否公開
+                  default: false
+      responses:
+        '201':
+          description: 播放清單已建立
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+        '400':
+          description: 名稱已存在或無效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: PLAYLIST_NAME_EXISTS
+                  message: 已存在相同名稱的播放清單
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /playlists/{playlistId}:
+    get:
+      tags:
+        - Playlists
+      summary: 取得播放清單詳情 (包含影片項目)
+      description: |
+        取得播放清單的詳細資訊及所有影片項目
+        - 驗證播放清單屬於當前會員
+        - 影片項目按 position 排序
+      operationId: getPlaylistDetails
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+      responses:
+        '200':
+          description: 成功取得播放清單詳情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Playlist'
+                      - type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PlaylistItem'
+        '403':
+          description: 無權限存取此播放清單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: FORBIDDEN
+                  message: 您沒有權限存取此播放清單
+        '404':
+          description: 播放清單不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Playlists
+      summary: 更新播放清單資訊
+      description: |
+        更新播放清單的名稱、描述或公開狀態
+        - 驗證播放清單屬於當前會員
+      operationId: updatePlaylist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+                isPublic:
+                  type: boolean
+      responses:
+        '200':
+          description: 播放清單已更新
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Playlists
+      summary: 刪除播放清單
+      description: |
+        刪除播放清單及其所有項目
+        - 驗證播放清單屬於當前會員
+        - CASCADE 刪除所有 playlist_items
+      operationId: deletePlaylist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+      responses:
+        '200':
+          description: 播放清單已刪除
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 播放清單已刪除
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /playlists/{playlistId}/items:
+    post:
+      tags:
+        - Playlists
+      summary: 新增影片到播放清單
+      description: |
+        將 YouTube 影片加入播放清單
+        - 驗證播放清單屬於當前會員
+        - 檢查影片是否已在播放清單中
+        - 自動設置 position (最後一個位置)
+      operationId: addItemToPlaylist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube 影片 ID
+                  example: dQw4w9WgXcQ
+      responses:
+        '201':
+          description: 影片已加入播放清單
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/PlaylistItem'
+        '400':
+          description: 影片已存在於播放清單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: ITEM_ALREADY_EXISTS
+                  message: 這個影片已經在播放清單中
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /playlists/{playlistId}/items/{itemId}:
+    delete:
+      tags:
+        - Playlists
+      summary: 從播放清單移除影片
+      description: |
+        從播放清單中移除指定影片項目
+        - 驗證項目屬於當前會員的播放清單
+        - 自動調整後續項目的 position
+      operationId: removeItemFromPlaylist
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單項目 ID
+          example: 10
+      responses:
+        '200':
+          description: 影片已從播放清單移除
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 影片已從播放清單移除
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /playlists/{playlistId}/reorder:
+    put:
+      tags:
+        - Playlists
+      summary: 重新排序播放清單項目
+      description: |
+        調整播放清單中影片項目的順序
+        - 驗證播放清單屬於當前會員
+        - 批次更新所有項目的 position
+      operationId: reorderPlaylistItems
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 播放清單 ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemIds
+              properties:
+                itemIds:
+                  type: array
+                  description: 項目 ID 陣列,順序即為新的排序
+                  items:
+                    type: integer
+                  example: [3, 1, 5, 2, 4]
+      responses:
+        '200':
+          description: 排序已更新
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 播放清單項目順序已更新
+        '400':
+          description: 無效的項目 ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /guest-data/migrate:
+    post:
+      tags:
+        - GuestData
+      summary: 遷移訪客資料
+      description: |
+        將訪客期間的播放歷史遷移到會員帳號
+        - 僅在會員首次登入時呼叫
+        - 接收前端 LocalStorage 的 guest_history 資料
+        - 批次寫入 video_library 表
+      operationId: migrateGuestData
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - historyData
+              properties:
+                historyData:
+                  type: array
+                  description: 訪客播放歷史
+                  items:
+                    type: object
+                    properties:
+                      videoId:
+                        type: string
+                        example: dQw4w9WgXcQ
+                      title:
+                        type: string
+                        example: Rick Astley - Never Gonna Give You Up
+                      thumbnail:
+                        type: string
+                        example: https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg
+                      playedAt:
+                        type: string
+                        format: date-time
+                        example: 2025-11-01T10:30:00Z
+      responses:
+        '200':
+          description: 資料遷移成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      migratedCount:
+                        type: integer
+                        example: 5
+                        description: 成功遷移的影片數量
+                      skippedCount:
+                        type: integer
+                        example: 2
+                        description: 跳過的影片數量 (已存在於影片庫)
+        '400':
+          description: 無效的資料格式
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: HTTP-only cookie 儲存的 access token
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        lineUserId:
+          type: string
+          example: U1234567890abcdef
+        displayName:
+          type: string
+          example: 張小明
+        avatarUrl:
+          type: string
+          nullable: true
+          example: https://profile.line-scdn.net/...
+        email:
+          type: string
+          nullable: true
+          example: user@example.com
+        status:
+          type: string
+          enum: [active, soft_deleted]
+          example: active
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-11-01T10:00:00Z
+
+    VideoLibraryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        videoId:
+          type: string
+          example: dQw4w9WgXcQ
+        title:
+          type: string
+          example: Rick Astley - Never Gonna Give You Up
+        thumbnailUrl:
+          type: string
+          nullable: true
+          example: https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg
+        duration:
+          type: integer
+          nullable: true
+          example: 212
+          description: 影片長度 (秒)
+        channelName:
+          type: string
+          nullable: true
+          example: Rick Astley
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-11-01T11:00:00Z
+
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 我的最愛
+        description:
+          type: string
+          nullable: true
+          example: 收藏的經典歌曲
+        isPublic:
+          type: boolean
+          example: false
+        itemCount:
+          type: integer
+          example: 10
+          description: 播放清單中的影片數量
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-11-01T10:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2025-11-01T12:00:00Z
+
+    PlaylistItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        playlistId:
+          type: integer
+          example: 1
+        videoId:
+          type: string
+          example: dQw4w9WgXcQ
+        title:
+          type: string
+          example: Rick Astley - Never Gonna Give You Up
+        thumbnailUrl:
+          type: string
+          nullable: true
+          example: https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg
+        position:
+          type: integer
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-11-01T11:00:00Z
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: ERROR_CODE
+            message:
+              type: string
+              example: 錯誤訊息描述
+
+  responses:
+    Unauthorized:
+      description: 未授權 - Token 無效或已過期
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: UNAUTHORIZED
+              message: 請先登入
+
+    Forbidden:
+      description: 禁止 - 無權限存取此資源
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: FORBIDDEN
+              message: 您沒有權限存取此資源
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: 資源不存在
+
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: INTERNAL_SERVER_ERROR
+              message: 伺服器發生錯誤,請稍後再試

@@ -1,11 +1,41 @@
 <template>
   <div id="app" class="container">
     <header class="app-header">
-      <h1 class="app-title">YouTube Loop Player</h1>
-      <p class="app-subtitle">貼上 YouTube 網址，自動循環播放</p>
+      <div class="header-content">
+        <div class="header-text">
+          <h1 class="app-title">YouTube Loop Player</h1>
+          <p class="app-subtitle">貼上 YouTube 網址，自動循環播放</p>
+        </div>
+      </div>
     </header>
 
     <main class="app-main">
+      <!-- 認證提示訊息 -->
+      <div v-if="showAuthRequiredMessage" class="auth-required-message">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          class="info-icon"
+        >
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <p>此功能需要登入，請先使用 LINE 登入</p>
+      </div>
+
+      <!-- 會話過期提示訊息 -->
+      <div v-if="showSessionExpiredMessage" class="session-expired-message">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          class="warning-icon"
+        >
+          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+        </svg>
+        <p>您的登入已過期，請重新登入以繼續使用會員功能</p>
+      </div>
+
       <!-- URL 輸入 -->
       <UrlInput
         :is-loading="isLoading"
@@ -71,6 +101,9 @@
           在上方輸入框貼上 YouTube 影片或播放清單網址，即可開始自動循環播放
         </p>
       </div>
+
+      <!-- 訪客播放歷史 -->
+      <GuestHistory @play-video="handlePlayFromHistory" />
     </main>
 
     <footer class="app-footer">
@@ -82,22 +115,31 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import UrlInput from '../components/UrlInput.vue'
 import VideoPlayer from '../components/VideoPlayer.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import PlayerControls from '../components/PlayerControls.vue'
 import LoopToggle from '../components/LoopToggle.vue'
 import SaveVideoActions from '../components/SaveVideoActions.vue'
+import GuestHistory from '../components/GuestHistory.vue'
 import { useUrlParser } from '../composables/useUrlParser'
 import { useYouTubePlayer } from '../composables/useYouTubePlayer'
 import { useLocalStorage } from '../composables/useLocalStorage'
 import { useGlobalPlayerStore } from '../stores/globalPlayerStore'
+import { useGuestHistory } from '../composables/useGuestHistory'
+
+// 路由
+const route = useRoute()
+const router = useRouter()
 
 // 狀態管理
 const isLoading = ref(false)
 const hasVideo = ref(false)
 const apiReady = ref(false)
+const showAuthRequiredMessage = ref(false)
+const showSessionExpiredMessage = ref(false)
 
 // 從 LocalStorage 載入用戶偏好設定
 const settingsStorage = useLocalStorage('youtube-loop-player-settings', {
@@ -114,6 +156,7 @@ const player = useYouTubePlayer('youtube-player', {
   isMuted: settingsStorage.value?.isMuted ?? false
 })
 const globalPlayerStore = useGlobalPlayerStore()
+const guestHistory = useGuestHistory()
 
 // 監聽設定變化，自動保存到 LocalStorage
 watch(() => player.loopEnabled.value, (newValue) => {
@@ -134,6 +177,21 @@ watch(() => player.isMuted.value, (newValue) => {
   settingsStorage.value = {
     ...settingsStorage.value,
     isMuted: newValue
+  }
+})
+
+// 監聽播放狀態，自動記錄到訪客歷史
+watch(() => player.isPlaying.value, (isNowPlaying) => {
+  if (isNowPlaying && player.isReady.value) {
+    // 當影片開始播放時，取得影片資訊並加入歷史記錄
+    const videoInfo = player.getCurrentVideoInfo()
+    if (videoInfo && videoInfo.videoId) {
+      guestHistory.addToHistory({
+        videoId: videoInfo.videoId,
+        title: videoInfo.title,
+        thumbnail: videoInfo.thumbnail
+      })
+    }
   }
 })
 
@@ -283,6 +341,15 @@ function getVideoInfo() {
   return player.getCurrentVideoInfo()
 }
 
+/**
+ * 從歷史記錄播放影片
+ * @param {string} videoId - YouTube 影片 ID
+ */
+function handlePlayFromHistory(videoId) {
+  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
+  handleUrlSubmit(youtubeUrl)
+}
+
 // 組件掛載時預先載入 YouTube API（但不初始化播放器）
 onMounted(async () => {
   try {
@@ -290,6 +357,50 @@ onMounted(async () => {
     console.log('YouTube API preloaded successfully')
   } catch (error) {
     console.error('Failed to preload YouTube API:', error)
+  }
+
+  // 檢查是否因需要認證被重定向
+  if (route.query.requireAuth === '1') {
+    showAuthRequiredMessage.value = true
+    setTimeout(() => {
+      showAuthRequiredMessage.value = false
+      router.replace({ path: '/', query: {} })
+    }, 5000)
+  }
+
+  // 檢查會話是否過期
+  if (route.query.session === 'expired') {
+    showSessionExpiredMessage.value = true
+    setTimeout(() => {
+      showSessionExpiredMessage.value = false
+      router.replace({ path: '/', query: {} })
+    }, 5000)
+  }
+
+  // 處理登入結果訊息
+  if (route.query.login) {
+    const loginStatus = route.query.login
+    const message = route.query.message
+    const restored = route.query.restored
+
+    if (loginStatus === 'success') {
+      console.log('登入成功！')
+
+      // 檢查是否為帳號恢復
+      if (restored === '1') {
+        // 顯示帳號恢復提示（使用 ErrorMessage 元件暫時顯示，或可建立專用 Toast 元件）
+        alert('歡迎回來！您的帳號資料已完全恢復')
+      }
+    } else if (loginStatus === 'cancelled') {
+      player.errorMessage.value = message || '您已取消 LINE 登入'
+    } else if (loginStatus === 'error') {
+      player.errorMessage.value = message || '登入失敗，請重試'
+    }
+
+    // 清除 query 參數
+    setTimeout(() => {
+      router.replace({ path: '/', query: {} })
+    }, 100)
   }
 })
 </script>
@@ -307,9 +418,20 @@ onMounted(async () => {
 
 /* Header */
 .app-header {
-  text-align: center;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   margin-bottom: 2rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.header-text {
+  text-align: center;
+  flex: 1;
 }
 
 .app-title {
@@ -336,6 +458,67 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* 認證提示訊息 */
+.auth-required-message {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background-color: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: var(--radius-lg);
+  color: #1976d2;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-required-message .info-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.auth-required-message p {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* 會話過期提示訊息 */
+.session-expired-message {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background-color: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: var(--radius-lg);
+  color: #f57c00;
+  animation: slideDown 0.3s ease-out;
+}
+
+.session-expired-message .warning-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.session-expired-message p {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
 }
 
 /* Welcome Message */
@@ -396,8 +579,13 @@ onMounted(async () => {
   }
 
   .app-header {
-    padding: 1.5rem 0.5rem;
+    padding: 1rem 0.5rem;
     margin-bottom: 1.5rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
   }
 
   .app-title {
