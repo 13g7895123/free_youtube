@@ -56,8 +56,9 @@ export const useAuthStore = defineStore('auth', () => {
       loginWithMock()
     } else {
       // LINE Login 模式：重定向到 LINE OAuth
-      const apiUrl = import.meta.env.VITE_API_URL || ''
-      window.location.href = `${apiUrl}/api/auth/line/login`
+      // 注意：VITE_API_URL 已包含 /api，所以這裡直接用 /auth/line/login
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      window.location.href = `${apiUrl}/auth/line/login`
     }
   }
 

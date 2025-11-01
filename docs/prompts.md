@@ -1,1 +1,1 @@
-1. 以下項目是我目前看到有問題的，請重新確認一次需求後，幫我修正，line登入的按鈕應該在navbar上面才對，另外，未登入的狀態，不應該看到navbar影片庫與播放清單，請確認specs/003-line-login-auth/spec.md是否有提到這段，如果沒有的話幫我修正補上
+1. /api/api/auth/line/login正式站我點line登入會到這個網址，似乎多了一個/api，我如果改回正確的/api/auth/line/login，則出現"LINE Login 設定錯誤"

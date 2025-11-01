@@ -28,11 +28,16 @@ class Auth extends BaseController
      */
     public function lineLogin()
     {
+        // 檢查是否為 Mock 模式
+        if (env('AUTH_MODE') === 'mock') {
+            return $this->fail('目前使用 Mock 認證模式，請點擊「登入」按鈕使用 Mock 登入', 403);
+        }
+
         $channelId = env('LINE_LOGIN_CHANNEL_ID');
         $callbackUrl = env('LINE_LOGIN_CALLBACK_URL');
 
         if (!$channelId || !$callbackUrl) {
-            return $this->fail('LINE Login 設定錯誤', 500);
+            return $this->fail('LINE Login 設定錯誤：請設定 LINE_LOGIN_CHANNEL_ID 和 LINE_LOGIN_CALLBACK_URL 環境變數', 500);
         }
 
         // 生成隨機 state 用於 CSRF 防護
