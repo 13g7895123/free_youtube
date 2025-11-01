@@ -11,7 +11,7 @@
 ### 2. 測試 API
 
 ```bash
-./test-line-debug-api.sh https://your-domain.com your-debug-key
+./test-line-debug-api.sh https://your-domain.com
 ```
 
 ## 📊 常用 API
@@ -19,29 +19,25 @@
 ### 查詢所有 logs
 
 ```bash
-curl -X GET "https://your-domain.com/api/auth/line/logs?limit=50" \
-  -H "X-Debug-Key: your-debug-key"
+curl -X GET "https://your-domain.com/api/auth/line/logs?limit=50"
 ```
 
 ### 查詢錯誤
 
 ```bash
-curl -X GET "https://your-domain.com/api/auth/line/errors?limit=20" \
-  -H "X-Debug-Key: your-debug-key"
+curl -X GET "https://your-domain.com/api/auth/line/errors?limit=20"
 ```
 
 ### 查詢特定 session
 
 ```bash
-curl -X GET "https://your-domain.com/api/auth/line/logs?session_id=line_login_xxx" \
-  -H "X-Debug-Key: your-debug-key"
+curl -X GET "https://your-domain.com/api/auth/line/logs?session_id=line_login_xxx"
 ```
 
 ### 查詢特定用戶
 
 ```bash
-curl -X GET "https://your-domain.com/api/auth/line/logs?line_user_id=Uxxxx" \
-  -H "X-Debug-Key: your-debug-key"
+curl -X GET "https://your-domain.com/api/auth/line/logs?line_user_id=Uxxxx"
 ```
 
 ## 🔍 登入步驟流程
@@ -62,14 +58,12 @@ curl -X GET "https://your-domain.com/api/auth/line/logs?line_user_id=Uxxxx" \
 1. **觸發一次登入** - 在正式環境使用 LINE 登入
 2. **查詢最近的 logs**
    ```bash
-   curl -X GET "https://your-domain.com/api/auth/line/logs?limit=100" \
-     -H "X-Debug-Key: your-debug-key" | jq .
+   curl -X GET "https://your-domain.com/api/auth/line/logs?limit=100" | jq .
    ```
 3. **找到錯誤的 session_id**
 4. **查詢該 session 的所有步驟**
    ```bash
-   curl -X GET "https://your-domain.com/api/auth/line/logs?session_id=xxx" \
-     -H "X-Debug-Key: your-debug-key" | jq .
+   curl -X GET "https://your-domain.com/api/auth/line/logs?session_id=xxx" | jq .
    ```
 5. **分析 error_message 和 response_data**
 
@@ -111,9 +105,9 @@ curl -X GET "https://your-domain.com/api/auth/line/logs?line_user_id=Uxxxx" \
 
 ## 🔐 安全提醒
 
-- **不要分享** DEBUG_API_KEY
-- **定期更換** DEBUG_API_KEY
+- ⚠️ **Debug API 目前無需驗證** - 建議僅在除錯期間啟用
 - **定期清理** 舊的 log 資料（建議保留 30 天）
+- 穩定後可考慮加回驗證或移除這些 API
 
 ## 📚 詳細文件
 

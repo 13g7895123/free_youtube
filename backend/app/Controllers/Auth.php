@@ -264,14 +264,6 @@ class Auth extends BaseController
      */
     public function getLineLoginLogs()
     {
-        // 簡單的安全檢查 - 可以改用環境變數或其他方式保護
-        $authKey = $this->request->getHeaderLine('X-Debug-Key');
-        $expectedKey = env('DEBUG_API_KEY', 'your-secret-debug-key');
-        
-        if ($authKey !== $expectedKey) {
-            return $this->fail('未授權', 403);
-        }
-
         $sessionId = $this->request->getGet('session_id');
         $lineUserId = $this->request->getGet('line_user_id');
         $status = $this->request->getGet('status');
@@ -320,14 +312,6 @@ class Auth extends BaseController
      */
     public function getLineLoginErrors()
     {
-        // 簡單的安全檢查
-        $authKey = $this->request->getHeaderLine('X-Debug-Key');
-        $expectedKey = env('DEBUG_API_KEY', 'your-secret-debug-key');
-        
-        if ($authKey !== $expectedKey) {
-            return $this->fail('未授權', 403);
-        }
-
         $limit = (int) ($this->request->getGet('limit') ?: 50);
         $errors = $this->lineLoginLogModel->getRecentErrors($limit);
 

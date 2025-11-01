@@ -4,14 +4,12 @@
 
 # 設定
 API_BASE_URL="${1:-https://your-domain.com}"
-DEBUG_KEY="${2:-your-secret-debug-key-here}"
 
 echo "==========================================="
 echo "LINE 登入 Debug API 測試"
 echo "==========================================="
 echo ""
 echo "API Base URL: $API_BASE_URL"
-echo "Debug Key: ${DEBUG_KEY:0:10}..."
 echo ""
 
 # 顏色
@@ -22,8 +20,7 @@ NC='\033[0m'
 
 # 測試 1: 查詢最近的 logs
 echo -e "${YELLOW}測試 1: 查詢最近的 logs (limit=10)${NC}"
-response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/logs?limit=10" \
-  -H "X-Debug-Key: $DEBUG_KEY")
+response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/logs?limit=10")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | sed '$d')
@@ -42,8 +39,7 @@ echo ""
 
 # 測試 2: 查詢錯誤 logs
 echo -e "${YELLOW}測試 2: 查詢錯誤 logs${NC}"
-response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/errors?limit=10" \
-  -H "X-Debug-Key: $DEBUG_KEY")
+response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/errors?limit=10")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | sed '$d')
@@ -69,8 +65,7 @@ echo ""
 
 # 測試 3: 查詢特定狀態
 echo -e "${YELLOW}測試 3: 查詢特定狀態 (status=error)${NC}"
-response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/logs?status=error&limit=5" \
-  -H "X-Debug-Key: $DEBUG_KEY")
+response=$(curl -s -w "\n%{http_code}" -X GET "$API_BASE_URL/api/auth/line/logs?status=error&limit=5")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | sed '$d')
@@ -89,8 +84,8 @@ echo "測試完成"
 echo "==========================================="
 echo ""
 echo "使用說明:"
-echo "  $0 [API_BASE_URL] [DEBUG_KEY]"
+echo "  $0 [API_BASE_URL]"
 echo ""
 echo "範例:"
-echo "  $0 https://your-domain.com your-debug-key"
+echo "  $0 https://your-domain.com"
 echo ""
