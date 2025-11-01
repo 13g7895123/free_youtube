@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\UserModel;
 use App\Models\UserTokenModel;
 use App\Models\GuestSessionModel;
+use App\Models\LineLoginLogModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class Auth extends BaseController
@@ -12,6 +13,7 @@ class Auth extends BaseController
     protected $userModel;
     protected $tokenModel;
     protected $guestSessionModel;
+    protected $lineLoginLogModel;
 
     public function __construct()
     {
@@ -19,6 +21,7 @@ class Auth extends BaseController
         $this->userModel = new UserModel();
         $this->tokenModel = new UserTokenModel();
         $this->guestSessionModel = new GuestSessionModel();
+        $this->lineLoginLogModel = new LineLoginLogModel();
     }
 
     /**
@@ -66,13 +69,33 @@ class Auth extends BaseController
      */
     public function lineCallback()
     {
+        // 生成本次登入的 session ID
+        $sessionId = uniqid('line_login_', true);
+        $ip = $this->request->getIPAddress();
+        $userAgent = $this->request->getUserAgent()->getAgentString();
+        
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+
+        // 記錄開始
+        $this->lineLoginLogModel->logStep($sessionId, 'callback_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'query_params' => $this->request->getGet()
+            ]
+        ]);
 
         // 檢查是否有錯誤參數（使用者取消授權）
         $error = $this->request->getGet('error');
         if ($error) {
             $errorDescription = $this->request->getGet('error_description') ?? '授權已取消';
             log_message('info', "LINE OAuth error: {$error} - {$errorDescription}");
+
+            $this->lineLoginLogModel->logStep($sessionId, 'callback_start', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => "User cancelled: {$error} - {$errorDescription}"
+            ]);
 
             return redirect()->to($frontendUrl . '/?login=cancelled&message=' . urlencode('您已取消 LINE 登入'));
         }
@@ -83,6 +106,17 @@ class Auth extends BaseController
 
         if (!$state || $state !== $sessionState) {
             log_message('warning', 'LINE OAuth state mismatch');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'State mismatch - CSRF validation failed',
+                'request' => [
+                    'state' => $state,
+                    'session_state' => $sessionState
+                ]
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
         }
 
@@ -93,27 +127,56 @@ class Auth extends BaseController
         $code = $this->request->getGet('code');
         if (!$code) {
             log_message('error', 'LINE OAuth callback missing code');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'get_code', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'Authorization code missing from callback'
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('授權失敗，請重試'));
         }
 
         // 使用授權碼換取 access token
-        $tokenData = $this->getLineAccessToken($code);
+        $tokenData = $this->getLineAccessToken($code, $sessionId, $ip, $userAgent);
         if (!$tokenData) {
             log_message('error', 'Failed to get LINE access token');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'get_token', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'Failed to exchange code for access token'
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法取得 LINE 授權，請檢查網路連線後重試'));
         }
 
         // 使用 access token 取得用戶資料
-        $lineUserData = $this->getLineUserProfile($tokenData['access_token']);
+        $lineUserData = $this->getLineUserProfile($tokenData['access_token'], $sessionId, $ip, $userAgent);
         if (!$lineUserData) {
             log_message('error', 'Failed to get LINE user profile');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'get_profile', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'Failed to get user profile from LINE API'
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法取得用戶資料，請重試'));
         }
 
         // 建立或更新用戶
-        $user = $this->createOrUpdateUser($lineUserData);
+        $user = $this->createOrUpdateUser($lineUserData, $sessionId, $ip, $userAgent);
         if (!$user) {
             log_message('error', 'Failed to create/update user');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'line_user_id' => $lineUserData['userId'] ?? null,
+                'error' => 'Failed to create or update user in database'
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法建立用戶帳號，請稍後再試'));
         }
 
@@ -133,8 +196,27 @@ class Auth extends BaseController
         $appToken = $this->generateUserToken($user['id']);
         if (!$appToken) {
             log_message('error', 'Failed to generate user token');
+            
+            $this->lineLoginLogModel->logStep($sessionId, 'create_token', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'line_user_id' => $lineUserData['userId'] ?? null,
+                'error' => 'Failed to generate authentication token'
+            ]);
+            
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法生成認證憑證，請重試'));
         }
+
+        // 記錄完成
+        $this->lineLoginLogModel->logStep($sessionId, 'complete', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'line_user_id' => $lineUserData['userId'] ?? null,
+            'response' => [
+                'user_id' => $user['id'],
+                'was_restored' => $wasRestored
+            ]
+        ]);
 
         // 設置 HTTP-only cookie
         $this->setAuthCookie($appToken['access_token']);
@@ -172,6 +254,97 @@ class Auth extends BaseController
         return $this->respond([
             'success' => true,
             'data' => $user
+        ]);
+    }
+
+    /**
+     * 查詢 LINE 登入 logs（開發用）
+     *
+     * @return ResponseInterface
+     */
+    public function getLineLoginLogs()
+    {
+        // 簡單的安全檢查 - 可以改用環境變數或其他方式保護
+        $authKey = $this->request->getHeaderLine('X-Debug-Key');
+        $expectedKey = env('DEBUG_API_KEY', 'your-secret-debug-key');
+        
+        if ($authKey !== $expectedKey) {
+            return $this->fail('未授權', 403);
+        }
+
+        $sessionId = $this->request->getGet('session_id');
+        $lineUserId = $this->request->getGet('line_user_id');
+        $status = $this->request->getGet('status');
+        $limit = (int) ($this->request->getGet('limit') ?: 50);
+
+        $builder = $this->lineLoginLogModel->builder();
+
+        if ($sessionId) {
+            $builder->where('session_id', $sessionId);
+        }
+
+        if ($lineUserId) {
+            $builder->where('line_user_id', $lineUserId);
+        }
+
+        if ($status) {
+            $builder->where('status', $status);
+        }
+
+        $logs = $builder->orderBy('id', 'DESC')
+                       ->limit($limit)
+                       ->get()
+                       ->getResultArray();
+
+        // 格式化輸出
+        foreach ($logs as &$log) {
+            if ($log['request_data']) {
+                $log['request_data'] = json_decode($log['request_data'], true);
+            }
+            if ($log['response_data']) {
+                $log['response_data'] = json_decode($log['response_data'], true);
+            }
+        }
+
+        return $this->respond([
+            'success' => true,
+            'data' => $logs,
+            'count' => count($logs)
+        ]);
+    }
+
+    /**
+     * 取得最近的 LINE 登入錯誤（開發用）
+     *
+     * @return ResponseInterface
+     */
+    public function getLineLoginErrors()
+    {
+        // 簡單的安全檢查
+        $authKey = $this->request->getHeaderLine('X-Debug-Key');
+        $expectedKey = env('DEBUG_API_KEY', 'your-secret-debug-key');
+        
+        if ($authKey !== $expectedKey) {
+            return $this->fail('未授權', 403);
+        }
+
+        $limit = (int) ($this->request->getGet('limit') ?: 50);
+        $errors = $this->lineLoginLogModel->getRecentErrors($limit);
+
+        // 格式化輸出
+        foreach ($errors as &$error) {
+            if ($error['request_data']) {
+                $error['request_data'] = json_decode($error['request_data'], true);
+            }
+            if ($error['response_data']) {
+                $error['response_data'] = json_decode($error['response_data'], true);
+            }
+        }
+
+        return $this->respond([
+            'success' => true,
+            'data' => $errors,
+            'count' => count($errors)
         ]);
     }
 
@@ -327,9 +500,12 @@ class Auth extends BaseController
      * 使用授權碼換取 LINE access token
      *
      * @param string $code
+     * @param string $sessionId
+     * @param string $ip
+     * @param string $userAgent
      * @return array|null
      */
-    private function getLineAccessToken(string $code): ?array
+    private function getLineAccessToken(string $code, string $sessionId = '', string $ip = '', string $userAgent = ''): ?array
     {
         $channelId = env('LINE_LOGIN_CHANNEL_ID');
         $channelSecret = env('LINE_LOGIN_CHANNEL_SECRET');
@@ -343,6 +519,21 @@ class Auth extends BaseController
             'client_secret' => $channelSecret
         ];
 
+        // 記錄請求
+        if ($sessionId) {
+            $this->lineLoginLogModel->logStep($sessionId, 'get_token', 'success', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'request' => [
+                    'url' => 'https://api.line.me/oauth2/v2.1/token',
+                    'grant_type' => 'authorization_code',
+                    'has_code' => !empty($code),
+                    'has_client_id' => !empty($channelId),
+                    'has_client_secret' => !empty($channelSecret)
+                ]
+            ]);
+        }
+
         $ch = curl_init('https://api.line.me/oauth2/v2.1/token');
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
@@ -353,23 +544,58 @@ class Auth extends BaseController
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
         if ($httpCode !== 200) {
             log_message('error', 'LINE token API error: ' . $response);
+            
+            // 記錄錯誤
+            if ($sessionId) {
+                $this->lineLoginLogModel->logStep($sessionId, 'get_token', 'error', [
+                    'ip' => $ip,
+                    'user_agent' => $userAgent,
+                    'error' => "HTTP {$httpCode}: " . ($curlError ?: $response),
+                    'response' => [
+                        'http_code' => $httpCode,
+                        'response_body' => $response,
+                        'curl_error' => $curlError
+                    ]
+                ]);
+            }
+            
             return null;
         }
 
-        return json_decode($response, true);
+        $tokenData = json_decode($response, true);
+        
+        // 記錄成功回應（隱藏敏感資訊）
+        if ($sessionId && $tokenData) {
+            $this->lineLoginLogModel->logStep($sessionId, 'get_token', 'success', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'response' => [
+                    'has_access_token' => !empty($tokenData['access_token']),
+                    'token_type' => $tokenData['token_type'] ?? null,
+                    'expires_in' => $tokenData['expires_in'] ?? null,
+                    'scope' => $tokenData['scope'] ?? null
+                ]
+            ]);
+        }
+
+        return $tokenData;
     }
 
     /**
      * 使用 access token 取得 LINE 用戶資料
      *
      * @param string $accessToken
+     * @param string $sessionId
+     * @param string $ip
+     * @param string $userAgent
      * @return array|null
      */
-    private function getLineUserProfile(string $accessToken): ?array
+    private function getLineUserProfile(string $accessToken, string $sessionId = '', string $ip = '', string $userAgent = ''): ?array
     {
         $ch = curl_init('https://api.line.me/v2/profile');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -379,23 +605,59 @@ class Auth extends BaseController
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
         if ($httpCode !== 200) {
             log_message('error', 'LINE profile API error: ' . $response);
+            
+            // 記錄錯誤
+            if ($sessionId) {
+                $this->lineLoginLogModel->logStep($sessionId, 'get_profile', 'error', [
+                    'ip' => $ip,
+                    'user_agent' => $userAgent,
+                    'error' => "HTTP {$httpCode}: " . ($curlError ?: $response),
+                    'response' => [
+                        'http_code' => $httpCode,
+                        'response_body' => $response,
+                        'curl_error' => $curlError
+                    ]
+                ]);
+            }
+            
             return null;
         }
 
-        return json_decode($response, true);
+        $userData = json_decode($response, true);
+        
+        // 記錄成功回應
+        if ($sessionId && $userData) {
+            $this->lineLoginLogModel->logStep($sessionId, 'get_profile', 'success', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'line_user_id' => $userData['userId'] ?? null,
+                'response' => [
+                    'user_id' => $userData['userId'] ?? null,
+                    'display_name' => $userData['displayName'] ?? null,
+                    'has_picture' => !empty($userData['pictureUrl']),
+                    'has_email' => !empty($userData['email'])
+                ]
+            ]);
+        }
+        
+        return $userData;
     }
 
     /**
      * 建立或更新用戶
      *
      * @param array $lineUserData
+     * @param string $sessionId
+     * @param string $ip
+     * @param string $userAgent
      * @return array|null
      */
-    private function createOrUpdateUser(array $lineUserData): ?array
+    private function createOrUpdateUser(array $lineUserData, string $sessionId = '', string $ip = '', string $userAgent = ''): ?array
     {
         $lineUserId = $lineUserData['userId'];
 
@@ -412,14 +674,104 @@ class Auth extends BaseController
             'email' => $lineUserData['email'] ?? null
         ];
 
-        if ($existingUser) {
-            // 更新現有用戶
-            $this->userModel->update($existingUser['id'], $userData);
-            return $this->userModel->withDeleted()->find($existingUser['id']);
-        } else {
-            // 建立新用戶
-            $userId = $this->userModel->insert($userData);
-            return $this->userModel->find($userId);
+        try {
+            if ($existingUser) {
+                // 更新現有用戶
+                $updateResult = $this->userModel->update($existingUser['id'], $userData);
+                
+                if (!$updateResult) {
+                    $errors = $this->userModel->errors();
+                    log_message('error', 'User update failed: ' . json_encode($errors));
+                    
+                    if ($sessionId) {
+                        $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'error', [
+                            'ip' => $ip,
+                            'user_agent' => $userAgent,
+                            'line_user_id' => $lineUserId,
+                            'error' => 'Update user failed: ' . json_encode($errors),
+                            'request' => $userData
+                        ]);
+                    }
+                    
+                    return null;
+                }
+                
+                $user = $this->userModel->withDeleted()->find($existingUser['id']);
+                
+                if ($sessionId) {
+                    $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'success', [
+                        'ip' => $ip,
+                        'user_agent' => $userAgent,
+                        'line_user_id' => $lineUserId,
+                        'response' => [
+                            'user_id' => $existingUser['id'],
+                            'action' => 'updated'
+                        ]
+                    ]);
+                }
+                
+                return $user;
+            } else {
+                // 建立新用戶
+                $userId = $this->userModel->insert($userData);
+                
+                if (!$userId) {
+                    $errors = $this->userModel->errors();
+                    log_message('error', 'User insert failed: ' . json_encode($errors));
+                    log_message('error', 'Last query: ' . $this->userModel->db->getLastQuery());
+                    
+                    if ($sessionId) {
+                        $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'error', [
+                            'ip' => $ip,
+                            'user_agent' => $userAgent,
+                            'line_user_id' => $lineUserId,
+                            'error' => 'Insert user failed: ' . json_encode($errors),
+                            'request' => $userData,
+                            'response' => [
+                                'last_query' => $this->userModel->db->getLastQuery()
+                            ]
+                        ]);
+                    }
+                    
+                    return null;
+                }
+                
+                $user = $this->userModel->find($userId);
+                
+                if ($sessionId) {
+                    $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'success', [
+                        'ip' => $ip,
+                        'user_agent' => $userAgent,
+                        'line_user_id' => $lineUserId,
+                        'response' => [
+                            'user_id' => $userId,
+                            'action' => 'created'
+                        ]
+                    ]);
+                }
+                
+                return $user;
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Exception in createOrUpdateUser: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            
+            if ($sessionId) {
+                $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'error', [
+                    'ip' => $ip,
+                    'user_agent' => $userAgent,
+                    'line_user_id' => $lineUserId,
+                    'error' => 'Exception: ' . $e->getMessage(),
+                    'request' => $userData,
+                    'response' => [
+                        'exception' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]
+                ]);
+            }
+            
+            return null;
         }
     }
 

@@ -22,6 +22,10 @@ $routes->group('api', static function ($routes) {
         // Mock Login（公開，僅開發環境）
         $routes->post('mock/login', 'Auth::mockLogin');
 
+        // Debug API（需要 X-Debug-Key header）
+        $routes->get('line/logs', 'Auth::getLineLoginLogs');       // 查詢 LINE 登入 logs
+        $routes->get('line/errors', 'Auth::getLineLoginErrors');   // 查詢 LINE 登入錯誤
+
         // 需要認證的路由
         $routes->group('', ['filter' => 'auth'], static function ($routes) {
             $routes->get('user', 'Auth::user');                    // 取得當前用戶
