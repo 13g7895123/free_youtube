@@ -64,20 +64,21 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}步驟 3: 重新部署後端...${NC}"
-docker-compose -f docker-compose.prod.yml up -d --build backend
+echo -e "${YELLOW}步驟 3: 重新部署服務...${NC}"
+echo "正在重建 backend 和 frontend..."
+docker-compose -f docker-compose.prod.yml up -d --build backend frontend
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ 後端重新部署成功${NC}"
+    echo -e "${GREEN}✓ 服務重新部署成功${NC}"
 else
-    echo -e "${RED}✗ 後端部署失敗${NC}"
+    echo -e "${RED}✗ 服務部署失敗${NC}"
     exit 1
 fi
 
 echo ""
 echo -e "${YELLOW}步驟 4: 檢查容器狀態...${NC}"
-sleep 3
-docker-compose -f docker-compose.prod.yml ps backend
+sleep 5
+docker-compose -f docker-compose.prod.yml ps backend frontend
 
 echo ""
 echo -e "${GREEN}=========================================${NC}"
