@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const isAuthenticated = ref(false)
   const isLoading = ref(false)
+  const wasAuthenticated = ref(false) // 追蹤是否曾經認證成功
 
   // Getters
   const isGuest = computed(() => !isAuthenticated.value)
@@ -26,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
         const wasGuest = !isAuthenticated.value
         user.value = response.data.data
         isAuthenticated.value = true
+        wasAuthenticated.value = true // 標記為曾經認證成功
 
         // 如果是首次登入，自動觸發訪客資料遷移
         if (wasGuest) {
@@ -135,14 +137,30 @@ export const useAuthStore = defineStore('auth', () => {
    * 處理 401 未授權事件
    */
   function handleUnauthorized() {
+    const wasLoggedIn = isAuthenticated.value // 記錄當前登入狀態
     user.value = null
     isAuthenticated.value = false
+
+    // 如果用戶從未登入過（首次載入頁面時 checkAuth 返回 401），不需要重定向
+    if (!wasLoggedIn && !wasAuthenticated.value) {
+      console.log('用戶未登入，無需重定向')
+      return
+    }
 
     // 如果已經在 session expired 頁面，不要再次重定向
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       if (params.get('session') === 'expired') {
         console.warn('Session 已過期')
+        return
+      }
+    }
+
+    // 如果在首頁且從未真正登入過，也不重定向
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname
+      if (currentPath === '/' && !wasAuthenticated.value) {
+        console.log('在首頁且從未登入，無需重定向')
         return
       }
     }

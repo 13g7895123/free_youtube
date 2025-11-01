@@ -1,5 +1,5 @@
 <template>
-  <div class="save-actions">
+  <div v-if="authStore.isAuthenticated" class="save-actions">
     <!-- 主加入按鈕 -->
     <div class="add-button-container">
       <button
@@ -100,6 +100,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { videoService, playlistService } from '@/services/api'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import {
   PlusIcon,
@@ -111,6 +112,8 @@ import {
   FolderOpenIcon,
   PlusCircleIcon
 } from '@heroicons/vue/24/outline'
+
+const authStore = useAuthStore()
 
 const props = defineProps({
   getVideoInfo: {

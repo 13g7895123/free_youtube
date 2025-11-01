@@ -1,1 +1,1 @@
-1. /api/api/auth/line/login正式站我點line登入會到這個網址，似乎多了一個/api，我如果改回正確的/api/auth/line/login，則出現"LINE Login 設定錯誤"
+ 1. 我用line登入後，導回來的頁面還是說我沒有登入，請幫我確認是甚麼原因
