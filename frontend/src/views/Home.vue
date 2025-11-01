@@ -129,6 +129,7 @@ import { useYouTubePlayer } from '../composables/useYouTubePlayer'
 import { useLocalStorage } from '../composables/useLocalStorage'
 import { useGlobalPlayerStore } from '../stores/globalPlayerStore'
 import { useGuestHistory } from '../composables/useGuestHistory'
+import { useAuthStore } from '../stores/auth'
 
 // 路由
 const route = useRoute()
@@ -157,6 +158,7 @@ const player = useYouTubePlayer('youtube-player', {
 })
 const globalPlayerStore = useGlobalPlayerStore()
 const guestHistory = useGuestHistory()
+const authStore = useAuthStore()
 
 // 監聽設定變化，自動保存到 LocalStorage
 watch(() => player.loopEnabled.value, (newValue) => {
@@ -384,7 +386,10 @@ onMounted(async () => {
     const restored = route.query.restored
 
     if (loginStatus === 'success') {
-      console.log('登入成功！')
+      console.log('登入成功！重新檢查認證狀態...')
+
+      // 重新檢查認證狀態以更新 UI
+      await authStore.checkAuth()
 
       // 檢查是否為帳號恢復
       if (restored === '1') {

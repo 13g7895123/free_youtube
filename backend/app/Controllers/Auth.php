@@ -467,7 +467,10 @@ class Auth extends BaseController
         $expiresSeconds = (int) env('TOKEN_EXPIRE_SECONDS', 2592000);
         $isProduction = env('CI_ENVIRONMENT') === 'production';
 
-        set_cookie([
+        // 取得 Cookie Domain 設置（如果有的話）
+        $cookieDomain = env('COOKIE_DOMAIN', '');
+
+        $cookieConfig = [
             'name' => 'access_token',
             'value' => $accessToken,
             'expire' => $expiresSeconds,
@@ -475,7 +478,16 @@ class Auth extends BaseController
             'secure' => $isProduction, // HTTPS only in production
             'httponly' => true, // 防止 JavaScript 存取
             'samesite' => 'Lax' // CSRF 防護
-        ]);
+        ];
+
+        // 只在有設定 domain 時才加入（避免空字串）
+        if (!empty($cookieDomain)) {
+            $cookieConfig['domain'] = $cookieDomain;
+        }
+
+        set_cookie($cookieConfig);
+
+        log_message('debug', 'Auth cookie set: expires=' . $expiresSeconds . 's, secure=' . ($isProduction ? 'true' : 'false') . ', domain=' . ($cookieDomain ?: 'default'));
     }
 
     /**
