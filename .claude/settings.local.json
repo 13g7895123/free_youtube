@@ -84,7 +84,8 @@
       "Bash(if [ -f \"/home/jarvis/project/idea/free_youtube/frontend/nginx.conf\" ])",
       "Bash(then cat /home/jarvis/project/idea/free_youtube/frontend/nginx.conf)",
       "Bash(else echo \"找不到 nginx.conf\")",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(docker network:*)"
     ],
     "deny": [],
     "ask": []

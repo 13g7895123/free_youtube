@@ -371,19 +371,50 @@ class Auth extends BaseController
             ]
         ]);
 
-        // 生成應用 token
-        $appToken = $this->generateUserToken($user['id']);
-        if (!$appToken) {
-            log_message('error', 'Failed to generate user token');
+        // 生成應用 token（加強錯誤捕獲）
+        try {
+            $appToken = $this->generateUserToken($user['id']);
 
-            $this->lineLoginLogModel->logStep($sessionId, 'create_token', 'error', [
+            if (!$appToken) {
+                log_message('error', 'Failed to generate user token - returned null');
+
+                $this->lineLoginLogModel->logStep($sessionId, 'generate_token', 'error', [
+                    'ip' => $ip,
+                    'user_agent' => $userAgent,
+                    'line_user_id' => $lineUserData['userId'] ?? null,
+                    'error' => 'generateUserToken returned null'
+                ]);
+
+                return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法生成認證憑證，請重試'));
+            }
+
+            // LOG: Token 生成成功
+            $this->lineLoginLogModel->logStep($sessionId, 'generate_token', 'success', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'line_user_id' => $lineUserData['userId'] ?? null,
-                'error' => 'Failed to generate authentication token'
+                'response' => [
+                    'has_access_token' => !empty($appToken['access_token']),
+                    'has_refresh_token' => !empty($appToken['refresh_token'])
+                ]
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Exception in generateUserToken: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+
+            $this->lineLoginLogModel->logStep($sessionId, 'generate_token', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'line_user_id' => $lineUserData['userId'] ?? null,
+                'error' => 'Exception: ' . $e->getMessage(),
+                'response' => [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
             ]);
 
-            return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法生成認證憑證，請重試'));
+            return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('系統錯誤，請稍後再試'));
         }
 
         // LOG: Token 生成成功，設置 cookie
