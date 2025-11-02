@@ -48,6 +48,10 @@ $routes->group('api', static function ($routes) {
         $routes->get('diagnostic', 'LineLoginDebug::diagnostic');           // 系統診斷資訊
         $routes->get('error-summary', 'LineLoginDebug::errorSummary');      // 錯誤摘要統計
         $routes->get('test-connection', 'LineLoginDebug::testConnection');  // 測試連接配置
+        $routes->get('test-jwt', 'LineLoginDebug::testJwtGeneration');      // 測試 JWT 生成功能
+        $routes->get('test-database', 'LineLoginDebug::testDatabaseConnection'); // 測試資料庫連接
+        $routes->get('diagnose-token', 'LineLoginDebug::diagnoseTokenGeneration'); // 診斷 Token 生成流程
+        $routes->get('diagnose-token/(:num)', 'LineLoginDebug::diagnoseTokenGeneration/$1'); // 診斷特定用戶的 Token 生成
     });
 
     // 測試路由（僅開發環境）

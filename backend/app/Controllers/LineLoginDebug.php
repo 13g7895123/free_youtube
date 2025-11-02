@@ -426,6 +426,412 @@ class LineLoginDebug extends ResourceController
 
     // ========== 輔助方法 ==========
 
+    /**
+     * 測試 JWT 生成功能
+     * GET /api/debug/line-login/test-jwt
+     */
+    public function testJwtGeneration()
+    {
+        try {
+            $testResults = [];
+
+            // 1. 測試 JWT_SECRET_KEY 讀取
+            $secretKeyTest = [
+                'getenv' => getenv('JWT_SECRET_KEY') ? 'has value' : 'empty',
+                '$_ENV' => isset($_ENV['JWT_SECRET_KEY']) ? 'has value' : 'not set',
+                'env_file' => file_exists(APPPATH . '../.env') ? 'exists' : 'not found',
+            ];
+
+            // 2. 測試 JWT 生成
+            $jwtTestResult = [];
+            try {
+                helper('jwt');
+                $testUserId = 999999; // 測試用戶 ID
+
+                // 測試 Access Token 生成
+                $accessTokenStart = microtime(true);
+                $accessToken = \App\Helpers\JwtHelper::generateAccessToken($testUserId);
+                $accessTokenTime = (microtime(true) - $accessTokenStart) * 1000;
+
+                $jwtTestResult['access_token'] = [
+                    'success' => true,
+                    'length' => strlen($accessToken),
+                    'parts' => count(explode('.', $accessToken)),
+                    'generation_time_ms' => round($accessTokenTime, 2),
+                    'sample' => substr($accessToken, 0, 50) . '...',
+                ];
+
+                // 測試 Refresh Token 生成
+                $refreshTokenStart = microtime(true);
+                $deviceId = md5('test-device-' . time());
+                $refreshToken = \App\Helpers\JwtHelper::generateRefreshToken($testUserId, $deviceId);
+                $refreshTokenTime = (microtime(true) - $refreshTokenStart) * 1000;
+
+                $jwtTestResult['refresh_token'] = [
+                    'success' => true,
+                    'length' => strlen($refreshToken),
+                    'parts' => count(explode('.', $refreshToken)),
+                    'generation_time_ms' => round($refreshTokenTime, 2),
+                    'sample' => substr($refreshToken, 0, 50) . '...',
+                ];
+
+                // 測試 Token 解碼
+                $decodedAccess = \App\Helpers\JwtHelper::decode($accessToken);
+                $decodedRefresh = \App\Helpers\JwtHelper::decode($refreshToken);
+
+                $jwtTestResult['decode'] = [
+                    'access_token' => [
+                        'success' => $decodedAccess !== null,
+                        'user_id' => $decodedAccess->sub ?? null,
+                        'type' => $decodedAccess->type ?? null,
+                        'exp' => isset($decodedAccess->exp) ? date('Y-m-d H:i:s', $decodedAccess->exp) : null,
+                    ],
+                    'refresh_token' => [
+                        'success' => $decodedRefresh !== null,
+                        'user_id' => $decodedRefresh->sub ?? null,
+                        'type' => $decodedRefresh->type ?? null,
+                        'jti' => $decodedRefresh->jti ?? null,
+                        'device_id' => $decodedRefresh->device_id ?? null,
+                        'exp' => isset($decodedRefresh->exp) ? date('Y-m-d H:i:s', $decodedRefresh->exp) : null,
+                    ],
+                ];
+
+                // 測試 Token 驗證
+                $verifyResult = \App\Helpers\JwtHelper::verifyToken($accessToken, 'access');
+                $jwtTestResult['verify'] = [
+                    'success' => $verifyResult !== null,
+                    'verified_user_id' => $verifyResult ? $verifyResult->sub : null,
+                ];
+
+            } catch (\Exception $e) {
+                $jwtTestResult['error'] = [
+                    'message' => $e->getMessage(),
+                    'class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ];
+            }
+
+            // 3. 測試環境變數
+            $envTest = [
+                'JWT_ACCESS_TOKEN_EXPIRE' => getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: '未設定 (預設: 900)',
+                'JWT_REFRESH_TOKEN_EXPIRE' => getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: '未設定 (預設: 2592000)',
+            ];
+
+            return $this->respond([
+                'success' => true,
+                'data' => [
+                    'secret_key_test' => $secretKeyTest,
+                    'jwt_generation_test' => $jwtTestResult,
+                    'environment_variables' => $envTest,
+                    'timestamp' => date('Y-m-d H:i:s'),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->fail([
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 測試資料庫連接和寫入
+     * GET /api/debug/line-login/test-database
+     */
+    public function testDatabaseConnection()
+    {
+        try {
+            $testResults = [];
+            $db = \Config\Database::connect();
+
+            // 1. 測試資料庫連接
+            $connectionTest = [
+                'connected' => $db->connect(),
+                'database' => $db->getDatabase(),
+                'driver' => $db->getPlatform(),
+                'version' => $db->getVersion(),
+            ];
+
+            // 2. 檢查 users 表
+            $usersTableTest = [];
+            try {
+                $userCount = $db->table('users')->countAll();
+                $usersTableTest = [
+                    'exists' => true,
+                    'count' => $userCount,
+                    'sample_user' => null,
+                ];
+
+                // 取得一個範例用戶
+                $sampleUser = $db->table('users')->limit(1)->get()->getRowArray();
+                if ($sampleUser) {
+                    $usersTableTest['sample_user'] = [
+                        'id' => $sampleUser['id'],
+                        'display_name' => $sampleUser['display_name'] ?? 'N/A',
+                        'created_at' => $sampleUser['created_at'],
+                    ];
+                }
+            } catch (\Exception $e) {
+                $usersTableTest = [
+                    'exists' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            // 3. 檢查 user_tokens 表
+            $tokensTableTest = [];
+            try {
+                // 檢查表結構
+                $fields = $db->getFieldData('user_tokens');
+                $fieldNames = array_map(function($field) {
+                    return $field->name;
+                }, $fields);
+
+                $tokenCount = $db->table('user_tokens')->countAll();
+                $tokensTableTest = [
+                    'exists' => true,
+                    'count' => $tokenCount,
+                    'fields' => $fieldNames,
+                    'recent_tokens' => [],
+                ];
+
+                // 取得最近的 token 記錄
+                $recentTokens = $db->table('user_tokens')
+                    ->orderBy('created_at', 'DESC')
+                    ->limit(3)
+                    ->get()
+                    ->getResultArray();
+
+                foreach ($recentTokens as $token) {
+                    $tokensTableTest['recent_tokens'][] = [
+                        'id' => $token['id'],
+                        'user_id' => $token['user_id'],
+                        'token_type' => $token['token_type'],
+                        'expires_at' => $token['expires_at'],
+                        'created_at' => $token['created_at'],
+                    ];
+                }
+            } catch (\Exception $e) {
+                $tokensTableTest = [
+                    'exists' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            // 4. 測試寫入 line_login_logs
+            $writeTest = [];
+            try {
+                $testData = [
+                    'session_id' => 'test-' . uniqid(),
+                    'step' => 'test_database_write',
+                    'status' => 'success',
+                    'response_data' => json_encode(['test' => true]),
+                    'created_at' => date('Y-m-d H:i:s'),
+                ];
+
+                $insertId = $db->table('line_login_logs')->insert($testData);
+                $writeTest = [
+                    'success' => true,
+                    'insert_id' => $db->insertID(),
+                    'affected_rows' => $db->affectedRows(),
+                ];
+
+                // 清理測試資料
+                $db->table('line_login_logs')->where('session_id', $testData['session_id'])->delete();
+
+            } catch (\Exception $e) {
+                $writeTest = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            return $this->respond([
+                'success' => true,
+                'data' => [
+                    'connection' => $connectionTest,
+                    'users_table' => $usersTableTest,
+                    'user_tokens_table' => $tokensTableTest,
+                    'write_test' => $writeTest,
+                    'timestamp' => date('Y-m-d H:i:s'),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->fail([
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 完整診斷 Token 生成流程
+     * GET /api/debug/line-login/diagnose-token/{userId?}
+     */
+    public function diagnoseTokenGeneration($userId = null)
+    {
+        try {
+            // 如果沒有提供 userId，嘗試取得最近的用戶
+            if (!$userId) {
+                $db = \Config\Database::connect();
+                $recentUser = $db->table('users')
+                    ->orderBy('created_at', 'DESC')
+                    ->limit(1)
+                    ->get()
+                    ->getRowArray();
+
+                if ($recentUser) {
+                    $userId = $recentUser['id'];
+                } else {
+                    return $this->fail('沒有找到任何用戶，請提供用戶 ID', 400);
+                }
+            }
+
+            $diagnosis = [];
+
+            // 1. 檢查用戶是否存在
+            $userModel = new \App\Models\UserModel();
+            $user = $userModel->find($userId);
+
+            $diagnosis['user'] = [
+                'exists' => $user !== null,
+                'id' => $user ? $user['id'] : null,
+                'display_name' => $user ? $user['display_name'] : null,
+                'status' => $user ? ($user['deleted_at'] ? 'deleted' : 'active') : 'not found',
+            ];
+
+            if (!$user) {
+                return $this->respond([
+                    'success' => false,
+                    'diagnosis' => $diagnosis,
+                    'error' => '用戶不存在',
+                ]);
+            }
+
+            // 2. 模擬 generateUserToken 流程
+            $tokenGeneration = [];
+
+            try {
+                // 初始化 helper
+                helper('jwt');
+
+                // 測試 Access Token 生成
+                $accessToken = \App\Helpers\JwtHelper::generateAccessToken($userId);
+                $tokenGeneration['access_token'] = [
+                    'success' => true,
+                    'length' => strlen($accessToken),
+                ];
+
+                // 測試 Refresh Token 生成
+                $request = service('request');
+                $userAgent = $request->getUserAgent()->getAgentString();
+                $ipAddress = $request->getIPAddress();
+                $deviceId = md5($userAgent . $ipAddress);
+
+                $refreshToken = \App\Helpers\JwtHelper::generateRefreshToken($userId, $deviceId);
+                $tokenGeneration['refresh_token'] = [
+                    'success' => true,
+                    'length' => strlen($refreshToken),
+                    'device_id' => $deviceId,
+                ];
+
+                // 測試 Token 解碼
+                $refreshDecoded = \App\Helpers\JwtHelper::decode($refreshToken);
+                $jti = $refreshDecoded->jti ?? null;
+
+                $tokenGeneration['decode'] = [
+                    'success' => $refreshDecoded !== null,
+                    'has_jti' => !empty($jti),
+                    'jti' => $jti,
+                ];
+
+                // 準備資料庫資料
+                $refreshExpireSeconds = (int) getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: 2592000;
+                $tokenData = [
+                    'user_id' => $userId,
+                    'access_token' => hash('sha256', $accessToken),
+                    'refresh_token' => $jti ?: hash('sha256', $refreshToken),
+                    'token_type' => 'jwt',
+                    'expires_at' => date('Y-m-d H:i:s', time() + $refreshExpireSeconds),
+                    'device_id' => $deviceId,
+                    'user_agent' => $userAgent,
+                    'ip_address' => $ipAddress,
+                ];
+
+                $tokenGeneration['token_data'] = [
+                    'user_id' => $tokenData['user_id'],
+                    'token_type' => $tokenData['token_type'],
+                    'expires_at' => $tokenData['expires_at'],
+                    'device_id' => substr($tokenData['device_id'], 0, 10) . '...',
+                ];
+
+                // 測試資料庫插入（但不實際插入）
+                $tokenModel = new \App\Models\UserTokenModel();
+                $validation = $tokenModel->validate($tokenData);
+
+                $tokenGeneration['database_validation'] = [
+                    'valid' => $validation,
+                    'errors' => !$validation ? $tokenModel->errors() : null,
+                ];
+
+                // 檢查現有 token 數量
+                $existingTokens = $tokenModel->where('user_id', $userId)->countAllResults();
+                $tokenGeneration['existing_tokens'] = $existingTokens;
+
+            } catch (\Exception $e) {
+                $tokenGeneration['error'] = [
+                    'message' => $e->getMessage(),
+                    'class' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => array_slice($e->getTrace(), 0, 3),
+                ];
+            }
+
+            // 3. 檢查最近的錯誤日誌
+            $recentErrors = $this->lineLoginLogModel
+                ->where('step LIKE', '%generate_token%')
+                ->where('status', 'error')
+                ->orderBy('created_at', 'DESC')
+                ->limit(5)
+                ->find();
+
+            $diagnosis['token_generation'] = $tokenGeneration;
+            $diagnosis['recent_token_errors'] = array_map(function($error) {
+                return [
+                    'id' => $error['id'],
+                    'session_id' => $error['session_id'],
+                    'step' => $error['step'],
+                    'error_message' => $error['error_message'],
+                    'created_at' => $error['created_at'],
+                    'response_data' => json_decode($error['response_data'], true),
+                ];
+            }, $recentErrors);
+
+            return $this->respond([
+                'success' => true,
+                'user_id' => $userId,
+                'diagnosis' => $diagnosis,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->fail([
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
+        }
+    }
+
     private function getTodayCount($status = null)
     {
         $builder = $this->lineLoginLogModel->builder();

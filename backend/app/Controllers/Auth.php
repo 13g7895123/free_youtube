@@ -1166,43 +1166,207 @@ class Auth extends BaseController
      */
     private function generateUserToken(int $userId): ?array
     {
-        try {
-            // 生成 JWT access token
-            $accessToken = JwtHelper::generateAccessToken($userId);
+        $debugInfo = [];
+        $sessionId = session_id() ?: 'no-session-' . uniqid();
 
-            // 生成 JWT refresh token（包含 device_id 用於多裝置管理）
-            $deviceId = md5($this->request->getUserAgent()->getAgentString() . $this->request->getIPAddress());
-            $refreshToken = JwtHelper::generateRefreshToken($userId, $deviceId);
+        try {
+            // 記錄開始生成 token
+            $debugInfo['start'] = [
+                'user_id' => $userId,
+                'timestamp' => date('Y-m-d H:i:s'),
+                'session_id' => $sessionId
+            ];
+
+            // 檢查 JWT_SECRET_KEY 環境變數
+            $secretKey = getenv('JWT_SECRET_KEY');
+            if (empty($secretKey)) {
+                // 嘗試從 .env 檔案讀取
+                $secretKey = $_ENV['JWT_SECRET_KEY'] ?? null;
+            }
+            $debugInfo['jwt_secret_check'] = [
+                'has_key' => !empty($secretKey),
+                'key_length' => $secretKey ? strlen($secretKey) : 0,
+                'key_prefix' => $secretKey ? substr($secretKey, 0, 10) . '...' : 'N/A',
+                'source' => !empty(getenv('JWT_SECRET_KEY')) ? 'getenv' : (!empty($_ENV['JWT_SECRET_KEY']) ? '$_ENV' : 'not_found')
+            ];
+
+            // 生成 JWT access token
+            try {
+                $accessToken = JwtHelper::generateAccessToken($userId);
+                $debugInfo['access_token'] = [
+                    'success' => true,
+                    'length' => strlen($accessToken),
+                    'prefix' => substr($accessToken, 0, 30) . '...',
+                    'parts_count' => count(explode('.', $accessToken)) // JWT 應該有 3 部分
+                ];
+            } catch (\Exception $e) {
+                $debugInfo['access_token'] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine()
+                ];
+
+                // 記錄 access token 生成失敗
+                $this->logModel->insert([
+                    'session_id' => $sessionId,
+                    'step' => 'generate_token_access_fail',
+                    'status' => 'error',
+                    'error_message' => 'Access token generation failed: ' . $e->getMessage(),
+                    'response_data' => json_encode($debugInfo)
+                ]);
+                throw $e;
+            }
+
+            // 取得裝置資訊並生成 JWT refresh token
+            $userAgent = $this->request->getUserAgent()->getAgentString();
+            $ipAddress = $this->request->getIPAddress();
+            $deviceId = md5($userAgent . $ipAddress);
+
+            $debugInfo['device_info'] = [
+                'device_id' => $deviceId,
+                'user_agent' => $userAgent,
+                'ip_address' => $ipAddress,
+                'user_agent_length' => strlen($userAgent),
+                'ip_valid' => filter_var($ipAddress, FILTER_VALIDATE_IP) !== false
+            ];
+
+            try {
+                $refreshToken = JwtHelper::generateRefreshToken($userId, $deviceId);
+                $debugInfo['refresh_token'] = [
+                    'success' => true,
+                    'length' => strlen($refreshToken),
+                    'prefix' => substr($refreshToken, 0, 30) . '...',
+                    'parts_count' => count(explode('.', $refreshToken))
+                ];
+            } catch (\Exception $e) {
+                $debugInfo['refresh_token'] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine()
+                ];
+
+                // 記錄 refresh token 生成失敗
+                $this->logModel->insert([
+                    'session_id' => $sessionId,
+                    'step' => 'generate_token_refresh_fail',
+                    'status' => 'error',
+                    'error_message' => 'Refresh token generation failed: ' . $e->getMessage(),
+                    'response_data' => json_encode($debugInfo)
+                ]);
+                throw $e;
+            }
 
             // 解碼 refresh token 取得 jti（用於撤銷機制）
-            $refreshDecoded = JwtHelper::decode($refreshToken);
-            $jti = $refreshDecoded->jti ?? null;
+            $jti = null;
+            try {
+                $refreshDecoded = JwtHelper::decode($refreshToken);
+                $jti = $refreshDecoded->jti ?? null;
+                $debugInfo['jwt_decode'] = [
+                    'success' => true,
+                    'has_jti' => !empty($jti),
+                    'jti' => $jti,
+                    'decoded_user_id' => $refreshDecoded->sub ?? null,
+                    'decoded_device_id' => $refreshDecoded->device_id ?? null
+                ];
+            } catch (\Exception $e) {
+                $debugInfo['jwt_decode'] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e)
+                ];
+                // 解碼失敗不是致命錯誤，繼續處理
+            }
 
-            // 將 refresh token 資訊存入資料庫（用於撤銷檢查）
-            $refreshExpireSeconds = (int) getenv('JWT_REFRESH_TOKEN_EXPIRE', 2592000);
+            // 準備將 refresh token 資訊存入資料庫
+            $refreshExpireSeconds = (int) getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: 2592000;
+            $accessExpireSeconds = (int) getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: 900;
+
             $tokenData = [
                 'user_id' => $userId,
                 'access_token' => hash('sha256', $accessToken), // 保留用於相容性
-                'refresh_token' => hash('sha256', $refreshToken),
+                'refresh_token' => $jti ?: hash('sha256', $refreshToken), // 優先使用 jti
                 'token_type' => 'jwt',
                 'expires_at' => date('Y-m-d H:i:s', time() + $refreshExpireSeconds),
                 'device_id' => $deviceId,
-                'user_agent' => $this->request->getUserAgent()->getAgentString(),
-                'ip_address' => $this->request->getIPAddress()
+                'user_agent' => $userAgent,
+                'ip_address' => $ipAddress
             ];
 
-            // 如果有 jti，儲存到資料庫
-            if ($jti) {
-                $tokenData['refresh_token'] = $jti; // 使用 jti 作為識別
+            $debugInfo['token_data'] = [
+                'user_id' => $userId,
+                'access_token_hash' => substr($tokenData['access_token'], 0, 10) . '...',
+                'refresh_token_identifier' => $jti ? "jti:$jti" : 'hash:' . substr($tokenData['refresh_token'], 0, 10) . '...',
+                'expires_at' => $tokenData['expires_at'],
+                'device_id' => $deviceId
+            ];
+
+            // 嘗試插入資料庫
+            try {
+                $inserted = $this->tokenModel->insert($tokenData);
+
+                if (!$inserted) {
+                    // 取得詳細的資料庫錯誤
+                    $dbErrors = $this->tokenModel->errors();
+                    $lastQuery = $this->tokenModel->getLastQuery();
+
+                    $debugInfo['db_insert'] = [
+                        'success' => false,
+                        'insert_id' => null,
+                        'model_errors' => $dbErrors,
+                        'last_query' => $lastQuery ? $lastQuery->getQuery() : null
+                    ];
+
+                    // 記錄資料庫插入失敗的詳細資訊
+                    $this->logModel->insert([
+                        'session_id' => $sessionId,
+                        'step' => 'generate_token_db_insert_fail',
+                        'status' => 'error',
+                        'error_message' => 'Database insert failed - Model errors: ' . json_encode($dbErrors),
+                        'response_data' => json_encode($debugInfo)
+                    ]);
+
+                    log_message('error', 'Failed to insert token data to database - Debug: ' . json_encode($debugInfo));
+                    return null;
+                }
+
+                $debugInfo['db_insert'] = [
+                    'success' => true,
+                    'insert_id' => $this->tokenModel->getInsertID(),
+                    'affected_rows' => $this->tokenModel->db->affectedRows()
+                ];
+
+            } catch (\Exception $e) {
+                $debugInfo['db_insert'] = [
+                    'success' => false,
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine(),
+                    'sql_error' => method_exists($e, 'getSQLState') ? $e->getSQLState() : null
+                ];
+
+                // 記錄資料庫異常的詳細資訊
+                $this->logModel->insert([
+                    'session_id' => $sessionId,
+                    'step' => 'generate_token_db_exception',
+                    'status' => 'error',
+                    'error_message' => 'Database exception: ' . $e->getMessage(),
+                    'response_data' => json_encode($debugInfo)
+                ]);
+                throw $e;
             }
 
-            $inserted = $this->tokenModel->insert($tokenData);
-            if (!$inserted) {
-                log_message('error', 'Failed to insert token data to database');
-                return null;
-            }
-
-            $accessExpireSeconds = (int) getenv('JWT_ACCESS_TOKEN_EXPIRE', 900);
+            // 成功生成 token - 記錄成功的詳細資訊
+            $this->logModel->insert([
+                'session_id' => $sessionId,
+                'step' => 'generate_token_success_detail',
+                'status' => 'success',
+                'response_data' => json_encode($debugInfo)
+            ]);
 
             return [
                 'access_token' => $accessToken,
@@ -1210,8 +1374,27 @@ class Auth extends BaseController
                 'access_expires_in' => $accessExpireSeconds,
                 'refresh_expires_in' => $refreshExpireSeconds
             ];
+
         } catch (\Exception $e) {
-            log_message('error', 'Failed to generate JWT token: ' . $e->getMessage());
+            // 記錄完整的異常資訊
+            $debugInfo['exception'] = [
+                'class' => get_class($e),
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => array_slice($e->getTrace(), 0, 5) // 只記錄前 5 層堆疊
+            ];
+
+            $this->logModel->insert([
+                'session_id' => $sessionId,
+                'step' => 'generate_token_exception',
+                'status' => 'error',
+                'error_message' => get_class($e) . ': ' . $e->getMessage(),
+                'response_data' => json_encode($debugInfo)
+            ]);
+
+            log_message('error', 'Failed to generate JWT token: ' . $e->getMessage() . ' - Debug: ' . json_encode($debugInfo));
             return null;
         }
     }
