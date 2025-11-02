@@ -6,7 +6,7 @@ RUN rm -rf /usr/share/nginx/html/*
 RUN rm /etc/nginx/conf.d/default.conf
 
 # 複製構建後的靜態文件到 nginx 的服務目錄
-COPY dist/ /usr/share/nginx/html/
+COPY frontend/dist/ /usr/share/nginx/html/
 
 # 複製自定義的 nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf

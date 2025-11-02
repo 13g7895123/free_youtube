@@ -1,0 +1,269 @@
+/* Import Design Tokens */
+@import './assets/design-tokens.css';
+
+/* Import Button and Form Styles */
+@import './assets/button-styles.css';
+
+/* CSS Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 保留舊變數以向後兼容（逐步遷移） */
+:root {
+  --primary-color: var(--color-brand-primary);
+  --secondary-color: var(--color-neutral-800);
+  --text-color: var(--text-primary);
+  --bg-color: var(--bg-primary);
+  --border-color: var(--border-color);
+  --error-color: var(--color-error);
+  --success-color: var(--color-success);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Loading indicator */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s linear infinite;
+}
+
+/* ==================== Tooltip 樣式 ==================== */
+[data-tooltip] {
+  position: relative;
+  cursor: pointer;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(33, 33, 33, 0.95);
+  color: white;
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: var(--z-tooltip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  border: 6px solid transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: var(--z-tooltip);
+}
+
+/* Top position (default) */
+[data-tooltip]:not([data-tooltip-position])::before,
+[data-tooltip][data-tooltip-position="top"]::before {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+}
+
+[data-tooltip]:not([data-tooltip-position])::after,
+[data-tooltip][data-tooltip-position="top"]::after {
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: rgba(33, 33, 33, 0.95);
+}
+
+/* Bottom position */
+[data-tooltip][data-tooltip-position="bottom"]::before {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+}
+
+[data-tooltip][data-tooltip-position="bottom"]::after {
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: rgba(33, 33, 33, 0.95);
+}
+
+/* Left position */
+[data-tooltip][data-tooltip-position="left"]::before {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.8);
+}
+
+[data-tooltip][data-tooltip-position="left"]::after {
+  right: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: rgba(33, 33, 33, 0.95);
+}
+
+/* Right position */
+[data-tooltip][data-tooltip-position="right"]::before {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.8);
+}
+
+[data-tooltip][data-tooltip-position="right"]::after {
+  left: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: rgba(33, 33, 33, 0.95);
+}
+
+/* Hover state */
+[data-tooltip]:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+[data-tooltip][data-tooltip-position="bottom"]:hover::before {
+  transform: translateX(-50%) scale(1);
+}
+
+[data-tooltip][data-tooltip-position="left"]:hover::before,
+[data-tooltip][data-tooltip-position="right"]:hover::before {
+  transform: translateY(-50%) scale(1);
+}
+
+/* 行動裝置禁用 tooltip（避免觸控體驗問題） */
+@media (max-width: 768px) {
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    display: none;
+  }
+}
+
+/* 滑鼠懸停時才顯示（避免鍵盤導航時閃爍） */
+@media (hover: hover) {
+  [data-tooltip]:focus::before,
+  [data-tooltip]:focus::after {
+    opacity: 0;
+  }
+
+  [data-tooltip]:hover:focus::before,
+  [data-tooltip]:hover:focus::after {
+    opacity: 1;
+  }
+}
+
+/* ==================== Focus 可見狀態（無障礙） ==================== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ==================== 通用按鈕樣式增強 ==================== */
+button {
+  transition: all var(--transition-fast);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==================== 通用卡片懸停效果 ==================== */
+.card-hover {
+  transition: all var(--transition-base);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ==================== 淡入動畫 ==================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-base);
+}
+
+.slide-up {
+  animation: slideUp var(--transition-base);
+}

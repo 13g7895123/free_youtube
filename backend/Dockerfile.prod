@@ -1,0 +1,75 @@
+# ========================================
+# 正式環境 Backend Dockerfile
+# ========================================
+FROM php:8.1-cli-alpine
+
+# 安裝系統依賴和 PHP 擴展
+RUN apk add --no-cache \
+    mysql-client \
+    curl \
+    git \
+    zip \
+    unzip \
+    icu-dev \
+    && docker-php-ext-install pdo pdo_mysql mysqli intl opcache
+
+# 配置 OPcache 以提升性能
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/opcache.ini
+
+# 安裝 Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# 設定工作目錄
+WORKDIR /var/www/html
+
+# 複製 composer 文件
+COPY composer.json composer.lock* ./
+
+# 安裝 PHP 依賴 (僅生產環境依賴)
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --no-autoloader \
+    --optimize-autoloader \
+    --prefer-dist \
+    --no-interaction
+
+# 複製應用程式代碼
+COPY . .
+
+# 完成 composer 自動加載優化
+RUN composer dump-autoload --optimize --no-dev
+
+# 創建並設定 writable 目錄權限
+RUN mkdir -p writable/cache writable/logs writable/session writable/uploads && \
+    chmod -R 777 writable
+
+# 複製並設定啟動腳本權限
+COPY docker-entrypoint.prod.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 移除不必要的文件以減小鏡像大小
+RUN rm -rf tests/ docs/ .git/ .github/ *.md
+
+# 創建非 root 用戶運行應用
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    chown -R appuser:appuser /var/www/html
+
+# 切換到非 root 用戶
+USER appuser
+
+# 暴露端口
+EXPOSE 8000
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD php -r "file_get_contents('http://localhost:8000/health') or exit(1);"
+
+# 使用啟動腳本
+ENTRYPOINT ["/docker-entrypoint.sh"]
