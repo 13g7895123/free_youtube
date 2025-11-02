@@ -43,7 +43,7 @@ class Auth extends BaseController
         ]);
 
         // LOG 2: 檢查是否為 Mock 模式
-        $authMode = env('AUTH_MODE');
+        $authMode = getenv('AUTH_MODE');
         if ($authMode === 'mock') {
             $this->lineLoginLogModel->logStep($sessionId, 'check_auth_mode', 'error', [
                 'ip' => $ip,
@@ -60,8 +60,8 @@ class Auth extends BaseController
         ]);
 
         // LOG 3: 讀取環境變數
-        $channelId = env('LINE_LOGIN_CHANNEL_ID');
-        $callbackUrl = env('LINE_LOGIN_CALLBACK_URL');
+        $channelId = getenv('LINE_LOGIN_CHANNEL_ID');
+        $callbackUrl = getenv('LINE_LOGIN_CALLBACK_URL');
 
         if (!$channelId || !$callbackUrl) {
             $this->lineLoginLogModel->logStep($sessionId, 'check_config', 'error', [
@@ -87,7 +87,7 @@ class Auth extends BaseController
         // LOG 4: 生成 state
         $timestamp = time();
         $random = bin2hex(random_bytes(8));
-        $secretKey = env('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
+        $secretKey = getenv('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
         $hash = hash_hmac('sha256', $timestamp . $random, $secretKey);
         $state = base64_encode($timestamp . '|' . $random . '|' . substr($hash, 0, 16));
 
@@ -135,7 +135,7 @@ class Auth extends BaseController
         $ip = $this->request->getIPAddress();
         $userAgent = $this->request->getUserAgent()->getAgentString();
         
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = getenv('FRONTEND_URL', 'http://localhost:5173');
 
         // 記錄開始
         $this->lineLoginLogModel->logStep($sessionId, 'callback_start', 'success', [
@@ -238,7 +238,7 @@ class Auth extends BaseController
         }
 
         // 驗證 hash
-        $secretKey = env('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
+        $secretKey = getenv('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
         $expectedHash = substr(hash_hmac('sha256', $timestamp . $random, $secretKey), 0, 16);
 
         if ($hash !== $expectedHash) {
@@ -493,7 +493,7 @@ class Auth extends BaseController
     public function testUserCreation()
     {
         // 安全檢查：僅允許開發環境
-        if (env('CI_ENVIRONMENT') === 'production') {
+        if (getenv('CI_ENVIRONMENT') === 'production') {
             return $this->fail('此功能僅在開發環境可用', 403);
         }
 
@@ -557,7 +557,7 @@ class Auth extends BaseController
     public function seedTestLogs()
     {
         // 安全檢查：僅允許開發環境
-        if (env('CI_ENVIRONMENT') === 'production') {
+        if (getenv('CI_ENVIRONMENT') === 'production') {
             return $this->fail('此功能僅在開發環境可用', 403);
         }
 
@@ -718,7 +718,7 @@ class Auth extends BaseController
         }
 
         // 清除 cookie（需要與 set_cookie 時使用相同的參數）
-        $isProduction = env('CI_ENVIRONMENT') === 'production';
+        $isProduction = getenv('CI_ENVIRONMENT') === 'production';
         delete_cookie('access_token', '', '/', '', $isProduction);
 
         return $this->respond([
@@ -882,9 +882,9 @@ class Auth extends BaseController
      */
     private function getLineAccessToken(string $code, string $sessionId = '', string $ip = '', string $userAgent = ''): ?array
     {
-        $channelId = env('LINE_LOGIN_CHANNEL_ID');
-        $channelSecret = env('LINE_LOGIN_CHANNEL_SECRET');
-        $callbackUrl = env('LINE_LOGIN_CALLBACK_URL');
+        $channelId = getenv('LINE_LOGIN_CHANNEL_ID');
+        $channelSecret = getenv('LINE_LOGIN_CHANNEL_SECRET');
+        $callbackUrl = getenv('LINE_LOGIN_CALLBACK_URL');
 
         $params = [
             'grant_type' => 'authorization_code',
@@ -1179,7 +1179,7 @@ class Auth extends BaseController
             $jti = $refreshDecoded->jti ?? null;
 
             // 將 refresh token 資訊存入資料庫（用於撤銷檢查）
-            $refreshExpireSeconds = (int) env('JWT_REFRESH_TOKEN_EXPIRE', 2592000);
+            $refreshExpireSeconds = (int) getenv('JWT_REFRESH_TOKEN_EXPIRE', 2592000);
             $tokenData = [
                 'user_id' => $userId,
                 'access_token' => hash('sha256', $accessToken), // 保留用於相容性
@@ -1202,7 +1202,7 @@ class Auth extends BaseController
                 return null;
             }
 
-            $accessExpireSeconds = (int) env('JWT_ACCESS_TOKEN_EXPIRE', 900);
+            $accessExpireSeconds = (int) getenv('JWT_ACCESS_TOKEN_EXPIRE', 900);
 
             return [
                 'access_token' => $accessToken,
@@ -1225,11 +1225,11 @@ class Auth extends BaseController
      */
     private function setAuthCookie(string $accessToken, ?string $refreshToken = null): void
     {
-        $isProduction = env('CI_ENVIRONMENT') === 'production';
-        $cookieDomain = env('COOKIE_DOMAIN', '');
+        $isProduction = getenv('CI_ENVIRONMENT') === 'production';
+        $cookieDomain = getenv('COOKIE_DOMAIN', '');
 
         // Access Token Cookie（短期有效）
-        $accessExpireSeconds = (int) env('JWT_ACCESS_TOKEN_EXPIRE', 900); // 預設 15 分鐘
+        $accessExpireSeconds = (int) getenv('JWT_ACCESS_TOKEN_EXPIRE', 900); // 預設 15 分鐘
         $accessCookieConfig = [
             'name' => 'access_token',
             'value' => $accessToken,
@@ -1249,7 +1249,7 @@ class Auth extends BaseController
 
         // Refresh Token Cookie（長期有效）
         if ($refreshToken !== null) {
-            $refreshExpireSeconds = (int) env('JWT_REFRESH_TOKEN_EXPIRE', 2592000); // 預設 30 天
+            $refreshExpireSeconds = (int) getenv('JWT_REFRESH_TOKEN_EXPIRE', 2592000); // 預設 30 天
             $refreshCookieConfig = [
                 'name' => 'refresh_token',
                 'value' => $refreshToken,
@@ -1277,16 +1277,16 @@ class Auth extends BaseController
     public function mockLogin()
     {
         // 安全檢查：僅允許開發環境
-        if (env('CI_ENVIRONMENT') === 'production') {
+        if (getenv('CI_ENVIRONMENT') === 'production') {
             return $this->fail('Mock 登入僅在開發環境可用', 403);
         }
 
-        if (env('AUTH_MODE') !== 'mock') {
+        if (getenv('AUTH_MODE') !== 'mock') {
             return $this->fail('Mock 模式未啟用', 403);
         }
 
         // 從環境變數讀取 Mock 使用者 ID
-        $mockUserId = (int) env('MOCK_USER_ID', 1);
+        $mockUserId = (int) getenv('MOCK_USER_ID', 1);
 
         try {
             // 檢查 Mock 使用者是否存在
