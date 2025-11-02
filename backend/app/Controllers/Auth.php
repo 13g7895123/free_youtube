@@ -1209,7 +1209,7 @@ class Auth extends BaseController
                 ];
 
                 // 記錄 access token 生成失敗
-                $this->logModel->insert([
+                $this->lineLoginLogModel->insert([
                     'session_id' => $sessionId,
                     'step' => 'generate_token_access_fail',
                     'status' => 'error',
@@ -1250,7 +1250,7 @@ class Auth extends BaseController
                 ];
 
                 // 記錄 refresh token 生成失敗
-                $this->logModel->insert([
+                $this->lineLoginLogModel->insert([
                     'session_id' => $sessionId,
                     'step' => 'generate_token_refresh_fail',
                     'status' => 'error',
@@ -1321,7 +1321,7 @@ class Auth extends BaseController
                     ];
 
                     // 記錄資料庫插入失敗的詳細資訊
-                    $this->logModel->insert([
+                    $this->lineLoginLogModel->insert([
                         'session_id' => $sessionId,
                         'step' => 'generate_token_db_insert_fail',
                         'status' => 'error',
@@ -1350,7 +1350,7 @@ class Auth extends BaseController
                 ];
 
                 // 記錄資料庫異常的詳細資訊
-                $this->logModel->insert([
+                $this->lineLoginLogModel->insert([
                     'session_id' => $sessionId,
                     'step' => 'generate_token_db_exception',
                     'status' => 'error',
@@ -1361,7 +1361,7 @@ class Auth extends BaseController
             }
 
             // 成功生成 token - 記錄成功的詳細資訊
-            $this->logModel->insert([
+            $this->lineLoginLogModel->insert([
                 'session_id' => $sessionId,
                 'step' => 'generate_token_success_detail',
                 'status' => 'success',
@@ -1386,7 +1386,7 @@ class Auth extends BaseController
                 'trace' => array_slice($e->getTrace(), 0, 5) // 只記錄前 5 層堆疊
             ];
 
-            $this->logModel->insert([
+            $this->lineLoginLogModel->insert([
                 'session_id' => $sessionId,
                 'step' => 'generate_token_exception',
                 'status' => 'error',
