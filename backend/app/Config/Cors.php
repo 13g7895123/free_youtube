@@ -53,5 +53,5 @@ class Cors extends BaseConfig
     /**
      * Allow credentials
      */
-    public bool $allowCredentials = false;
+    public bool $allowCredentials = true;
 }
