@@ -1127,4 +1127,80 @@ class Auth extends BaseController
             ]);
         }
     }
+
+    /**
+     * 查詢 LINE 登入日誌（最近的錯誤）
+     * GET /auth/line/logs/errors
+     *
+     * @return ResponseInterface
+     */
+    public function lineLoginErrors()
+    {
+        try {
+            $limit = (int) ($this->request->getGet('limit') ?? 50);
+            $limit = min($limit, 100); // 最多 100 筆
+
+            $errors = $this->lineLoginLogModel->getRecentErrors($limit);
+
+            return $this->respond([
+                'success' => true,
+                'data' => $errors,
+                'count' => count($errors)
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to get LINE login errors: ' . $e->getMessage());
+            return $this->fail('無法取得錯誤日誌', 500);
+        }
+    }
+
+    /**
+     * 查詢特定 session 的所有日誌
+     * GET /auth/line/logs/session/{sessionId}
+     *
+     * @param string $sessionId
+     * @return ResponseInterface
+     */
+    public function lineLoginSession(string $sessionId)
+    {
+        try {
+            $logs = $this->lineLoginLogModel->getSessionLogs($sessionId);
+
+            return $this->respond([
+                'success' => true,
+                'data' => $logs,
+                'count' => count($logs),
+                'session_id' => $sessionId
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to get session logs: ' . $e->getMessage());
+            return $this->fail('無法取得日誌', 500);
+        }
+    }
+
+    /**
+     * 查詢特定 LINE User 的登入歷史
+     * GET /auth/line/logs/user/{lineUserId}
+     *
+     * @param string $lineUserId
+     * @return ResponseInterface
+     */
+    public function lineLoginUserHistory(string $lineUserId)
+    {
+        try {
+            $limit = (int) ($this->request->getGet('limit') ?? 50);
+            $limit = min($limit, 100);
+
+            $logs = $this->lineLoginLogModel->getUserLogs($lineUserId, $limit);
+
+            return $this->respond([
+                'success' => true,
+                'data' => $logs,
+                'count' => count($logs),
+                'line_user_id' => $lineUserId
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to get user login history: ' . $e->getMessage());
+            return $this->fail('無法取得登入歷史', 500);
+        }
+    }
 }

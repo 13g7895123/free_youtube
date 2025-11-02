@@ -32,10 +32,10 @@ $routes->group('api', static function ($routes) {
     });
 
     // LINE 登入 Log 路由（公開，不需認證）
-    $routes->group('line-logs', static function ($routes) {
-        $routes->get('/', 'Auth::getLineLoginLogs');               // 查詢所有 LINE 登入 logs
-        $routes->get('errors', 'Auth::getLineLoginErrors');        // 查詢 LINE 登入錯誤
-        $routes->post('seed-test', 'Auth::seedTestLogs');          // 插入測試資料（僅開發環境）
+    $routes->group('auth/line/logs', static function ($routes) {
+        $routes->get('errors', 'Auth::lineLoginErrors');                    // 查詢錯誤日誌
+        $routes->get('session/(:segment)', 'Auth::lineLoginSession/$1');    // 查詢特定 session 的日誌
+        $routes->get('user/(:segment)', 'Auth::lineLoginUserHistory/$1');   // 查詢特定用戶的登入歷史
     });
 
     // 測試路由（僅開發環境）
