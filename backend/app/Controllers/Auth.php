@@ -804,7 +804,14 @@ class Auth extends BaseController
 
         try {
             if ($existingUser) {
-                // 更新現有用戶
+                // 更新現有用戶 - 動態設置驗證規則以排除當前使用者 ID
+                $this->userModel->setValidationRules([
+                    'line_user_id' => "required|max_length[255]|is_unique[users.line_user_id,id,{$existingUser['id']}]",
+                    'display_name' => 'required|max_length[255]',
+                    'avatar_url' => 'permit_empty|valid_url',
+                    'status' => 'required|in_list[active,soft_deleted]'
+                ]);
+
                 $updateResult = $this->userModel->update($existingUser['id'], $userData);
                 
                 if (!$updateResult) {

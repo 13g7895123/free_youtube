@@ -386,15 +386,38 @@ onMounted(async () => {
     const restored = route.query.restored
 
     if (loginStatus === 'success') {
-      console.log('登入成功！重新檢查認證狀態...')
+      console.log('登入成功！檢查認證狀態...')
 
-      // 重新檢查認證狀態以更新 UI
-      await authStore.checkAuth()
+      // 添加延遲以確保 cookie 已設置
+      await new Promise(resolve => setTimeout(resolve, 300))
 
-      // 檢查是否為帳號恢復
-      if (restored === '1') {
-        // 顯示帳號恢復提示（使用 ErrorMessage 元件暫時顯示，或可建立專用 Toast 元件）
-        alert('歡迎回來！您的帳號資料已完全恢復')
+      // 重試邏輯：最多嘗試 3 次
+      let authSuccess = false
+      for (let i = 0; i < 3; i++) {
+        console.log(`認證檢查嘗試 ${i + 1}/3...`)
+        await authStore.checkAuth()
+
+        if (authStore.isAuthenticated) {
+          console.log('認證成功！')
+          authSuccess = true
+
+          // 檢查是否為帳號恢復
+          if (restored === '1') {
+            alert('歡迎回來！您的帳號資料已完全恢復')
+          }
+          break
+        }
+
+        // 如果未成功且還有重試機會，等待後重試
+        if (i < 2) {
+          console.log('認證尚未成功，等待後重試...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      }
+
+      if (!authSuccess) {
+        console.warn('認證檢查失敗，請手動重新整理頁面')
+        player.errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
       }
     } else if (loginStatus === 'cancelled') {
       player.errorMessage.value = message || '您已取消 LINE 登入'
