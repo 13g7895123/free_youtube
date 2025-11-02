@@ -288,6 +288,42 @@ jobs:
             exit 1
           fi
 
+      - name: Create deployment notification in database
+        if: always()
+        run: |
+          ssh -p 8022 -i ~/.ssh/id_ed25519 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            # 切換到專案目錄
+            cd /home/jarvis/project/idea/free_youtube
+
+            # 判斷部署狀態
+            if [ "${{ job.status }}" == "success" ]; then
+              TITLE="✅ 正式環境部署成功"
+              MESSAGE="free_youtube 專案已成功部署至正式環境\n分支: ${{ github.ref_name }}\n提交: ${{ github.sha }}\n部署者: ${{ github.actor }}\n時間: $(date '+%Y-%m-%d %H:%M:%S')"
+            else
+              TITLE="❌ 正式環境部署失敗"
+              MESSAGE="free_youtube 專案部署至正式環境時發生錯誤\n分支: ${{ github.ref_name }}\n提交: ${{ github.sha }}\n部署者: ${{ github.actor }}\n時間: $(date '+%Y-%m-%d %H:%M:%S')"
+            fi
+
+            # 調用 Notifications API
+            RESPONSE=$(curl -s -X POST http://localhost:9204/api/notifications \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"project\": \"free_youtube\",
+                \"title\": \"${TITLE}\",
+                \"message\": \"${MESSAGE}\",
+                \"status\": 0
+              }")
+
+            # 檢查是否成功
+            if echo "$RESPONSE" | grep -q '"success":true'; then
+              NOTIFICATION_ID=$(echo "$RESPONSE" | grep -o '"id":"[0-9]*"' | grep -o '[0-9]*')
+              echo "✅ 部署通知已建立 (ID: ${NOTIFICATION_ID})"
+            else
+              echo "⚠️ 部署通知建立失敗"
+              echo "Response: $RESPONSE"
+            fi
+          ENDSSH
+
   deploy-development:
     name: Deploy to Development (VPS)
     runs-on: ubuntu-latest
@@ -335,3 +371,39 @@ jobs:
             echo "❌ Development deployment failed!"
             exit 1
           fi
+
+      - name: Create deployment notification in database
+        if: always()
+        run: |
+          ssh -p 8022 -i ~/.ssh/id_ed25519 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            # 切換到專案目錄
+            cd /home/jarvis/project/idea/free_youtube
+
+            # 判斷部署狀態
+            if [ "${{ job.status }}" == "success" ]; then
+              TITLE="✅ 開發環境部署成功"
+              MESSAGE="free_youtube 專案已成功部署至開發環境\n分支: ${{ github.ref_name }}\n提交: ${{ github.sha }}\n部署者: ${{ github.actor }}\n時間: $(date '+%Y-%m-%d %H:%M:%S')"
+            else
+              TITLE="❌ 開發環境部署失敗"
+              MESSAGE="free_youtube 專案部署至開發環境時發生錯誤\n分支: ${{ github.ref_name }}\n提交: ${{ github.sha }}\n部署者: ${{ github.actor }}\n時間: $(date '+%Y-%m-%d %H:%M:%S')"
+            fi
+
+            # 調用 Notifications API（使用開發環境端口 8082）
+            RESPONSE=$(curl -s -X POST http://localhost:8082/api/notifications \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"project\": \"free_youtube\",
+                \"title\": \"${TITLE}\",
+                \"message\": \"${MESSAGE}\",
+                \"status\": 0
+              }")
+
+            # 檢查是否成功
+            if echo "$RESPONSE" | grep -q '"success":true'; then
+              NOTIFICATION_ID=$(echo "$RESPONSE" | grep -o '"id":"[0-9]*"' | grep -o '[0-9]*')
+              echo "✅ 部署通知已建立 (ID: ${NOTIFICATION_ID})"
+            else
+              echo "⚠️ 部署通知建立失敗"
+              echo "Response: $RESPONSE"
+            fi
+          ENDSSH
