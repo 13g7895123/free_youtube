@@ -21,27 +21,40 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function checkAuth() {
     isLoading.value = true
+    console.log('[Auth] 開始 checkAuth...')
+
     try {
+      console.log('[Auth] 發送 GET /auth/user 請求...')
       const response = await api.get('/auth/user')
+      console.log('[Auth] 收到回應:', response.data)
+
       if (response.data.success && response.data.data) {
         const wasGuest = !isAuthenticated.value
         user.value = response.data.data
         isAuthenticated.value = true
         wasAuthenticated.value = true // 標記為曾經認證成功
+        console.log('[Auth] 認證成功，用戶:', user.value)
 
         // 如果是首次登入，自動觸發訪客資料遷移
         if (wasGuest) {
           await migrateGuestData()
         }
       } else {
+        console.log('[Auth] 認證失敗，response.data.success 為 false')
         user.value = null
         isAuthenticated.value = false
       }
     } catch (error) {
+      console.error('[Auth] checkAuth 錯誤:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      })
       user.value = null
       isAuthenticated.value = false
     } finally {
       isLoading.value = false
+      console.log('[Auth] checkAuth 完成，isAuthenticated:', isAuthenticated.value)
     }
   }
 

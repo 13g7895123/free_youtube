@@ -49,6 +49,85 @@
         @close="clearError"
       />
 
+      <!-- DEBUG 認證狀態顯示 (開發用) -->
+      <div v-if="debugMode" class="debug-panel">
+        <div class="debug-header">
+          <h3>🔍 認證流程 DEBUG 資訊</h3>
+          <button @click="debugMode = false" class="debug-close">✕</button>
+        </div>
+        <div class="debug-content">
+          <div class="debug-section">
+            <h4>認證狀態</h4>
+            <div class="debug-item">
+              <span class="debug-label">isAuthenticated:</span>
+              <span :class="['debug-value', authStore.isAuthenticated ? 'success' : 'error']">
+                {{ authStore.isAuthenticated }}
+              </span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">當前用戶:</span>
+              <span class="debug-value">{{ authStore.user ? authStore.user.display_name : 'null' }}</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">用戶 ID:</span>
+              <span class="debug-value">{{ authStore.user ? authStore.user.id : 'null' }}</span>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>Cookie 狀態</h4>
+            <div class="debug-item">
+              <span class="debug-label">Document.cookie:</span>
+              <span class="debug-value cookie">{{ cookieStatus }}</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">Has access_token:</span>
+              <span :class="['debug-value', hasAccessTokenCookie ? 'success' : 'error']">
+                {{ hasAccessTokenCookie }}
+              </span>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>API 配置</h4>
+            <div class="debug-item">
+              <span class="debug-label">API URL:</span>
+              <span class="debug-value">{{ apiUrl }}</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">withCredentials:</span>
+              <span class="debug-value success">true</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">Auth Mode:</span>
+              <span class="debug-value">{{ authMode }}</span>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>認證流程日誌</h4>
+            <div class="debug-log-container">
+              <div v-for="(log, index) in debugLogs" :key="index" class="debug-log">
+                <span class="debug-time">{{ log.time }}</span>
+                <span :class="['debug-type', log.type]">{{ log.type }}</span>
+                <span class="debug-message">{{ log.message }}</span>
+                <pre v-if="log.data" class="debug-data">{{ JSON.stringify(log.data, null, 2) }}</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>操作</h4>
+            <div class="debug-actions">
+              <button @click="testCheckAuth" class="debug-btn">測試 checkAuth</button>
+              <button @click="testApiCall" class="debug-btn">測試 API Call</button>
+              <button @click="checkCookies" class="debug-btn">檢查 Cookies</button>
+              <button @click="clearDebugLogs" class="debug-btn">清除日誌</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 影片播放器 -->
       <VideoPlayer
         v-if="hasVideo"
@@ -141,6 +220,14 @@ const hasVideo = ref(false)
 const apiReady = ref(false)
 const showAuthRequiredMessage = ref(false)
 const showSessionExpiredMessage = ref(false)
+
+// DEBUG 模式相關
+const debugMode = ref(true) // 預設開啟 DEBUG 模式 (完成後可改為 false 隱藏)
+const debugLogs = ref([])
+const cookieStatus = ref('')
+const hasAccessTokenCookie = ref(false)
+const apiUrl = import.meta.env.VITE_API_URL || '/api'
+const authMode = import.meta.env.VITE_AUTH_MODE || 'line'
 
 // 從 LocalStorage 載入用戶偏好設定
 const settingsStorage = useLocalStorage('youtube-loop-player-settings', {
@@ -352,8 +439,99 @@ function handlePlayFromHistory(videoId) {
   handleUrlSubmit(youtubeUrl)
 }
 
+/**
+ * DEBUG 相關函數
+ */
+
+// 添加 debug 日誌
+function addDebugLog(type, message, data = null) {
+  const time = new Date().toLocaleTimeString('zh-TW')
+  debugLogs.value.unshift({
+    time,
+    type,
+    message,
+    data
+  })
+  // 限制日誌數量
+  if (debugLogs.value.length > 50) {
+    debugLogs.value = debugLogs.value.slice(0, 50)
+  }
+}
+
+// 檢查 Cookies
+function checkCookies() {
+  addDebugLog('info', '檢查 Cookies...')
+
+  // 檢查 document.cookie
+  const cookies = document.cookie
+  cookieStatus.value = cookies || '(空)'
+
+  // 檢查是否有 access_token
+  hasAccessTokenCookie.value = cookies.includes('access_token')
+
+  addDebugLog('info', 'Cookie 檢查完成', {
+    cookies: cookies || '無',
+    hasAccessToken: hasAccessTokenCookie.value
+  })
+}
+
+// 測試 checkAuth
+async function testCheckAuth() {
+  addDebugLog('info', '開始測試 checkAuth...')
+
+  try {
+    await authStore.checkAuth()
+    addDebugLog('success', 'checkAuth 完成', {
+      isAuthenticated: authStore.isAuthenticated,
+      user: authStore.user
+    })
+  } catch (error) {
+    addDebugLog('error', 'checkAuth 失敗', {
+      error: error.message,
+      response: error.response?.data
+    })
+  }
+}
+
+// 測試 API Call
+async function testApiCall() {
+  addDebugLog('info', '開始測試 API Call...')
+
+  try {
+    // 使用 fetch 直接測試，以便看到更多細節
+    const response = await fetch(`${apiUrl}/auth/user`, {
+      method: 'GET',
+      credentials: 'include', // 這相當於 withCredentials: true
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    const data = await response.json()
+
+    addDebugLog(response.ok ? 'success' : 'error', `API 回應: ${response.status}`, {
+      status: response.status,
+      statusText: response.statusText,
+      data: data,
+      headers: Object.fromEntries(response.headers.entries())
+    })
+  } catch (error) {
+    addDebugLog('error', 'API Call 失敗', {
+      error: error.message
+    })
+  }
+}
+
+// 清除 debug 日誌
+function clearDebugLogs() {
+  debugLogs.value = []
+  addDebugLog('info', 'Debug 日誌已清除')
+}
+
 // 組件掛載時預先載入 YouTube API（但不初始化播放器）
 onMounted(async () => {
+  // 初始化時檢查一次 Cookie
+  checkCookies()
   try {
     await loadYouTubeAPI()
     console.log('YouTube API preloaded successfully')
@@ -385,20 +563,48 @@ onMounted(async () => {
     const message = route.query.message
     const restored = route.query.restored
 
+    addDebugLog('info', '檢測到登入回調', {
+      loginStatus,
+      message,
+      restored
+    })
+
     if (loginStatus === 'success') {
       console.log('登入成功！檢查認證狀態...')
+      addDebugLog('success', 'LINE 登入成功，開始檢查認證狀態')
+
+      // 檢查 Cookie 狀態
+      checkCookies()
 
       // 添加延遲以確保 cookie 已設置
+      addDebugLog('info', '等待 300ms 確保 Cookie 已設置...')
       await new Promise(resolve => setTimeout(resolve, 300))
+
+      // 再次檢查 Cookie
+      checkCookies()
 
       // 重試邏輯：最多嘗試 3 次
       let authSuccess = false
       for (let i = 0; i < 3; i++) {
         console.log(`認證檢查嘗試 ${i + 1}/3...`)
-        await authStore.checkAuth()
+        addDebugLog('info', `認證檢查嘗試 ${i + 1}/3`)
+
+        try {
+          await authStore.checkAuth()
+          addDebugLog('info', `checkAuth 結果`, {
+            isAuthenticated: authStore.isAuthenticated,
+            user: authStore.user
+          })
+        } catch (error) {
+          addDebugLog('error', `checkAuth 失敗`, {
+            error: error.message,
+            response: error.response?.data
+          })
+        }
 
         if (authStore.isAuthenticated) {
           console.log('認證成功！')
+          addDebugLog('success', '認證成功！')
           authSuccess = true
 
           // 檢查是否為帳號恢復
@@ -411,12 +617,21 @@ onMounted(async () => {
         // 如果未成功且還有重試機會，等待後重試
         if (i < 2) {
           console.log('認證尚未成功，等待後重試...')
+          addDebugLog('warning', '認證尚未成功，等待 500ms 後重試...')
           await new Promise(resolve => setTimeout(resolve, 500))
         }
       }
 
       if (!authSuccess) {
         console.warn('認證檢查失敗，請手動重新整理頁面')
+        addDebugLog('error', '3 次認證檢查都失敗', {
+          finalStatus: {
+            isAuthenticated: authStore.isAuthenticated,
+            user: authStore.user,
+            cookieStatus: cookieStatus.value,
+            hasAccessToken: hasAccessTokenCookie.value
+          }
+        })
         player.errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
       }
     } else if (loginStatus === 'cancelled') {
@@ -667,5 +882,213 @@ onMounted(async () => {
   .welcome-text {
     font-size: 0.9375rem;
   }
+}
+
+/* DEBUG Panel Styles */
+.debug-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 500px;
+  max-height: 80vh;
+  background: white;
+  border: 2px solid #ff6b6b;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #ff6b6b;
+  color: white;
+}
+
+.debug-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.debug-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.debug-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.debug-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.debug-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.debug-section:last-child {
+  border-bottom: none;
+}
+
+.debug-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.debug-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.debug-label {
+  font-weight: 600;
+  color: #666;
+  margin-right: 8px;
+  min-width: 120px;
+}
+
+.debug-value {
+  color: #333;
+  word-break: break-all;
+}
+
+.debug-value.success {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.debug-value.error {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.debug-value.cookie {
+  font-family: monospace;
+  font-size: 11px;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+.debug-log-container {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.debug-log {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 12px;
+}
+
+.debug-log:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.debug-time {
+  color: #999;
+  margin-right: 8px;
+  font-size: 11px;
+}
+
+.debug-type {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+.debug-type.info {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.debug-type.success {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.debug-type.warning {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.debug-type.error {
+  background: #ffebee;
+  color: #f44336;
+}
+
+.debug-message {
+  color: #333;
+}
+
+.debug-data {
+  margin-top: 4px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: monospace;
+  overflow-x: auto;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.debug-btn {
+  padding: 6px 12px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.debug-btn:hover {
+  background: #1976d2;
+}
+
+.debug-btn:active {
+  transform: scale(0.98);
 }
 </style>

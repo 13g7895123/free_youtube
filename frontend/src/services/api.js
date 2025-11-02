@@ -10,11 +10,48 @@ const api = axios.create({
   withCredentials: true, // 允許發送 cookies (HTTP-only cookies)
 })
 
+// Request interceptor: 記錄請求詳情
+api.interceptors.request.use(
+  (config) => {
+    console.log('[API Request]', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      withCredentials: config.withCredentials,
+      headers: config.headers,
+      data: config.data
+    })
+    return config
+  },
+  (error) => {
+    console.error('[API Request Error]', error)
+    return Promise.reject(error)
+  }
+)
+
 // Response interceptor: 處理 401 未授權錯誤
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API Response]', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.config.url,
+      data: response.data,
+      headers: response.headers
+    })
+    return response
+  },
   (error) => {
+    console.error('[API Response Error]', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      data: error.response?.data,
+      message: error.message
+    })
+
     if (error.response && error.response.status === 401) {
+      console.warn('[API] 收到 401 未授權錯誤，觸發 auth:unauthorized 事件')
       // Token 過期或無效,清除認證狀態
       // 這裡會觸發 auth store 的登出邏輯
       if (typeof window !== 'undefined') {
