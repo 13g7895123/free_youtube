@@ -19,10 +19,22 @@ class JwtHelper
     private static function init(): void
     {
         if (!isset(self::$secretKey)) {
+            // 優先使用系統環境變數，否則從 .env 檔案讀取
             self::$secretKey = getenv('JWT_SECRET_KEY');
 
+            // 如果環境變數沒有，嘗試從 .env 檔案讀取
             if (empty(self::$secretKey)) {
-                throw new Exception('JWT_SECRET_KEY 未設置，請在 .env 檔案中設置');
+                $envFile = __DIR__ . '/../../.env';
+                if (file_exists($envFile)) {
+                    $envContent = file_get_contents($envFile);
+                    if (preg_match('/JWT_SECRET_KEY\s*=\s*[\'"]?([^\'"\\r\\n]+)[\'"]?/', $envContent, $matches)) {
+                        self::$secretKey = trim($matches[1], '\'" ');
+                    }
+                }
+            }
+
+            if (empty(self::$secretKey)) {
+                throw new Exception('JWT_SECRET_KEY 未設置，請在 .env 檔案或環境變數中設置');
             }
         }
     }
@@ -38,7 +50,7 @@ class JwtHelper
     {
         self::init();
 
-        $expireSeconds = (int) (getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: 900); // 預設 15 分鐘
+        $expireSeconds = (int) (getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_ACCESS_TOKEN_EXPIRE', 900)); // 預設 15 分鐘
         $issuedAt = time();
         $expiresAt = $issuedAt + $expireSeconds;
 
@@ -69,7 +81,7 @@ class JwtHelper
     {
         self::init();
 
-        $expireSeconds = (int) (getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: 2592000); // 預設 30 天
+        $expireSeconds = (int) (getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_REFRESH_TOKEN_EXPIRE', 2592000)); // 預設 30 天
         $issuedAt = time();
         $expiresAt = $issuedAt + $expireSeconds;
 
@@ -199,5 +211,24 @@ class JwtHelper
         }
 
         return null;
+    }
+
+    /**
+     * 從 .env 檔案讀取環境變數
+     *
+     * @param string $key 變數名稱
+     * @param mixed $default 預設值
+     * @return mixed
+     */
+    private static function getEnvValue(string $key, $default = null)
+    {
+        $envFile = __DIR__ . '/../../.env';
+        if (file_exists($envFile)) {
+            $envContent = file_get_contents($envFile);
+            if (preg_match('/' . preg_quote($key, '/') . '\s*=\s*[\'"]?([^\'"\\r\\n]+)[\'"]?/', $envContent, $matches)) {
+                return trim($matches[1], '\'" ');
+            }
+        }
+        return $default;
     }
 }
