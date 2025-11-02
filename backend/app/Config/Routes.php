@@ -62,6 +62,14 @@ $routes->group('api', static function ($routes) {
         $routes->delete('(:segment)', 'VideoLibrary::remove/$1');   // 移除影片
     });
 
+    // 通知路由（公開，不需認證）
+    $routes->group('notifications', static function ($routes) {
+        $routes->post('/', 'Notification::create');                         // 建立通知
+        $routes->patch('(:num)/status', 'Notification::updateStatus/$1');   // 更新狀態
+        $routes->get('/', 'Notification::index');                           // 列表（選用）
+        $routes->get('(:num)', 'Notification::show/$1');                    // 詳情（選用）
+    });
+
     // 影片路由
     $routes->group('videos', static function ($routes) {
         $routes->get('/', 'Api\VideoController::index');           // 列表
