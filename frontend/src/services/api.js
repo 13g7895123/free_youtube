@@ -29,7 +29,23 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor: 處理 401 未授權錯誤
+// Token 刷新相關
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+
+  failedQueue = []
+}
+
+// Response interceptor: 處理 401 未授權錯誤 + 自動刷新 Token
 api.interceptors.response.use(
   (response) => {
     console.log('[API Response]', {
@@ -41,7 +57,7 @@ api.interceptors.response.use(
     })
     return response
   },
-  (error) => {
+  async (error) => {
     console.error('[API Response Error]', {
       status: error.response?.status,
       statusText: error.response?.statusText,
@@ -50,14 +66,68 @@ api.interceptors.response.use(
       message: error.message
     })
 
-    if (error.response && error.response.status === 401) {
-      console.warn('[API] 收到 401 未授權錯誤，觸發 auth:unauthorized 事件')
-      // Token 過期或無效,清除認證狀態
-      // 這裡會觸發 auth store 的登出邏輯
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    const originalRequest = error.config
+
+    // 如果是 401 錯誤且不是 refresh API 本身
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      // 如果是 refresh API 失敗，直接登出
+      if (originalRequest.url.includes('/auth/refresh')) {
+        console.warn('[API] Refresh token 失敗，觸發登出')
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+        }
+        return Promise.reject(error)
+      }
+
+      // 如果正在刷新，將請求加入隊列
+      if (isRefreshing) {
+        console.log('[API] Token 正在刷新中，將請求加入隊列')
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject })
+        })
+          .then(() => {
+            console.log('[API] Token 刷新成功，重試原請求')
+            return api(originalRequest)
+          })
+          .catch(err => {
+            return Promise.reject(err)
+          })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      console.log('[API] 嘗試刷新 Token...')
+
+      try {
+        // 調用 refresh API
+        const response = await api.post('/auth/refresh')
+
+        if (response.data.success) {
+          console.log('[API] Token 刷新成功')
+          processQueue(null, response.data)
+
+          // 重試原請求
+          return api(originalRequest)
+        } else {
+          throw new Error('Token refresh failed')
+        }
+      } catch (refreshError) {
+        console.error('[API] Token 刷新失敗', refreshError)
+        processQueue(refreshError, null)
+
+        // 刷新失敗，觸發登出
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+        }
+
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
       }
     }
+
+    // 其他錯誤直接返回
     return Promise.reject(error)
   }
 )

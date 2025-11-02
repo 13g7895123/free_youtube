@@ -6,6 +6,7 @@ use App\Models\UserModel;
 use App\Models\UserTokenModel;
 use App\Models\GuestSessionModel;
 use App\Models\LineLoginLogModel;
+use App\Helpers\JwtHelper;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class Auth extends BaseController
@@ -218,8 +219,8 @@ class Auth extends BaseController
             ]
         ]);
 
-        // 設置 HTTP-only cookie
-        $this->setAuthCookie($appToken['access_token']);
+        // 設置 HTTP-only cookie（包含 access_token 和 refresh_token）
+        $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
 
         // 重定向到前端首頁（登入成功）
         $redirectUrl = $frontendUrl . '/?login=success';
@@ -500,7 +501,7 @@ class Auth extends BaseController
     }
 
     /**
-     * 刷新 Token
+     * 刷新 Token（使用 JWT）
      *
      * @return ResponseInterface
      */
@@ -512,30 +513,50 @@ class Auth extends BaseController
             return $this->fail('未提供 refresh token', 401);
         }
 
-        // 驗證 refresh token
-        $tokenData = $this->tokenModel->where('refresh_token', $refreshToken)
-            ->where('expires_at >', date('Y-m-d H:i:s'))
-            ->first();
+        // 使用 JWT 驗證 refresh token
+        $decoded = JwtHelper::verifyToken($refreshToken, 'refresh');
 
-        if (!$tokenData) {
+        if (!$decoded) {
             return $this->fail('refresh token 無效或已過期', 401);
         }
 
-        // 撤銷舊 token
-        $this->tokenModel->delete($tokenData['id']);
+        $userId = $decoded->sub;
+        $jti = $decoded->jti ?? null;
 
-        // 生成新 token
-        $newToken = $this->generateUserToken($tokenData['user_id']);
+        // 檢查 refresh token 是否已被撤銷（從資料庫檢查 jti）
+        if ($jti) {
+            $tokenData = $this->tokenModel
+                ->where('refresh_token', $jti)
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$tokenData) {
+                log_message('warning', "Refresh token jti={$jti} not found in database or already revoked");
+                return $this->fail('refresh token 已被撤銷', 401);
+            }
+
+            // 撤銷舊 refresh token（標記為已使用）
+            $this->tokenModel->delete($tokenData['id']);
+        }
+
+        // 生成新的 token pair
+        $newToken = $this->generateUserToken($userId);
         if (!$newToken) {
             return $this->fail('無法生成新 token', 500);
         }
 
-        // 設置新 cookie
-        $this->setAuthCookie($newToken['access_token']);
+        // 設置新 cookie（包含新的 access_token 和 refresh_token）
+        $this->setAuthCookie($newToken['access_token'], $newToken['refresh_token']);
+
+        log_message('info', "Token refreshed for user_id={$userId}");
 
         return $this->respond([
             'success' => true,
-            'message' => 'Token 已更新'
+            'message' => 'Token 已更新',
+            'data' => [
+                'access_expires_in' => $newToken['access_expires_in'],
+                'refresh_expires_in' => $newToken['refresh_expires_in']
+            ]
         ]);
     }
 
@@ -911,70 +932,114 @@ class Auth extends BaseController
     }
 
     /**
-     * 生成應用 token 並儲存到資料庫
+     * 生成應用 token（使用 JWT）
      *
      * @param int $userId
      * @return array|null
      */
     private function generateUserToken(int $userId): ?array
     {
-        $accessToken = bin2hex(random_bytes(32));
-        $refreshToken = bin2hex(random_bytes(32));
-        $expiresSeconds = (int) env('TOKEN_EXPIRE_SECONDS', 2592000); // 預設 30 天
+        try {
+            // 生成 JWT access token
+            $accessToken = JwtHelper::generateAccessToken($userId);
 
-        $tokenData = [
-            'user_id' => $userId,
-            'access_token' => hash('sha256', $accessToken),
-            'refresh_token' => hash('sha256', $refreshToken),
-            'expires_at' => date('Y-m-d H:i:s', time() + $expiresSeconds),
-            'user_agent' => $this->request->getUserAgent()->getAgentString(),
-            'ip_address' => $this->request->getIPAddress()
-        ];
+            // 生成 JWT refresh token（包含 device_id 用於多裝置管理）
+            $deviceId = md5($this->request->getUserAgent()->getAgentString() . $this->request->getIPAddress());
+            $refreshToken = JwtHelper::generateRefreshToken($userId, $deviceId);
 
-        $inserted = $this->tokenModel->insert($tokenData);
-        if (!$inserted) {
+            // 解碼 refresh token 取得 jti（用於撤銷機制）
+            $refreshDecoded = JwtHelper::decode($refreshToken);
+            $jti = $refreshDecoded->jti ?? null;
+
+            // 將 refresh token 資訊存入資料庫（用於撤銷檢查）
+            $refreshExpireSeconds = (int) env('JWT_REFRESH_TOKEN_EXPIRE', 2592000);
+            $tokenData = [
+                'user_id' => $userId,
+                'access_token' => hash('sha256', $accessToken), // 保留用於相容性
+                'refresh_token' => hash('sha256', $refreshToken),
+                'token_type' => 'jwt',
+                'expires_at' => date('Y-m-d H:i:s', time() + $refreshExpireSeconds),
+                'device_id' => $deviceId,
+                'user_agent' => $this->request->getUserAgent()->getAgentString(),
+                'ip_address' => $this->request->getIPAddress()
+            ];
+
+            // 如果有 jti，儲存到資料庫
+            if ($jti) {
+                $tokenData['refresh_token'] = $jti; // 使用 jti 作為識別
+            }
+
+            $inserted = $this->tokenModel->insert($tokenData);
+            if (!$inserted) {
+                log_message('error', 'Failed to insert token data to database');
+                return null;
+            }
+
+            $accessExpireSeconds = (int) env('JWT_ACCESS_TOKEN_EXPIRE', 900);
+
+            return [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'access_expires_in' => $accessExpireSeconds,
+                'refresh_expires_in' => $refreshExpireSeconds
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to generate JWT token: ' . $e->getMessage());
             return null;
         }
-
-        return [
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken,
-            'expires_in' => $expiresSeconds
-        ];
     }
 
     /**
-     * 設置認證 cookie
+     * 設置認證 cookie（Access Token 和 Refresh Token）
      *
      * @param string $accessToken
+     * @param string|null $refreshToken
      * @return void
      */
-    private function setAuthCookie(string $accessToken): void
+    private function setAuthCookie(string $accessToken, ?string $refreshToken = null): void
     {
-        $expiresSeconds = (int) env('TOKEN_EXPIRE_SECONDS', 2592000);
         $isProduction = env('CI_ENVIRONMENT') === 'production';
-
-        // 取得 Cookie Domain 設置（如果有的話）
         $cookieDomain = env('COOKIE_DOMAIN', '');
 
-        $cookieConfig = [
+        // Access Token Cookie（短期有效）
+        $accessExpireSeconds = (int) env('JWT_ACCESS_TOKEN_EXPIRE', 900); // 預設 15 分鐘
+        $accessCookieConfig = [
             'name' => 'access_token',
             'value' => $accessToken,
-            'expire' => $expiresSeconds,
+            'expire' => $accessExpireSeconds,
             'path' => '/',
-            'secure' => $isProduction, // HTTPS only in production
-            'httponly' => true, // 防止 JavaScript 存取
-            'samesite' => 'Lax' // CSRF 防護
+            'secure' => $isProduction,
+            'httponly' => true,
+            'samesite' => 'Lax'
         ];
 
-        // 只在有設定 domain 時才加入（避免空字串）
         if (!empty($cookieDomain)) {
-            $cookieConfig['domain'] = $cookieDomain;
+            $accessCookieConfig['domain'] = $cookieDomain;
         }
 
-        set_cookie($cookieConfig);
+        set_cookie($accessCookieConfig);
+        log_message('debug', 'Access token cookie set: expires=' . $accessExpireSeconds . 's');
 
-        log_message('debug', 'Auth cookie set: expires=' . $expiresSeconds . 's, secure=' . ($isProduction ? 'true' : 'false') . ', domain=' . ($cookieDomain ?: 'default'));
+        // Refresh Token Cookie（長期有效）
+        if ($refreshToken !== null) {
+            $refreshExpireSeconds = (int) env('JWT_REFRESH_TOKEN_EXPIRE', 2592000); // 預設 30 天
+            $refreshCookieConfig = [
+                'name' => 'refresh_token',
+                'value' => $refreshToken,
+                'expire' => $refreshExpireSeconds,
+                'path' => '/',
+                'secure' => $isProduction,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ];
+
+            if (!empty($cookieDomain)) {
+                $refreshCookieConfig['domain'] = $cookieDomain;
+            }
+
+            set_cookie($refreshCookieConfig);
+            log_message('debug', 'Refresh token cookie set: expires=' . $refreshExpireSeconds . 's');
+        }
     }
 
     /**
@@ -1014,8 +1079,8 @@ class Auth extends BaseController
                 return $this->fail('無法生成認證憑證', 500);
             }
 
-            // 設置 cookie (與 LINE Login 流程相同)
-            $this->setAuthCookie($appToken['access_token']);
+            // 設置 cookie（包含 access_token 和 refresh_token）
+            $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
 
             log_message('info', "Mock login successful for user_id: {$mockUserId}");
 
@@ -1043,9 +1108,15 @@ class Auth extends BaseController
                 'updated_at' => date('Y-m-d H:i:s')
             ];
 
-            // 生成假的 token（不儲存到資料庫）
-            $fakeToken = bin2hex(random_bytes(32));
-            $this->setAuthCookie($fakeToken);
+            // 生成 JWT token（簡化模式，不儲存到資料庫）
+            try {
+                $fakeAccessToken = JwtHelper::generateAccessToken($mockUserId);
+                $fakeRefreshToken = JwtHelper::generateRefreshToken($mockUserId);
+                $this->setAuthCookie($fakeAccessToken, $fakeRefreshToken);
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to generate mock JWT: ' . $e->getMessage());
+                return $this->fail('無法生成認證憑證', 500);
+            }
 
             return $this->respond([
                 'success' => true,
