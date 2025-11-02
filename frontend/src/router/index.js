@@ -30,6 +30,12 @@ const routes = [
     component: () => import('../views/Home.vue')
   },
   {
+    path: '/line-logs',
+    name: 'LineLoginLogs',
+    component: () => import('../views/LineLoginLogs.vue')
+    // 不需要認證，公開頁面
+  },
+  {
     path: '/playlists',
     name: 'PlaylistManager',
     component: () => import('../views/PlaylistManager.vue'),

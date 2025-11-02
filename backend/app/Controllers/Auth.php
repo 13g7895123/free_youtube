@@ -258,6 +258,85 @@ class Auth extends BaseController
     }
 
     /**
+     * 插入測試資料（僅開發環境）
+     *
+     * @return ResponseInterface
+     */
+    public function seedTestLogs()
+    {
+        // 安全檢查：僅允許開發環境
+        if (env('CI_ENVIRONMENT') === 'production') {
+            return $this->fail('此功能僅在開發環境可用', 403);
+        }
+
+        $testData = [
+            [
+                'session_id' => 'test_session_001',
+                'step' => 'callback_start',
+                'status' => 'success',
+                'line_user_id' => 'U1234567890abcdef',
+                'request_data' => json_encode(['query_params' => ['code' => 'abc123', 'state' => 'xyz789']]),
+                'response_data' => null,
+                'error_message' => null,
+                'ip_address' => '192.168.1.100',
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'created_at' => date('Y-m-d H:i:s', strtotime('-2 hours'))
+            ],
+            [
+                'session_id' => 'test_session_001',
+                'step' => 'get_token',
+                'status' => 'success',
+                'line_user_id' => 'U1234567890abcdef',
+                'request_data' => json_encode(['grant_type' => 'authorization_code']),
+                'response_data' => json_encode(['has_access_token' => true, 'token_type' => 'Bearer']),
+                'error_message' => null,
+                'ip_address' => '192.168.1.100',
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'created_at' => date('Y-m-d H:i:s', strtotime('-2 hours +5 seconds'))
+            ],
+            [
+                'session_id' => 'test_session_002',
+                'step' => 'callback_start',
+                'status' => 'error',
+                'line_user_id' => null,
+                'request_data' => json_encode(['query_params' => ['error' => 'access_denied']]),
+                'response_data' => null,
+                'error_message' => 'User cancelled: access_denied - 使用者取消授權',
+                'ip_address' => '192.168.1.101',
+                'user_agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
+                'created_at' => date('Y-m-d H:i:s', strtotime('-1 hour'))
+            ],
+            [
+                'session_id' => 'test_session_003',
+                'step' => 'get_profile',
+                'status' => 'warning',
+                'line_user_id' => 'U9876543210fedcba',
+                'request_data' => null,
+                'response_data' => json_encode(['user_id' => 'U9876543210fedcba', 'display_name' => '測試使用者']),
+                'error_message' => null,
+                'ip_address' => '192.168.1.102',
+                'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+                'created_at' => date('Y-m-d H:i:s', strtotime('-30 minutes'))
+            ]
+        ];
+
+        $db = \Config\Database::connect();
+        $inserted = 0;
+
+        foreach ($testData as $data) {
+            if ($db->table('line_login_logs')->insert($data)) {
+                $inserted++;
+            }
+        }
+
+        return $this->respond([
+            'success' => true,
+            'message' => "成功插入 {$inserted} 筆測試資料",
+            'data' => ['inserted' => $inserted]
+        ]);
+    }
+
+    /**
      * 查詢 LINE 登入 logs（開發用）
      *
      * @return ResponseInterface

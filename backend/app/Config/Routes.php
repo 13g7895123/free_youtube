@@ -22,10 +22,6 @@ $routes->group('api', static function ($routes) {
         // Mock Login（公開，僅開發環境）
         $routes->post('mock/login', 'Auth::mockLogin');
 
-        // Debug API（需要 X-Debug-Key header）
-        $routes->get('line/logs', 'Auth::getLineLoginLogs');       // 查詢 LINE 登入 logs
-        $routes->get('line/errors', 'Auth::getLineLoginErrors');   // 查詢 LINE 登入錯誤
-
         // 需要認證的路由
         $routes->group('', ['filter' => 'auth'], static function ($routes) {
             $routes->get('user', 'Auth::user');                    // 取得當前用戶
@@ -33,6 +29,13 @@ $routes->group('api', static function ($routes) {
             $routes->post('refresh', 'Auth::refresh');             // 刷新 token
             $routes->post('migrate-guest-data', 'Auth::migrateGuestData'); // 遷移訪客資料
         });
+    });
+
+    // LINE 登入 Log 路由（公開，不需認證）
+    $routes->group('line-logs', static function ($routes) {
+        $routes->get('/', 'Auth::getLineLoginLogs');               // 查詢所有 LINE 登入 logs
+        $routes->get('errors', 'Auth::getLineLoginErrors');        // 查詢 LINE 登入錯誤
+        $routes->post('seed-test', 'Auth::seedTestLogs');          // 插入測試資料（僅開發環境）
     });
 
     // 影片庫路由（需認證）
