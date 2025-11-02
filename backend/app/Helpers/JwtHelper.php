@@ -19,43 +19,33 @@ class JwtHelper
     private static function init(): void
     {
         if (!isset(self::$secretKey)) {
-            // 優先使用系統環境變數，否則從 .env 檔案讀取
-            self::$secretKey = getenv('JWT_SECRET_KEY');
-            $source = 'getenv';
+            // 使用 CodeIgniter 的 env() 函數，會自動檢查 $_ENV、$_SERVER 和 getenv()
+            self::$secretKey = env('JWT_SECRET_KEY');
 
-            // 如果環境變數沒有，嘗試從 $_ENV 全域變數
             if (empty(self::$secretKey)) {
-                self::$secretKey = $_ENV['JWT_SECRET_KEY'] ?? '';
-                $source = '$_ENV';
-            }
-
-            // 如果還是沒有，嘗試從 .env 檔案讀取
-            if (empty(self::$secretKey)) {
+                // 如果還是沒有，嘗試從 .env 檔案直接讀取（備用方案）
                 $envFile = __DIR__ . '/../../.env';
                 if (file_exists($envFile)) {
                     $envContent = file_get_contents($envFile);
                     if (preg_match('/JWT_SECRET_KEY\s*=\s*[\'"]?([^\'"\\r\\n]+)[\'"]?/', $envContent, $matches)) {
                         self::$secretKey = trim($matches[1], '\'" ');
-                        $source = '.env file';
                     }
-                } else {
-                    $source = '.env file not found at: ' . $envFile;
                 }
             }
 
             if (empty(self::$secretKey)) {
                 $debugInfo = [
+                    'env()' => env('JWT_SECRET_KEY') ? 'has value' : 'empty',
                     'getenv' => getenv('JWT_SECRET_KEY') ? 'has value' : 'empty',
                     '$_ENV' => isset($_ENV['JWT_SECRET_KEY']) ? 'has value' : 'not set',
                     'env_file' => file_exists(__DIR__ . '/../../.env') ? 'exists' : 'not found',
-                    'source_tried' => $source,
                     'working_dir' => getcwd(),
                     'env_path' => realpath(__DIR__ . '/../../.env') ?: 'path not resolvable'
                 ];
-                throw new Exception('JWT_SECRET_KEY 未設置 - Debug: ' . json_encode($debugInfo));
+                throw new Exception('JWT_SECRET_KEY 未設置，請在 .env 檔案或環境變數中設置 - Debug: ' . json_encode($debugInfo));
             }
 
-            log_message('debug', 'JWT initialized with secret key from: ' . $source);
+            log_message('debug', 'JWT initialized with secret key successfully');
         }
     }
 
@@ -72,13 +62,13 @@ class JwtHelper
         try {
             self::init();
 
-            $expireSeconds = (int) (getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_ACCESS_TOKEN_EXPIRE', 900)); // 預設 15 分鐘
+            $expireSeconds = (int) (env('JWT_ACCESS_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_ACCESS_TOKEN_EXPIRE', 900)); // 預設 15 分鐘
             $issuedAt = time();
             $expiresAt = $issuedAt + $expireSeconds;
 
             $payload = [
-                'iss' => getenv('app.baseURL') ?: 'http://localhost:8080', // Issuer
-                'aud' => getenv('app.baseURL') ?: 'http://localhost:8080', // Audience
+                'iss' => env('app.baseURL') ?: 'http://localhost:8080', // Issuer
+                'aud' => env('app.baseURL') ?: 'http://localhost:8080', // Audience
                 'iat' => $issuedAt,    // Issued at
                 'nbf' => $issuedAt,    // Not before
                 'exp' => $expiresAt,   // Expiration time
@@ -130,7 +120,7 @@ class JwtHelper
         try {
             self::init();
 
-            $expireSeconds = (int) (getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_REFRESH_TOKEN_EXPIRE', 2592000)); // 預設 30 天
+            $expireSeconds = (int) (env('JWT_REFRESH_TOKEN_EXPIRE') ?: self::getEnvValue('JWT_REFRESH_TOKEN_EXPIRE', 2592000)); // 預設 30 天
             $issuedAt = time();
             $expiresAt = $issuedAt + $expireSeconds;
 
@@ -145,8 +135,8 @@ class JwtHelper
             }
 
             $payload = [
-                'iss' => getenv('app.baseURL') ?: 'http://localhost:8080',
-                'aud' => getenv('app.baseURL') ?: 'http://localhost:8080',
+                'iss' => env('app.baseURL') ?: 'http://localhost:8080',
+                'aud' => env('app.baseURL') ?: 'http://localhost:8080',
                 'iat' => $issuedAt,
                 'nbf' => $issuedAt,
                 'exp' => $expiresAt,
