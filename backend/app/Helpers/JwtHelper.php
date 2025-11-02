@@ -19,7 +19,7 @@ class JwtHelper
     private static function init(): void
     {
         if (!isset(self::$secretKey)) {
-            self::$secretKey = env('JWT_SECRET_KEY');
+            self::$secretKey = getenv('JWT_SECRET_KEY');
 
             if (empty(self::$secretKey)) {
                 throw new Exception('JWT_SECRET_KEY 未設置，請在 .env 檔案中設置');
@@ -38,13 +38,13 @@ class JwtHelper
     {
         self::init();
 
-        $expireSeconds = (int) env('JWT_ACCESS_TOKEN_EXPIRE', 900); // 預設 15 分鐘
+        $expireSeconds = (int) (getenv('JWT_ACCESS_TOKEN_EXPIRE') ?: 900); // 預設 15 分鐘
         $issuedAt = time();
         $expiresAt = $issuedAt + $expireSeconds;
 
         $payload = [
-            'iss' => env('app.baseURL', 'http://localhost:8080'), // Issuer
-            'aud' => env('app.baseURL', 'http://localhost:8080'), // Audience
+            'iss' => getenv('app.baseURL') ?: 'http://localhost:8080', // Issuer
+            'aud' => getenv('app.baseURL') ?: 'http://localhost:8080', // Audience
             'iat' => $issuedAt,    // Issued at
             'nbf' => $issuedAt,    // Not before
             'exp' => $expiresAt,   // Expiration time
@@ -69,13 +69,13 @@ class JwtHelper
     {
         self::init();
 
-        $expireSeconds = (int) env('JWT_REFRESH_TOKEN_EXPIRE', 2592000); // 預設 30 天
+        $expireSeconds = (int) (getenv('JWT_REFRESH_TOKEN_EXPIRE') ?: 2592000); // 預設 30 天
         $issuedAt = time();
         $expiresAt = $issuedAt + $expireSeconds;
 
         $payload = [
-            'iss' => env('app.baseURL', 'http://localhost:8080'),
-            'aud' => env('app.baseURL', 'http://localhost:8080'),
+            'iss' => getenv('app.baseURL') ?: 'http://localhost:8080',
+            'aud' => getenv('app.baseURL') ?: 'http://localhost:8080',
             'iat' => $issuedAt,
             'nbf' => $issuedAt,
             'exp' => $expiresAt,
