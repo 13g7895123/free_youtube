@@ -45,8 +45,12 @@ class Auth extends BaseController
         }
 
         // 生成隨機 state 用於 CSRF 防護
-        $state = bin2hex(random_bytes(16));
-        session()->set('line_oauth_state', $state);
+        // 使用 timestamp + random + hash 的組合，不依賴 session
+        $timestamp = time();
+        $random = bin2hex(random_bytes(8));
+        $secretKey = env('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
+        $hash = hash_hmac('sha256', $timestamp . $random, $secretKey);
+        $state = base64_encode($timestamp . '|' . $random . '|' . substr($hash, 0, 16));
 
         // 構建 LINE OAuth 授權 URL
         $params = [
@@ -103,26 +107,65 @@ class Auth extends BaseController
 
         // 驗證 state 參數（CSRF 防護）
         $state = $this->request->getGet('state');
-        $sessionState = session()->get('line_oauth_state');
 
-        if (!$state || $state !== $sessionState) {
-            log_message('warning', 'LINE OAuth state mismatch');
-            
+        if (!$state) {
+            log_message('warning', 'LINE OAuth state missing');
+
             $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
-                'error' => 'State mismatch - CSRF validation failed',
-                'request' => [
-                    'state' => $state,
-                    'session_state' => $sessionState
-                ]
+                'error' => 'State parameter missing'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
         }
 
-        // 清除 session state
-        session()->remove('line_oauth_state');
+        // 解碼並驗證 state
+        $stateDecoded = base64_decode($state);
+        $stateParts = explode('|', $stateDecoded);
+
+        if (count($stateParts) !== 3) {
+            log_message('warning', 'LINE OAuth state invalid format');
+
+            $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'State format invalid'
+            ]);
+
+            return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
+        }
+
+        list($timestamp, $random, $hash) = $stateParts;
+
+        // 驗證時間戳（10分鐘內有效）
+        if (time() - $timestamp > 600) {
+            log_message('warning', 'LINE OAuth state expired');
+
+            $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'State expired - request timeout'
+            ]);
+
+            return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求已過期，請重試'));
+        }
+
+        // 驗證 hash
+        $secretKey = env('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
+        $expectedHash = substr(hash_hmac('sha256', $timestamp . $random, $secretKey), 0, 16);
+
+        if ($hash !== $expectedHash) {
+            log_message('warning', 'LINE OAuth state hash mismatch');
+
+            $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'State verification failed - CSRF check failed'
+            ]);
+
+            return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
+        }
 
         // 取得授權碼
         $code = $this->request->getGet('code');
