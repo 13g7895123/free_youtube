@@ -38,6 +38,18 @@ $routes->group('api', static function ($routes) {
         $routes->get('user/(:segment)', 'Auth::lineLoginUserHistory/$1');   // 查詢特定用戶的登入歷史
     });
 
+    // LINE Login Debug API（完整診斷工具）
+    $routes->group('debug/line-login', static function ($routes) {
+        $routes->get('status', 'LineLoginDebug::status');                   // 系統狀態總覽
+        $routes->get('recent', 'LineLoginDebug::recent');                   // 最近的日誌
+        $routes->get('errors', 'LineLoginDebug::errors');                   // 錯誤日誌（詳細）
+        $routes->get('session/(:segment)', 'LineLoginDebug::session/$1');   // Session 完整流程
+        $routes->get('sessions', 'LineLoginDebug::sessions');               // 所有 Sessions
+        $routes->get('diagnostic', 'LineLoginDebug::diagnostic');           // 系統診斷資訊
+        $routes->get('error-summary', 'LineLoginDebug::errorSummary');      // 錯誤摘要統計
+        $routes->get('test-connection', 'LineLoginDebug::testConnection');  // 測試連接配置
+    });
+
     // 測試路由（僅開發環境）
     $routes->group('test', static function ($routes) {
         $routes->post('user-creation', 'Auth::testUserCreation');  // 測試使用者建立功能
