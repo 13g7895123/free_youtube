@@ -258,6 +258,70 @@ class Auth extends BaseController
     }
 
     /**
+     * 測試使用者建立功能（僅開發環境）
+     *
+     * @return ResponseInterface
+     */
+    public function testUserCreation()
+    {
+        // 安全檢查：僅允許開發環境
+        if (env('CI_ENVIRONMENT') === 'production') {
+            return $this->fail('此功能僅在開發環境可用', 403);
+        }
+
+        $results = [];
+
+        // 測試資料
+        $testLineUserData = [
+            'userId' => 'test_user_' . time(),
+            'displayName' => '測試使用者（驗證 status 修復）',
+            'pictureUrl' => 'https://example.com/test-avatar.jpg',
+            'email' => 'test-status-fix@example.com'
+        ];
+
+        $sessionId = 'test_creation_' . time();
+        $ip = '127.0.0.1';
+        $userAgent = 'Test Agent';
+
+        // 嘗試建立使用者
+        try {
+            $user = $this->createOrUpdateUser($testLineUserData, $sessionId, $ip, $userAgent);
+
+            if ($user) {
+                $results['success'] = true;
+                $results['message'] = '使用者建立成功！status 欄位修復有效';
+                $results['user'] = [
+                    'id' => $user['id'],
+                    'line_user_id' => $user['line_user_id'],
+                    'display_name' => $user['display_name'],
+                    'status' => $user['status'],
+                    'created_at' => $user['created_at']
+                ];
+
+                // 清理測試資料
+                $this->userModel->delete($user['id']);
+                $results['cleanup'] = '測試資料已清理';
+            } else {
+                $results['success'] = false;
+                $results['message'] = '使用者建立失敗';
+            }
+        } catch (\Exception $e) {
+            $results['success'] = false;
+            $results['message'] = '建立使用者時發生例外';
+            $results['error'] = $e->getMessage();
+        }
+
+        // 檢查 log 中是否有 status 相關錯誤
+        $recentLogs = $this->lineLoginLogModel
+            ->where('session_id', $sessionId)
+            ->findAll();
+
+        $results['logs'] = $recentLogs;
+
+        return $this->respond($results);
+    }
+
+    /**
      * 插入測試資料（僅開發環境）
      *
      * @return ResponseInterface
@@ -734,7 +798,8 @@ class Auth extends BaseController
             'line_user_id' => $lineUserId,
             'display_name' => $lineUserData['displayName'] ?? '',
             'avatar_url' => $lineUserData['pictureUrl'] ?? '',
-            'email' => $lineUserData['email'] ?? null
+            'email' => $lineUserData['email'] ?? null,
+            'status' => 'active'
         ];
 
         try {

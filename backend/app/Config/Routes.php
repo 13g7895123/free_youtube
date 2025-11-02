@@ -38,6 +38,11 @@ $routes->group('api', static function ($routes) {
         $routes->post('seed-test', 'Auth::seedTestLogs');          // 插入測試資料（僅開發環境）
     });
 
+    // 測試路由（僅開發環境）
+    $routes->group('test', static function ($routes) {
+        $routes->post('user-creation', 'Auth::testUserCreation');  // 測試使用者建立功能
+    });
+
     // 影片庫路由（需認證）
     $routes->group('video-library', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'VideoLibrary::index');                   // 取得影片庫
