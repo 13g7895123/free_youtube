@@ -97,6 +97,9 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+    volumes:
+      # 掛載 writable 目錄以便從宿主機直接查看 logs 等檔案
+      - ./backend/writable:/var/www/html/writable
     networks:
       - app_network_prod
     restart: unless-stopped

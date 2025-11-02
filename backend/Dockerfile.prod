@@ -34,7 +34,6 @@ COPY composer.json composer.lock* ./
 RUN composer install \
     --no-dev \
     --no-scripts \
-    --no-autoloader \
     --optimize-autoloader \
     --prefer-dist \
     --no-interaction
@@ -42,8 +41,8 @@ RUN composer install \
 # 複製應用程式代碼
 COPY . .
 
-# 完成 composer 自動加載優化
-RUN composer dump-autoload --optimize --no-dev
+# 完成 composer 自動加載優化 (使用 classmap-authoritative 提升效能)
+RUN composer dump-autoload --optimize --classmap-authoritative
 
 # 創建並設定 writable 目錄權限
 RUN mkdir -p writable/cache writable/logs writable/session writable/uploads && \
