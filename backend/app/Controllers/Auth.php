@@ -32,27 +32,75 @@ class Auth extends BaseController
      */
     public function lineLogin()
     {
-        // 檢查是否為 Mock 模式
-        if (env('AUTH_MODE') === 'mock') {
+        $sessionId = uniqid('line_login_init_', true);
+        $ip = $this->request->getIPAddress();
+        $userAgent = $this->request->getUserAgent()->getAgentString();
+
+        // LOG 1: 記錄開始
+        $this->lineLoginLogModel->logStep($sessionId, 'login_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent
+        ]);
+
+        // LOG 2: 檢查是否為 Mock 模式
+        $authMode = env('AUTH_MODE');
+        if ($authMode === 'mock') {
+            $this->lineLoginLogModel->logStep($sessionId, 'check_auth_mode', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'Mock mode enabled, LINE login rejected'
+            ]);
             return $this->fail('目前使用 Mock 認證模式，請點擊「登入」按鈕使用 Mock 登入', 403);
         }
 
+        $this->lineLoginLogModel->logStep($sessionId, 'check_auth_mode', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => ['auth_mode' => $authMode]
+        ]);
+
+        // LOG 3: 讀取環境變數
         $channelId = env('LINE_LOGIN_CHANNEL_ID');
         $callbackUrl = env('LINE_LOGIN_CALLBACK_URL');
 
         if (!$channelId || !$callbackUrl) {
+            $this->lineLoginLogModel->logStep($sessionId, 'check_config', 'error', [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+                'error' => 'Missing LINE_LOGIN_CHANNEL_ID or LINE_LOGIN_CALLBACK_URL',
+                'request' => [
+                    'has_channel_id' => !empty($channelId),
+                    'has_callback_url' => !empty($callbackUrl)
+                ]
+            ]);
             return $this->fail('LINE Login 設定錯誤：請設定 LINE_LOGIN_CHANNEL_ID 和 LINE_LOGIN_CALLBACK_URL 環境變數', 500);
         }
 
-        // 生成隨機 state 用於 CSRF 防護
-        // 使用 timestamp + random + hash 的組合，不依賴 session
+        $this->lineLoginLogModel->logStep($sessionId, 'check_config', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'callback_url' => $callbackUrl
+            ]
+        ]);
+
+        // LOG 4: 生成 state
         $timestamp = time();
         $random = bin2hex(random_bytes(8));
         $secretKey = env('JWT_SECRET_KEY', 'default_secret_key_change_in_production');
         $hash = hash_hmac('sha256', $timestamp . $random, $secretKey);
         $state = base64_encode($timestamp . '|' . $random . '|' . substr($hash, 0, 16));
 
-        // 構建 LINE OAuth 授權 URL
+        $this->lineLoginLogModel->logStep($sessionId, 'generate_state', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'timestamp' => $timestamp,
+                'state_preview' => substr($state, 0, 20) . '...'
+            ]
+        ]);
+
+        // LOG 5: 構建授權 URL
         $params = [
             'response_type' => 'code',
             'client_id' => $channelId,
@@ -62,6 +110,14 @@ class Auth extends BaseController
         ];
 
         $authUrl = 'https://access.line.me/oauth2/v2.1/authorize?' . http_build_query($params);
+
+        $this->lineLoginLogModel->logStep($sessionId, 'redirect_to_line', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'auth_url' => $authUrl
+            ]
+        ]);
 
         // 重定向到 LINE 授權頁面
         return redirect()->to($authUrl);
@@ -120,6 +176,16 @@ class Auth extends BaseController
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
         }
 
+        // LOG: 開始解碼 state
+        $this->lineLoginLogModel->logStep($sessionId, 'decode_state_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'state_length' => strlen($state),
+                'state_preview' => substr($state, 0, 20) . '...'
+            ]
+        ]);
+
         // 解碼並驗證 state
         $stateDecoded = base64_decode($state);
         $stateParts = explode('|', $stateDecoded);
@@ -130,13 +196,28 @@ class Auth extends BaseController
             $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
-                'error' => 'State format invalid'
+                'error' => 'State format invalid',
+                'request' => [
+                    'parts_count' => count($stateParts),
+                    'expected' => 3,
+                    'decoded_state' => $stateDecoded
+                ]
             ]);
 
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
         }
 
         list($timestamp, $random, $hash) = $stateParts;
+
+        // LOG: State 解碼成功
+        $this->lineLoginLogModel->logStep($sessionId, 'decode_state_success', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'timestamp' => $timestamp,
+                'time_diff' => time() - $timestamp
+            ]
+        ]);
 
         // 驗證時間戳（10分鐘內有效）
         if (time() - $timestamp > 600) {
@@ -145,7 +226,12 @@ class Auth extends BaseController
             $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
-                'error' => 'State expired - request timeout'
+                'error' => 'State expired - request timeout',
+                'request' => [
+                    'timestamp' => $timestamp,
+                    'current_time' => time(),
+                    'time_diff_seconds' => time() - $timestamp
+                ]
             ]);
 
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求已過期，請重試'));
@@ -161,66 +247,104 @@ class Auth extends BaseController
             $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
-                'error' => 'State verification failed - CSRF check failed'
+                'error' => 'State verification failed - CSRF check failed',
+                'request' => [
+                    'received_hash' => $hash,
+                    'expected_hash' => $expectedHash
+                ]
             ]);
 
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('登入請求無效，請重試'));
         }
 
-        // 取得授權碼
+        // LOG: State 驗證通過
+        $this->lineLoginLogModel->logStep($sessionId, 'validate_state', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent
+        ]);
+
+        // LOG: 檢查授權碼
         $code = $this->request->getGet('code');
+        $this->lineLoginLogModel->logStep($sessionId, 'check_code', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'request' => [
+                'has_code' => !empty($code),
+                'code_length' => $code ? strlen($code) : 0
+            ]
+        ]);
+
         if (!$code) {
             log_message('error', 'LINE OAuth callback missing code');
-            
+
             $this->lineLoginLogModel->logStep($sessionId, 'get_code', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'error' => 'Authorization code missing from callback'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('授權失敗，請重試'));
         }
+
+        // LOG: 開始取得 token
+        $this->lineLoginLogModel->logStep($sessionId, 'get_token_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent
+        ]);
 
         // 使用授權碼換取 access token
         $tokenData = $this->getLineAccessToken($code, $sessionId, $ip, $userAgent);
         if (!$tokenData) {
             log_message('error', 'Failed to get LINE access token');
-            
+
             $this->lineLoginLogModel->logStep($sessionId, 'get_token', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'error' => 'Failed to exchange code for access token'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法取得 LINE 授權，請檢查網路連線後重試'));
         }
+
+        // LOG: Token 取得成功，開始取得用戶資料
+        $this->lineLoginLogModel->logStep($sessionId, 'get_profile_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent
+        ]);
 
         // 使用 access token 取得用戶資料
         $lineUserData = $this->getLineUserProfile($tokenData['access_token'], $sessionId, $ip, $userAgent);
         if (!$lineUserData) {
             log_message('error', 'Failed to get LINE user profile');
-            
+
             $this->lineLoginLogModel->logStep($sessionId, 'get_profile', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'error' => 'Failed to get user profile from LINE API'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法取得用戶資料，請重試'));
         }
+
+        // LOG: 用戶資料取得成功，開始建立/更新用戶
+        $this->lineLoginLogModel->logStep($sessionId, 'create_user_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'line_user_id' => $lineUserData['userId'] ?? null
+        ]);
 
         // 建立或更新用戶
         $user = $this->createOrUpdateUser($lineUserData, $sessionId, $ip, $userAgent);
         if (!$user) {
             log_message('error', 'Failed to create/update user');
-            
+
             $this->lineLoginLogModel->logStep($sessionId, 'create_user', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'line_user_id' => $lineUserData['userId'] ?? null,
                 'error' => 'Failed to create or update user in database'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法建立用戶帳號，請稍後再試'));
         }
 
@@ -236,22 +360,43 @@ class Auth extends BaseController
             }
         }
 
+        // LOG: 用戶建立/更新成功，開始生成 token
+        $this->lineLoginLogModel->logStep($sessionId, 'generate_token_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'line_user_id' => $lineUserData['userId'] ?? null,
+            'request' => [
+                'user_id' => $user['id'],
+                'was_restored' => $wasRestored
+            ]
+        ]);
+
         // 生成應用 token
         $appToken = $this->generateUserToken($user['id']);
         if (!$appToken) {
             log_message('error', 'Failed to generate user token');
-            
+
             $this->lineLoginLogModel->logStep($sessionId, 'create_token', 'error', [
                 'ip' => $ip,
                 'user_agent' => $userAgent,
                 'line_user_id' => $lineUserData['userId'] ?? null,
                 'error' => 'Failed to generate authentication token'
             ]);
-            
+
             return redirect()->to($frontendUrl . '/?login=error&message=' . urlencode('無法生成認證憑證，請重試'));
         }
 
-        // 記錄完成
+        // LOG: Token 生成成功，設置 cookie
+        $this->lineLoginLogModel->logStep($sessionId, 'set_cookie_start', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'line_user_id' => $lineUserData['userId'] ?? null
+        ]);
+
+        // 設置 HTTP-only cookie（包含 access_token 和 refresh_token）
+        $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
+
+        // LOG: 記錄完成
         $this->lineLoginLogModel->logStep($sessionId, 'complete', 'success', [
             'ip' => $ip,
             'user_agent' => $userAgent,
@@ -262,14 +407,22 @@ class Auth extends BaseController
             ]
         ]);
 
-        // 設置 HTTP-only cookie（包含 access_token 和 refresh_token）
-        $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
-
         // 重定向到前端首頁（登入成功）
         $redirectUrl = $frontendUrl . '/?login=success';
         if ($wasRestored) {
             $redirectUrl .= '&restored=1';
         }
+
+        // LOG: 準備重定向
+        $this->lineLoginLogModel->logStep($sessionId, 'redirect_to_frontend', 'success', [
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'line_user_id' => $lineUserData['userId'] ?? null,
+            'request' => [
+                'redirect_url' => $redirectUrl
+            ]
+        ]);
+
         return redirect()->to($redirectUrl);
     }
 
