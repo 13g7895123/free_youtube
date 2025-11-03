@@ -83,13 +83,8 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
       // 順序播放
       nextIndex = currentIndex.value + 1
       if (nextIndex >= playlistLength) {
-        if (loopMode.value === 'all') {
-          nextIndex = 0
-        } else {
-          // 播放完畢
-          isPlaying.value = false
-          return
-        }
+        // 播放清單循環：回到第一首（預設行為）
+        nextIndex = 0
       }
     }
 
