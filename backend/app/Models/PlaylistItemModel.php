@@ -33,9 +33,12 @@ class PlaylistItemModel extends Model
      */
     public function getPlaylistItems(int $playlistId)
     {
-        return $this->where('playlist_id', $playlistId)
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('playlist_id', $playlistId)
                     ->orderBy('position', 'ASC')
-                    ->findAll();
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**

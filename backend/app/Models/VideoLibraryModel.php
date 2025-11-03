@@ -42,9 +42,13 @@ class VideoLibraryModel extends Model
      */
     public function getUserLibrary(int $userId, int $limit = 100, int $offset = 0)
     {
-        return $this->where('user_id', $userId)
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('user_id', $userId)
                     ->orderBy('created_at', 'DESC')
-                    ->findAll($limit, $offset);
+                    ->limit($limit, $offset)
+                    ->get()
+                    ->getResultArray();
     }
 
     /**
@@ -52,6 +56,10 @@ class VideoLibraryModel extends Model
      */
     public function isVideoInLibrary(int $userId, string $videoId): bool
     {
-        return $this->where(['user_id' => $userId, 'video_id' => $videoId])->countAllResults() > 0;
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('user_id', $userId)
+                    ->where('video_id', $videoId)
+                    ->countAllResults() > 0;
     }
 }

@@ -36,9 +36,13 @@ class PlaylistModel extends Model
      */
     public function getUserPlaylists(int $userId)
     {
-        return $this->where('user_id', $userId)
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('user_id', $userId)
+                    ->where('deleted_at', null)
                     ->orderBy('created_at', 'DESC')
-                    ->findAll();
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
@@ -46,9 +50,13 @@ class PlaylistModel extends Model
      */
     public function getActive()
     {
-        return $this->where('is_active', true)
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('is_active', true)
+                    ->where('deleted_at', null)
                     ->orderBy('created_at', 'DESC')
-                    ->findAll();
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
@@ -56,9 +64,15 @@ class PlaylistModel extends Model
      */
     public function search(string $query)
     {
-        return $this->like('name', $query)
-                    ->orLike('description', $query)
-                    ->findAll();
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('deleted_at', null)
+                    ->groupStart()
+                        ->like('name', $query)
+                        ->orLike('description', $query)
+                    ->groupEnd()
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
@@ -93,6 +107,12 @@ class PlaylistModel extends Model
      */
     public function getRecent(int $limit = 10)
     {
-        return $this->orderBy('created_at', 'DESC')->limit($limit)->findAll();
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('deleted_at', null)
+                    ->orderBy('created_at', 'DESC')
+                    ->limit($limit)
+                    ->get()
+                    ->getResult($this->returnType);
     }
 }
