@@ -199,7 +199,7 @@ class PlaylistItemController extends ResourceController
 
             // 驗證項目是否存在
             $item = $this->model->find($itemId);
-            if (!$item || $item['playlist_id'] != $playlistId) {
+            if (!$item || $item->playlist_id != $playlistId) {
                 return $this->failNotFound('項目不存在或不屬於該播放清單');
             }
 
