@@ -425,7 +425,7 @@ class Auth extends BaseController
         ]);
 
         // 設置 HTTP-only cookie（包含 access_token 和 refresh_token）
-        $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
+        $cookieConfigs = $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
 
         // LOG: 記錄完成
         $this->lineLoginLogModel->logStep($sessionId, 'complete', 'success', [
@@ -454,7 +454,18 @@ class Auth extends BaseController
             ]
         ]);
 
-        return redirect()->to($redirectUrl);
+        // 創建 redirect response 並手動附加 cookies
+        $response = redirect()->to($redirectUrl);
+
+        // 將每個 cookie 設置到 redirect response 中
+        foreach ($cookieConfigs as $cookieConfig) {
+            $response->setCookie($cookieConfig);
+            log_message('debug', '🔧 Manually setting cookie to redirect response: ' . $cookieConfig['name']);
+        }
+
+        log_message('debug', '✅ Redirect response with cookies created. Total cookies: ' . count($cookieConfigs));
+
+        return $response;
     }
 
     /**
@@ -773,11 +784,12 @@ class Auth extends BaseController
         }
 
         // 設置新 cookie（包含新的 access_token 和 refresh_token）
-        $this->setAuthCookie($newToken['access_token'], $newToken['refresh_token']);
+        $cookieConfigs = $this->setAuthCookie($newToken['access_token'], $newToken['refresh_token']);
 
         log_message('info', "Token refreshed for user_id={$userId}");
 
-        return $this->respond([
+        // 創建 response 並附加 cookies
+        $response = $this->respond([
             'success' => true,
             'message' => 'Token 已更新',
             'data' => [
@@ -785,6 +797,13 @@ class Auth extends BaseController
                 'refresh_expires_in' => $newToken['refresh_expires_in']
             ]
         ]);
+
+        // 將 cookies 附加到 response
+        foreach ($cookieConfigs as $cookieConfig) {
+            $response->setCookie($cookieConfig);
+        }
+
+        return $response;
     }
 
     /**
@@ -1400,16 +1419,21 @@ class Auth extends BaseController
     }
 
     /**
-     * 設置認證 cookie（Access Token 和 Refresh Token）
+     * 設置認證 Cookies 到 Response 對象
      *
-     * @param string $accessToken
-     * @param string|null $refreshToken
-     * @return void
+     * 注意：此方法返回 cookie 配置數組，需要手動附加到 response 中
+     * 這是為了解決 CodeIgniter redirect() 會覆蓋 cookies 的問題
+     *
+     * @param string $accessToken Access token
+     * @param string|null $refreshToken Refresh token (optional)
+     * @return array Cookie configurations for manual setting
      */
-    private function setAuthCookie(string $accessToken, ?string $refreshToken = null): void
+    private function setAuthCookie(string $accessToken, ?string $refreshToken = null): array
     {
         $isProduction = getenv('CI_ENVIRONMENT') === 'production';
         $cookieDomain = getenv('COOKIE_DOMAIN', '');
+
+        $cookies = [];
 
         // Access Token Cookie（短期有效）
         $accessExpireSeconds = (int) getenv('JWT_ACCESS_TOKEN_EXPIRE', 900); // 預設 15 分鐘
@@ -1427,7 +1451,7 @@ class Auth extends BaseController
             $accessCookieConfig['domain'] = $cookieDomain;
         }
 
-        set_cookie($accessCookieConfig);
+        $cookies[] = $accessCookieConfig;
 
         // 詳細的調試日誌
         log_message('info', '🍪 Setting access_token cookie: ' . json_encode([
@@ -1457,7 +1481,7 @@ class Auth extends BaseController
                 $refreshCookieConfig['domain'] = $cookieDomain;
             }
 
-            set_cookie($refreshCookieConfig);
+            $cookies[] = $refreshCookieConfig;
 
             log_message('info', '🍪 Setting refresh_token cookie: ' . json_encode([
                 'expires_in' => $refreshExpireSeconds . 's',
@@ -1468,6 +1492,8 @@ class Auth extends BaseController
                 'path' => $refreshCookieConfig['path']
             ]));
         }
+
+        return $cookies;
     }
 
     /**
@@ -1508,18 +1534,25 @@ class Auth extends BaseController
             }
 
             // 設置 cookie（包含 access_token 和 refresh_token）
-            $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
+            $cookieConfigs = $this->setAuthCookie($appToken['access_token'], $appToken['refresh_token']);
 
             log_message('info', "Mock login successful for user_id: {$mockUserId}");
 
             // 返回 JSON (而非重定向，方便前端處理)
-            return $this->respond([
+            $response = $this->respond([
                 'success' => true,
                 'message' => 'Mock 登入成功',
                 'data' => [
                     'user' => $user
                 ]
             ]);
+
+            // 將 cookies 附加到 response
+            foreach ($cookieConfigs as $cookieConfig) {
+                $response->setCookie($cookieConfig);
+            }
+
+            return $response;
         } catch (\Exception $e) {
             // 資料庫連線失敗時，返回假的 Mock 使用者資料（僅開發環境）
             log_message('warning', "Mock login fallback (database unavailable): {$e->getMessage()}");
@@ -1537,22 +1570,30 @@ class Auth extends BaseController
             ];
 
             // 生成 JWT token（簡化模式，不儲存到資料庫）
+            $cookieConfigs = [];
             try {
                 $fakeAccessToken = JwtHelper::generateAccessToken($mockUserId);
                 $fakeRefreshToken = JwtHelper::generateRefreshToken($mockUserId);
-                $this->setAuthCookie($fakeAccessToken, $fakeRefreshToken);
+                $cookieConfigs = $this->setAuthCookie($fakeAccessToken, $fakeRefreshToken);
             } catch (\Exception $e) {
                 log_message('error', 'Failed to generate mock JWT: ' . $e->getMessage());
                 return $this->fail('無法生成認證憑證', 500);
             }
 
-            return $this->respond([
+            $response = $this->respond([
                 'success' => true,
                 'message' => 'Mock 登入成功（簡化模式，資料庫未連線）',
                 'data' => [
                     'user' => $mockUser
                 ]
             ]);
+
+            // 將 cookies 附加到 response
+            foreach ($cookieConfigs as $cookieConfig) {
+                $response->setCookie($cookieConfig);
+            }
+
+            return $response;
         }
     }
 
