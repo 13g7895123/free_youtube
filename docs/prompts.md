@@ -1,14 +1,8 @@
-DEBUG - 2025-11-02 23:58:38 --> JWT initialized with secret key successfully
-DEBUG - 2025-11-02 23:58:38 --> Generating access token for user 1 with expire seconds: 900
-DEBUG - 2025-11-02 23:58:38 --> Generating refresh token for user 1 with jti: be6333b376f81719e0f8592654254e28 and expire seconds: 2592000
-DEBUG - 2025-11-02 23:58:38 --> Access token cookie set: expires=900s
-DEBUG - 2025-11-02 23:58:38 --> Refresh token cookie set: expires=2592000s
-WARNING - 2025-11-02 23:58:38 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:38 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
+DEBUG - 2025-11-03 00:41:18 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
+WARNING - 2025-11-03 00:41:18 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
+DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
+WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
+DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
+WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
+DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"POST","uri":"http:\/\/localhost:8080\/api\/auth\/refresh","origin":"https:\/\/free.youtube.mercylife.cc","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
+WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}

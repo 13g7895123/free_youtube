@@ -94,6 +94,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ACCESS_TOKEN_EXPIRE: ${JWT_ACCESS_TOKEN_EXPIRE:-900}
       JWT_REFRESH_TOKEN_EXPIRE: ${JWT_REFRESH_TOKEN_EXPIRE:-2592000}
+      # Cookie 配置
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
     depends_on:
       mariadb:
         condition: service_healthy

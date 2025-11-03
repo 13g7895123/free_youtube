@@ -44,6 +44,7 @@ class Cookie extends BaseConfig
      * --------------------------------------------------------------------------
      *
      * Set to `.your-domain.com` for site-wide cookies.
+     * 從環境變數 COOKIE_DOMAIN 讀取，如果未設置則使用空字串（當前域名）
      */
     public string $domain = '';
 
@@ -53,8 +54,30 @@ class Cookie extends BaseConfig
      * --------------------------------------------------------------------------
      *
      * Cookie will only be set if a secure HTTPS connection exists.
+     * 正式環境應該強制啟用 HTTPS（secure=true）
+     * 從環境變數 CI_ENVIRONMENT 判斷：production 時強制啟用
      */
     public bool $secure = false;
+
+    /**
+     * Constructor - 從環境變數初始化配置
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        // 從環境變數讀取 Cookie Domain
+        $cookieDomain = getenv('COOKIE_DOMAIN');
+        if ($cookieDomain !== false && $cookieDomain !== '') {
+            $this->domain = $cookieDomain;
+        }
+
+        // 正式環境強制啟用 secure（僅 HTTPS）
+        $environment = getenv('CI_ENVIRONMENT') ?: 'production';
+        if ($environment === 'production') {
+            $this->secure = true;
+        }
+    }
 
     /**
      * --------------------------------------------------------------------------
