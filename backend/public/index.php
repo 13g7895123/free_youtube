@@ -23,7 +23,8 @@ if (PHP_SAPI !== 'cli') {
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
     header('Access-Control-Expose-Headers: Content-Type, X-Total-Count');
-    header('Content-Type: application/json');
+    // Removed: header('Content-Type: application/json');
+    // Let CodeIgniter decide Content-Type (JSON for API, HTML for error pages)
 
     // Handle preflight OPTIONS requests
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
