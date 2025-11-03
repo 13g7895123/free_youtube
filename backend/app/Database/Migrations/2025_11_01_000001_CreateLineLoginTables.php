@@ -174,93 +174,12 @@ class CreateLineLoginTables extends Migration
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('video_library');
 
-        // 4. playlists 表
-        $this->forge->addField([
-            'id' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => true,
-                'auto_increment' => true,
-            ],
-            'user_id' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => true,
-                'null' => false,
-            ],
-            'name' => [
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-                'null' => false,
-            ],
-            'description' => [
-                'type' => 'TEXT',
-                'null' => true,
-            ],
-            'is_public' => [
-                'type' => 'TINYINT',
-                'constraint' => 1,
-                'default' => 0,
-                'null' => false,
-            ],
-            'created_at' => [
-                'type' => 'DATETIME',
-                'null' => false,
-            ],
-            'updated_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
-            ],
-        ]);
-        $this->forge->addKey('id', true);
-        $this->forge->addKey('user_id');
-        $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('playlists');
-
-        // 5. playlist_items 表
-        $this->forge->addField([
-            'id' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => true,
-                'auto_increment' => true,
-            ],
-            'playlist_id' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => true,
-                'null' => false,
-            ],
-            'video_id' => [
-                'type' => 'VARCHAR',
-                'constraint' => 20,
-                'null' => false,
-            ],
-            'title' => [
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-                'null' => false,
-            ],
-            'thumbnail_url' => [
-                'type' => 'TEXT',
-                'null' => true,
-            ],
-            'position' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => true,
-                'null' => false,
-            ],
-            'created_at' => [
-                'type' => 'DATETIME',
-                'null' => false,
-            ],
-        ]);
-        $this->forge->addKey('id', true);
-        $this->forge->addUniqueKey(['playlist_id', 'video_id']);
-        $this->forge->addKey(['playlist_id', 'position']);
-        $this->forge->addForeignKey('playlist_id', 'playlists', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('playlist_items');
+        // 4. playlists 表 - 已在 2025_10_27_000002_CreatePlaylistsTable.php 中定義
+        // user_id 欄位將由 2025_11_03_000001_AddUserIdToPlaylistsTable.php 添加
+        // 跳過此表的創建，避免重複定義
+        
+        // 5. playlist_items 表 - 已在 2025_10_27_000003_CreatePlaylistItemsTable.php 中定義
+        // 跳過此表的創建，避免重複定義
 
         // 6. guest_sessions 表
         $this->forge->addField([
@@ -296,11 +215,13 @@ class CreateLineLoginTables extends Migration
 
     public function down()
     {
-        $this->forge->dropTable('playlist_items', true);
-        $this->forge->dropTable('playlists', true);
+        // 不刪除 playlist_items 和 playlists，因為它們在其他 Migration 中定義
+        // $this->forge->dropTable('playlist_items', true);
+        // $this->forge->dropTable('playlists', true);
+        
+        $this->forge->dropTable('guest_sessions', true);
         $this->forge->dropTable('video_library', true);
         $this->forge->dropTable('user_tokens', true);
         $this->forge->dropTable('users', true);
-        $this->forge->dropTable('guest_sessions', true);
     }
 }
