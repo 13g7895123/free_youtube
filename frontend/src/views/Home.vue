@@ -222,7 +222,7 @@ const showAuthRequiredMessage = ref(false)
 const showSessionExpiredMessage = ref(false)
 
 // DEBUG 模式相關
-const debugMode = ref(true) // 預設開啟 DEBUG 模式 (完成後可改為 false 隱藏)
+const debugMode = ref(false) // 預設關閉 DEBUG 模式，需要時可改為 true
 const debugLogs = ref([])
 const cookieStatus = ref('')
 const hasAccessTokenCookie = ref(false)
