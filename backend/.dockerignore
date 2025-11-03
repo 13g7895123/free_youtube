@@ -1,0 +1,39 @@
+# 排除 vendor 目錄（由 composer install 在容器內安裝）
+vendor/
+
+# 排除環境配置文件
+.env
+.env.*
+
+# 排除運行時生成的文件
+writable/cache/*
+writable/logs/*
+writable/session/*
+writable/uploads/*
+
+# 保留 .gitkeep 文件
+!writable/cache/.gitkeep
+!writable/logs/.gitkeep
+!writable/session/.gitkeep
+!writable/uploads/.gitkeep
+
+# 排除測試文件
+tests/
+
+# 排除版本控制
+.git/
+.github/
+
+# 排除文檔
+docs/
+*.md
+!README.md
+
+# 排除 IDE 配置
+.vscode/
+.idea/
+
+# 排除臨時文件
+*.log
+*.tmp
+.DS_Store

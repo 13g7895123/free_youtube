@@ -86,7 +86,8 @@
       "Bash(else echo \"找不到 nginx.conf\")",
       "Bash(/dev/null)",
       "Bash(docker network:*)",
-      "Bash(docker start:*)"
+      "Bash(docker start:*)",
+      "Bash(./deploy-prod.sh:*)"
     ],
     "deny": [],
     "ask": []
