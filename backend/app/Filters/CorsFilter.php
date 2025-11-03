@@ -1,64 +1,47 @@
 <?php
 
-namespace Config;
+namespace App\Filters;
 
-use CodeIgniter\Config\BaseConfig;
+use CodeIgniter\Filters\FilterInterface;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
 
-/**
- * CORS Filter Configuration
- */
-class CorsFilter extends BaseConfig
+class CorsFilter implements FilterInterface
 {
-    /**
-     * Enable/disable CORS
-     */
-    public bool $enabled = true;
+    public function before(RequestInterface $request, $arguments = null)
+    {
+        $origin = $request->getServer('HTTP_ORIGIN') ?? '*';
 
-    /**
-     * Allowed origins
-     */
-    public array $allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-    ];
+        // 從環境變數讀取允許的 origins
+        $frontendUrl = getenv('FRONTEND_URL') ?: 'http://localhost:5173';
 
-    /**
-     * Allowed methods
-     */
-    public array $allowedMethods = [
-        'GET',
-        'POST',
-        'PUT',
-        'DELETE',
-        'PATCH',
-        'OPTIONS',
-    ];
+        $allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://localhost:8080',
+            'http://localhost',
+            $frontendUrl,  // 支援生產環境
+        ];
 
-    /**
-     * Allowed headers
-     */
-    public array $allowedHeaders = [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-        'Accept',
-    ];
+        if (in_array($origin, $allowedOrigins)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Cookie');
+            header('Access-Control-Expose-Headers: Content-Type, X-Total-Count');
+            header('Access-Control-Max-Age: 7200');
+            header('Access-Control-Allow-Credentials: true');  // ✅ 允許發送 credentials (cookies)
+        }
 
-    /**
-     * Max age
-     */
-    public int $maxAge = 7200;
+        // 處理 preflight 請求
+        if ($request->getMethod() === 'OPTIONS') {
+            return \Config\Services::response()->setStatusCode(204);
+        }
 
-    /**
-     * Allow credentials
-     */
-    public bool $allowCredentials = false;
+        return $request;
+    }
 
-    /**
-     * Exposed headers
-     */
-    public array $exposedHeaders = [
-        'Content-Type',
-        'X-Total-Count',
-    ];
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
+    {
+        return $response;
+    }
 }
