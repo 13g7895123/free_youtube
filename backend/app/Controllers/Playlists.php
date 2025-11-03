@@ -127,8 +127,9 @@ class Playlists extends BaseController
         // 取得播放清單項目
         $items = $this->playlistItemModel->getPlaylistItems($id);
 
-        $playlist['items'] = $items;
-        $playlist['items_count'] = count($items);
+        // 使用物件屬性而非陣列語法
+        $playlist->items = $items;
+        $playlist->items_count = count($items);
 
         return $this->respond([
             'success' => true,
@@ -379,7 +380,7 @@ class Playlists extends BaseController
             return $this->fail('找不到該項目', 404);
         }
 
-        $removedPosition = $item['position'];
+        $removedPosition = $item->position;
 
         // 刪除項目
         $deleted = $this->playlistItemModel->delete($itemId);
