@@ -1,1 +1,2 @@
-1. 我把專案重新啟用後出現這個錯誤，"The error view file was not specified. Cannot display error view."
+INFO - 2025-11-03 07:50:55 --> 🍪 Setting refresh_token cookie: {"expires_in":"2592000s","secure":true,"httponly":true,"samesite":"Lax","domain":"(not set)","path":"\/"}
+DEBUG - 2025-11-03 07:50:55 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/index.php\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}

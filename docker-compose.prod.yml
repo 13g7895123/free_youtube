@@ -96,6 +96,9 @@ services:
       JWT_REFRESH_TOKEN_EXPIRE: ${JWT_REFRESH_TOKEN_EXPIRE:-2592000}
       # Cookie 配置
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # CodeIgniter App 配置
+      app.baseURL: ${APP_BASEURL:-https://free.youtube.mercylife.cc/}
+      app.forceGlobalSecureRequests: ${APP_FORCE_HTTPS:-true}
     depends_on:
       mariadb:
         condition: service_healthy

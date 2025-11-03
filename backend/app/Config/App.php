@@ -15,6 +15,8 @@ class App extends BaseConfig
      * WITH a trailing slash:
      *
      * E.g., http://example.com/
+     *
+     * Note: This will be overridden from environment variable in constructor
      */
     public string $baseURL = 'http://localhost:8080/';
 
@@ -180,7 +182,12 @@ class App extends BaseConfig
      *
      * @var array<string, string>
      */
-    public array $proxyIPs = [];
+    public array $proxyIPs = [
+        // Trust private network ranges (Docker, local networks)
+        '10.0.0.0/8'     => 'X-Forwarded-For',
+        '172.16.0.0/12'  => 'X-Forwarded-For',
+        '192.168.0.0/16' => 'X-Forwarded-For',
+    ];
 
     /**
      * --------------------------------------------------------------------------
@@ -199,4 +206,22 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = false;
+
+    /**
+     * Constructor
+     *
+     * Override baseURL from environment variable if set
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Read baseURL from environment variable
+        // This supports both app.baseURL (from .env) and APP_BASEURL (from docker-compose)
+        $envBaseURL = getenv('app.baseURL') ?: getenv('APP_BASEURL');
+
+        if ($envBaseURL !== false && $envBaseURL !== '') {
+            $this->baseURL = rtrim($envBaseURL, '/') . '/';
+        }
+    }
 }

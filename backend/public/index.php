@@ -12,26 +12,26 @@ use Config\Paths;
 
 /*
  *---------------------------------------------------------------
- * CORS HANDLING - Allow all origins for API access
+ * CORS HANDLING - Disabled to avoid conflicts with CorsFilter
  *---------------------------------------------------------------
- * This handles CORS headers before the request is processed.
- * Allows all origins to access the API.
+ * CORS headers are now handled by app/Filters/CorsFilter.php
+ * This avoids conflicts with Access-Control-Allow-Credentials
+ * which requires specific origin instead of wildcard (*)
+ *
+ * IMPORTANT: Do not use 'Access-Control-Allow-Origin: *' with credentials!
  */
-if (PHP_SAPI !== 'cli') {
-    // Set CORS headers for all requests
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
-    header('Access-Control-Expose-Headers: Content-Type, X-Total-Count');
-    // Removed: header('Content-Type: application/json');
-    // Let CodeIgniter decide Content-Type (JSON for API, HTML for error pages)
-
-    // Handle preflight OPTIONS requests
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit(0);
-    }
-}
+// CORS handling disabled - CorsFilter handles this properly
+// if (PHP_SAPI !== 'cli') {
+//     header('Access-Control-Allow-Origin: *');  // ❌ Conflicts with credentials
+//     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+//     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
+//     header('Access-Control-Expose-Headers: Content-Type, X-Total-Count');
+//
+//     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//         http_response_code(200);
+//         exit(0);
+//     }
+// }
 
 /*
  *---------------------------------------------------------------
