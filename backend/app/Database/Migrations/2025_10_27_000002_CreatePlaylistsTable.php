@@ -15,6 +15,12 @@ class CreatePlaylistsTable extends Migration
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
+            'user_id' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'unsigned' => true,
+                'comment' => '會員 ID',
+            ],
             'name' => [
                 'type' => 'VARCHAR',
                 'constraint' => 255,
@@ -52,9 +58,11 @@ class CreatePlaylistsTable extends Migration
         ]);
 
         $this->forge->addKey('id', false, false, 'PRIMARY');
+        $this->forge->addKey('user_id');
         $this->forge->addKey('name');
         $this->forge->addKey('is_active');
         $this->forge->addKey('created_at');
+        $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
 
         $this->forge->createTable('playlists');
     }
