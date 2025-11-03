@@ -28,16 +28,25 @@ class PlaylistItemController extends ResourceController
     public function getItems($playlistId = null)
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             if (!$playlistId) {
                 return $this->fail('缺少播放清單 ID', 400);
             }
 
-            // 驗證播放清單是否存在
+            // 驗證播放清單是否存在且屬於該使用者
             $playlistModel = new PlaylistModel();
-            $playlist = $playlistModel->find($playlistId);
+            $playlist = $playlistModel
+                ->where('id', $playlistId)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限存取');
             }
 
             $items = $this->model->getPlaylistVideos($playlistId);
@@ -55,6 +64,12 @@ class PlaylistItemController extends ResourceController
     public function addItem($playlistId = null)
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             if (!$playlistId) {
                 return $this->fail('缺少播放清單 ID', 400);
             }
@@ -65,12 +80,15 @@ class PlaylistItemController extends ResourceController
                 return $this->fail('缺少 video_id', 422);
             }
 
-            // 驗證播放清單是否存在
+            // 驗證播放清單是否存在且屬於該使用者
             $playlistModel = new PlaylistModel();
-            $playlist = $playlistModel->find($playlistId);
+            $playlist = $playlistModel
+                ->where('id', $playlistId)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限新增');
             }
 
             // 驗證影片是否存在
@@ -107,6 +125,12 @@ class PlaylistItemController extends ResourceController
     public function reorder($playlistId = null)
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             if (!$playlistId) {
                 return $this->fail('缺少播放清單 ID', 400);
             }
@@ -117,12 +141,15 @@ class PlaylistItemController extends ResourceController
                 return $this->fail('缺少 items 陣列或格式不正確', 422);
             }
 
-            // 驗證播放清單是否存在
+            // 驗證播放清單是否存在且屬於該使用者
             $playlistModel = new PlaylistModel();
-            $playlist = $playlistModel->find($playlistId);
+            $playlist = $playlistModel
+                ->where('id', $playlistId)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限排序');
             }
 
             // 重新排序
@@ -143,16 +170,25 @@ class PlaylistItemController extends ResourceController
     public function removeItem($playlistId = null, $videoId = null)
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             if (!$playlistId || !$videoId) {
                 return $this->fail('缺少播放清單 ID 或影片 ID', 400);
             }
 
-            // 驗證播放清單是否存在
+            // 驗證播放清單是否存在且屬於該使用者
             $playlistModel = new PlaylistModel();
-            $playlist = $playlistModel->find($playlistId);
+            $playlist = $playlistModel
+                ->where('id', $playlistId)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限移除');
             }
 
             // 驗證項目是否存在
@@ -189,12 +225,15 @@ class PlaylistItemController extends ResourceController
                 return $this->fail('缺少 position 參數', 422);
             }
 
-            // 驗證播放清單是否存在
+            // 驗證播放清單是否存在且屬於該使用者
             $playlistModel = new PlaylistModel();
-            $playlist = $playlistModel->find($playlistId);
+            $playlist = $playlistModel
+                ->where('id', $playlistId)
+                ->where('user_id', $this->request->userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限修改');
             }
 
             // 驗證項目是否存在

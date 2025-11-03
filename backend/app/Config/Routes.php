@@ -74,8 +74,8 @@ $routes->group('api', static function ($routes) {
         $routes->get('(:num)', 'Notification::show/$1');                    // 詳情（選用）
     });
 
-    // 影片路由
-    $routes->group('videos', static function ($routes) {
+    // 影片路由（需認證）
+    $routes->group('videos', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'Api\VideoController::index');           // 列表
         $routes->get('search', 'Api\VideoController::search');     // 搜尋
         $routes->post('/', 'Api\VideoController::create');         // 建立
@@ -93,7 +93,7 @@ $routes->group('api', static function ($routes) {
         $routes->put('(:num)', 'Playlists::update/$1');            // 更新
         $routes->delete('(:num)', 'Playlists::delete/$1');         // 刪除
 
-        // 播放清單項目路由
+        // 播放清單項目路由（繼承 auth filter）
         $routes->post('(:num)/items', 'Playlists::addItem/$1');                      // 新增項目
         $routes->delete('(:num)/items/(:num)', 'Playlists::removeItem/$1/$2');      // 移除項目
         $routes->put('(:num)/reorder', 'Playlists::reorder/$1');                    // 重新排序

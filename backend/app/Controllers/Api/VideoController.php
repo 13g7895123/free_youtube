@@ -21,17 +21,24 @@ class VideoController extends ResourceController
 
     /**
      * GET /api/videos
-     * 取得所有影片列表 (分頁)
+     * 取得使用者的影片列表 (分頁)
      */
     public function index()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $page = $this->request->getVar('page') ?? 1;
             $perPage = $this->request->getVar('per_page') ?? 20;
 
-            // 使用 countAll() 避免重置查詢建構器
-            $total = $this->model->countAll();
+            // 計算該使用者的影片總數
+            $total = $this->model->where('user_id', $userId)->countAllResults(false);
             $videos = $this->model
+                ->where('user_id', $userId)
                 ->orderBy('created_at', 'DESC')
                 ->paginate($perPage, 'default', $page - 1);
 
@@ -43,18 +50,24 @@ class VideoController extends ResourceController
 
     /**
      * GET /api/videos/search
-     * 搜尋影片
+     * 搜尋使用者的影片
      */
     public function search()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $query = $this->request->getVar('q') ?? '';
 
             if (strlen($query) < 2) {
                 return $this->fail('搜尋詞至少 2 個字元', 400);
             }
 
-            $videos = $this->model->search($query);
+            $videos = $this->model->search($query, $userId);
 
             return $this->respond(api_success($videos, '搜尋成功'), 200);
         } catch (\Exception $e) {
@@ -69,10 +82,19 @@ class VideoController extends ResourceController
     public function show($id = null)
     {
         try {
-            $video = $this->model->find($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            $video = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$video) {
-                return $this->failNotFound('影片不存在');
+                return $this->failNotFound('影片不存在或無權限存取');
             }
 
             return $this->respond(api_success($video, '取得成功'), 200);
@@ -88,6 +110,12 @@ class VideoController extends ResourceController
     public function create()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $data = $this->request->getJSON(true);
 
             // 驗證必填欄位
@@ -95,9 +123,12 @@ class VideoController extends ResourceController
                 return $this->fail('缺少必填欄位: video_id, title, youtube_url', 422);
             }
 
-            // 檢查影片是否已存在
-            if ($this->model->findByYoutubeId($data['video_id'])) {
-                return $this->fail('該 YouTube 影片已存在', 409);
+            // 自動設定 user_id
+            $data['user_id'] = $userId;
+
+            // 檢查該使用者是否已有此影片
+            if ($this->model->findByYoutubeId($data['video_id'], $userId)) {
+                return $this->fail('該 YouTube 影片已存在於您的影片庫', 409);
             }
 
             if (!$this->model->insert($data)) {
@@ -120,13 +151,25 @@ class VideoController extends ResourceController
     public function update($id = null)
     {
         try {
-            $video = $this->model->find($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            $video = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$video) {
-                return $this->failNotFound('影片不存在');
+                return $this->failNotFound('影片不存在或無權限修改');
             }
 
             $data = $this->request->getJSON(true);
+
+            // 防止修改 user_id
+            unset($data['user_id']);
 
             if (!$this->model->update($id, $data)) {
                 return $this->fail('更新失敗: ' . implode(', ', $this->model->errors()), 400);
@@ -147,10 +190,19 @@ class VideoController extends ResourceController
     public function delete($id = null)
     {
         try {
-            $video = $this->model->find($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            $video = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$video) {
-                return $this->failNotFound('影片不存在');
+                return $this->failNotFound('影片不存在或無權限刪除');
             }
 
             $this->model->delete($id);
@@ -163,18 +215,24 @@ class VideoController extends ResourceController
 
     /**
      * POST /api/videos/check
-     * 檢查影片是否存在
+     * 檢查影片是否存在於使用者的影片庫
      */
     public function check()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $videoId = $this->request->getVar('video_id');
 
             if (!$videoId) {
                 return $this->fail('缺少 video_id 參數', 400);
             }
 
-            $video = $this->model->findByYoutubeId($videoId);
+            $video = $this->model->findByYoutubeId($videoId, $userId);
             $exists = $video !== null;
 
             return $this->respond(api_success([

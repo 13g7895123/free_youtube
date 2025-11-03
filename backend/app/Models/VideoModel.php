@@ -15,6 +15,7 @@ class VideoModel extends Model
     protected $useSoftDeletes   = true;
 
     protected $allowedFields = [
+        'user_id',
         'video_id',
         'title',
         'description',
@@ -36,45 +37,93 @@ class VideoModel extends Model
     protected $skipValidation     = false;
 
     /**
-     * 根據 YouTube 影片 ID 取得影片
+     * 取得使用者的影片
      */
-    public function findByYoutubeId(string $videoId)
+    public function getUserVideos(int $userId)
     {
-        return $this->where('video_id', $videoId)->first();
+        return $this->builder()
+                    ->where('user_id', $userId)
+                    ->orderBy('created_at', 'DESC')
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
-     * 搜尋影片
+     * 根據 YouTube 影片 ID 取得使用者的影片
      */
-    public function search(string $query)
+    public function findByYoutubeId(string $videoId, ?int $userId = null)
     {
-        return $this->like('title', $query)
+        $builder = $this->where('video_id', $videoId);
+        
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+        
+        return $builder->first();
+    }
+
+    /**
+     * 搜尋使用者的影片
+     */
+    public function search(string $query, ?int $userId = null)
+    {
+        $builder = $this->builder();
+        
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+        
+        return $builder->groupStart()
+                    ->like('title', $query)
                     ->orLike('description', $query)
                     ->orLike('channel_name', $query)
-                    ->findAll();
+                    ->groupEnd()
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
      * 取得最近新增的影片
      */
-    public function getRecentVideos(int $limit = 10)
+    public function getRecentVideos(int $limit = 10, ?int $userId = null)
     {
-        return $this->orderBy('created_at', 'DESC')->limit($limit)->findAll();
+        $builder = $this->builder();
+        
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+        
+        return $builder->orderBy('created_at', 'DESC')
+                    ->limit($limit)
+                    ->get()
+                    ->getResult($this->returnType);
     }
 
     /**
      * 取得指定頻道的影片
      */
-    public function getVideosByChannel(string $channelId)
+    public function getVideosByChannel(string $channelId, ?int $userId = null)
     {
-        return $this->where('channel_id', $channelId)->orderBy('published_at', 'DESC')->findAll();
+        $builder = $this->where('channel_id', $channelId);
+        
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+        
+        return $builder->orderBy('published_at', 'DESC')->findAll();
     }
 
     /**
      * 檢查影片是否存在
      */
-    public function exists(string $videoId): bool
+    public function exists(string $videoId, ?int $userId = null): bool
     {
-        return $this->where('video_id', $videoId)->first() !== null;
+        $builder = $this->where('video_id', $videoId);
+        
+        if ($userId !== null) {
+            $builder->where('user_id', $userId);
+        }
+        
+        return $builder->first() !== null;
     }
 }

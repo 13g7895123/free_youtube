@@ -21,17 +21,24 @@ class PlaylistController extends ResourceController
 
     /**
      * GET /api/playlists
-     * 取得所有播放清單
+     * 取得使用者的所有播放清單
      */
     public function index()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $page = $this->request->getVar('page') ?? 1;
             $perPage = $this->request->getVar('per_page') ?? 20;
 
-            // 使用 countAll() 避免重置查詢建構器
-            $total = $this->model->countAll();
+            // 計算該使用者的播放清單總數
+            $total = $this->model->where('user_id', $userId)->countAllResults(false);
             $playlists = $this->model
+                ->where('user_id', $userId)
                 ->orderBy('created_at', 'DESC')
                 ->paginate($perPage, 'default', $page - 1);
 
@@ -48,11 +55,24 @@ class PlaylistController extends ResourceController
     public function show($id = null)
     {
         try {
-            $playlist = $this->model->getWithItems($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            // 驗證播放清單是否屬於該使用者
+            $playlist = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限存取');
             }
+
+            // 取得播放清單項目
+            $playlist = $this->model->getWithItems($id);
 
             return $this->respond(api_success($playlist, '取得成功'), 200);
         } catch (\Exception $e) {
@@ -67,6 +87,12 @@ class PlaylistController extends ResourceController
     public function create()
     {
         try {
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
             $data = $this->request->getJSON(true);
 
             // 驗證必填欄位
@@ -74,7 +100,8 @@ class PlaylistController extends ResourceController
                 return $this->fail('缺少必填欄位: name', 422);
             }
 
-            // 設定預設值
+            // 自動設定 user_id 和預設值
+            $data['user_id'] = $userId;
             $data['is_active'] = $data['is_active'] ?? true;
             $data['item_count'] = 0;
 
@@ -98,15 +125,26 @@ class PlaylistController extends ResourceController
     public function update($id = null)
     {
         try {
-            $playlist = $this->model->find($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            // 驗證播放清單是否屬於該使用者
+            $playlist = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限修改');
             }
 
             $data = $this->request->getJSON(true);
 
-            // 防止更新 item_count (應由 PlaylistItemController 更新)
+            // 防止更新 user_id 和 item_count
+            unset($data['user_id']);
             unset($data['item_count']);
 
             if (!$this->model->update($id, $data)) {
@@ -128,10 +166,20 @@ class PlaylistController extends ResourceController
     public function delete($id = null)
     {
         try {
-            $playlist = $this->model->find($id);
+            $userId = $this->request->userId ?? null;
+
+            if (!$userId) {
+                return $this->fail('未登入', 401);
+            }
+
+            // 驗證播放清單是否屬於該使用者
+            $playlist = $this->model
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->first();
 
             if (!$playlist) {
-                return $this->failNotFound('播放清單不存在');
+                return $this->failNotFound('播放清單不存在或無權限刪除');
             }
 
             $this->model->delete($id);
