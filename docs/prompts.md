@@ -1,16 +1,14 @@
-WARNING - 2025-11-02 15:33:36 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 15:33:36 --> AuthFilter: No access_token cookie found
-WARNING - 2025-11-02 15:33:36 --> AuthFilter: No access_token cookie found
-DEBUG - 2025-11-02 15:33:41 --> JWT initialized with secret key successfully
-DEBUG - 2025-11-02 15:33:41 --> Generating access token for user 1 with expire seconds: 900
-CRITICAL - 2025-11-02 15:33:41 --> Error: Class "Firebase\JWT\JWT" not found
-[Method: GET, Route: api/auth/line/callback]
-in APPPATH/Helpers/JwtHelper.php on line 85.
- 1 APPPATH/Controllers/Auth.php(1195): App\Helpers\JwtHelper::generateAccessToken(1)
- 2 APPPATH/Controllers/Auth.php(376): App\Controllers\Auth->generateUserToken(1)
- 3 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Auth->lineCallback()
- 4 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Auth))
- 5 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
- 6 SYSTEMPATH/Boot.php(363): CodeIgniter\CodeIgniter->run()
- 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
- 8 FCPATH/index.php(68): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+DEBUG - 2025-11-02 23:58:38 --> JWT initialized with secret key successfully
+DEBUG - 2025-11-02 23:58:38 --> Generating access token for user 1 with expire seconds: 900
+DEBUG - 2025-11-02 23:58:38 --> Generating refresh token for user 1 with jti: be6333b376f81719e0f8592654254e28 and expire seconds: 2592000
+DEBUG - 2025-11-02 23:58:38 --> Access token cookie set: expires=900s
+DEBUG - 2025-11-02 23:58:38 --> Refresh token cookie set: expires=2592000s
+WARNING - 2025-11-02 23:58:38 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:38 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:39 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found
+WARNING - 2025-11-02 23:58:40 --> AuthFilter: No access_token cookie found

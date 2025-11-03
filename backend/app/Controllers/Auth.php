@@ -1428,7 +1428,17 @@ class Auth extends BaseController
         }
 
         set_cookie($accessCookieConfig);
-        log_message('debug', 'Access token cookie set: expires=' . $accessExpireSeconds . 's');
+
+        // 詳細的調試日誌
+        log_message('info', '🍪 Setting access_token cookie: ' . json_encode([
+            'expires_in' => $accessExpireSeconds . 's',
+            'secure' => $accessCookieConfig['secure'],
+            'httponly' => $accessCookieConfig['httponly'],
+            'samesite' => $accessCookieConfig['samesite'],
+            'domain' => $accessCookieConfig['domain'] ?? '(not set)',
+            'path' => $accessCookieConfig['path'],
+            'token_preview' => substr($accessToken, 0, 30) . '...'
+        ]));
 
         // Refresh Token Cookie（長期有效）
         if ($refreshToken !== null) {
@@ -1448,7 +1458,15 @@ class Auth extends BaseController
             }
 
             set_cookie($refreshCookieConfig);
-            log_message('debug', 'Refresh token cookie set: expires=' . $refreshExpireSeconds . 's');
+
+            log_message('info', '🍪 Setting refresh_token cookie: ' . json_encode([
+                'expires_in' => $refreshExpireSeconds . 's',
+                'secure' => $refreshCookieConfig['secure'],
+                'httponly' => $refreshCookieConfig['httponly'],
+                'samesite' => $refreshCookieConfig['samesite'],
+                'domain' => $refreshCookieConfig['domain'] ?? '(not set)',
+                'path' => $refreshCookieConfig['path']
+            ]));
         }
     }
 

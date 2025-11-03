@@ -23,8 +23,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
+        target: 'http://localhost:9204',  // ✅ 修正為實際的 backend 端口
+        changeOrigin: true,
+        secure: false  // 允許非 HTTPS 連接
       }
     }
   }

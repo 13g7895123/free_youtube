@@ -22,16 +22,35 @@ class AuthFilter implements FilterInterface
     {
         helper('cookie');
 
+        // 詳細調試：記錄所有 cookies 和相關 headers
+        $allCookies = $_COOKIE ?? [];
+        $cookieHeader = $request->getServer('HTTP_COOKIE') ?? '(none)';
+        $origin = $request->getServer('HTTP_ORIGIN') ?? '(none)';
+
+        log_message('debug', '🔍 AuthFilter - Request Details: ' . json_encode([
+            'method' => $request->getMethod(),
+            'uri' => (string)$request->getUri(),
+            'origin' => $origin,
+            'cookie_header' => $cookieHeader,
+            'cookies_available' => array_keys($allCookies),
+            'has_access_token' => isset($allCookies['access_token'])
+        ]));
+
         // 檢查 access_token cookie 是否存在
         $accessToken = get_cookie('access_token');
 
         if (!$accessToken) {
-            log_message('warning', 'AuthFilter: No access_token cookie found');
+            log_message('warning', '⚠️ AuthFilter: No access_token cookie found - ' . json_encode([
+                'all_cookies' => array_keys($allCookies),
+                'cookie_header' => substr($cookieHeader, 0, 100)
+            ]));
             return Services::response()->setStatusCode(401)->setJSON([
                 'success' => false,
                 'message' => '未登入'
             ]);
         }
+
+        log_message('info', '✅ AuthFilter: access_token cookie found, length=' . strlen($accessToken));
 
         // Mock 模式：允許簡化的 JWT 驗證（跳過資料庫檢查）
         if (env('AUTH_MODE') === 'mock') {
