@@ -60,8 +60,12 @@ RUN addgroup -g 1000 appuser && \
     adduser -D -u 1000 -G appuser appuser && \
     chown -R appuser:appuser /var/www/html
 
-# 切換到非 root 用戶
-USER appuser
+# 安裝 su-exec 以便在 entrypoint 中切換用戶
+RUN apk add --no-cache su-exec
+
+# 注意：不在此處切換用戶，而是在 entrypoint 中切換
+# 這樣可以讓 entrypoint 以 root 執行 composer，然後再切換到 appuser 啟動應用
+# USER appuser
 
 # 暴露端口
 EXPOSE 8000

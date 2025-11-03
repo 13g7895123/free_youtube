@@ -30,6 +30,61 @@ done
 
 echo "✅ Database is ready!"
 
+# ========================================
+# 檢查並安裝 PHP 依賴
+# ========================================
+echo ""
+echo "Checking PHP dependencies..."
+
+# 定義必需的依賴套件
+REQUIRED_PACKAGES=(
+    "firebase/php-jwt"
+    "codeigniter4/framework"
+)
+
+MISSING_PACKAGES=()
+
+# 檢查每個必需套件是否存在
+for package in "${REQUIRED_PACKAGES[@]}"; do
+    PACKAGE_PATH="/var/www/html/vendor/${package}"
+    if [ ! -d "$PACKAGE_PATH" ]; then
+        echo "⚠️  Missing package: ${package}"
+        MISSING_PACKAGES+=("${package}")
+    else
+        echo "✅ Found: ${package}"
+    fi
+done
+
+# 如果有缺少的套件，執行安裝
+if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
+    echo ""
+    echo "⚠️  Found ${#MISSING_PACKAGES[@]} missing package(s), installing..."
+
+    # 切換回應用根目錄（確保在正確位置執行 composer）
+    cd /var/www/html
+
+    # 逐一安裝缺少的套件
+    for package in "${MISSING_PACKAGES[@]}"; do
+        echo "Installing ${package}..."
+        if composer require "${package}" --no-interaction --prefer-dist; then
+            echo "✅ ${package} installed successfully!"
+        else
+            echo "❌ Failed to install ${package}"
+            exit 1
+        fi
+    done
+
+    # 重新優化自動加載
+    echo "Optimizing autoloader..."
+    composer dump-autoload --optimize --classmap-authoritative
+
+    echo "✅ All missing dependencies installed!"
+else
+    echo "✅ All required dependencies are installed"
+fi
+
+echo ""
+
 # 檢查數據庫是否存在
 DB_EXISTS=$(mysql -h "${MYSQL_HOST:-mariadb}" \
                   -u "${MYSQL_USER:-app_user}" \
@@ -92,8 +147,19 @@ fi
 # 使用 PHP 內建伺服器啟動（更穩定的方式）
 echo "🚀 Starting with PHP built-in server (Production Mode)..."
 cd /var/www/html/public
-exec php -S 0.0.0.0:8000 \
-    -d display_errors=1 \
-    -d error_reporting=E_ALL \
-    -d log_errors=1 \
-    -d error_log=/var/www/html/writable/logs/php-error.log
+
+# 如果當前是 root 用戶，切換到 appuser 執行應用（提升安全性）
+if [ "$(id -u)" = "0" ]; then
+    echo "Switching to appuser for security..."
+    exec su-exec appuser php -S 0.0.0.0:8000 \
+        -d display_errors=1 \
+        -d error_reporting=E_ALL \
+        -d log_errors=1 \
+        -d error_log=/var/www/html/writable/logs/php-error.log
+else
+    exec php -S 0.0.0.0:8000 \
+        -d display_errors=1 \
+        -d error_reporting=E_ALL \
+        -d log_errors=1 \
+        -d error_log=/var/www/html/writable/logs/php-error.log
+fi
