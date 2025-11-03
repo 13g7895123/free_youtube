@@ -1,8 +1,1 @@
-DEBUG - 2025-11-03 00:41:18 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
-WARNING - 2025-11-03 00:41:18 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
-DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
-WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
-DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
-WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
-DEBUG - 2025-11-03 01:05:37 --> 🔍 AuthFilter - Request Details: {"method":"POST","uri":"http:\/\/localhost:8080\/api\/auth\/refresh","origin":"https:\/\/free.youtube.mercylife.cc","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
-WARNING - 2025-11-03 01:05:37 --> ⚠️ AuthFilter: No access_token cookie found - {"all_cookies":[],"cookie_header":"(none)"}
+TEST
