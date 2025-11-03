@@ -835,8 +835,8 @@ class Auth extends BaseController
         $migratedCount = 0;
         $skippedCount = 0;
 
-        // 檢查會員影片總數（包含即將遷移的）
-        $currentCount = $videoLibraryModel->where('user_id', $userId)->countAllResults();
+        // 檢查會員影片總數（包含即將遷移的）- 使用 countAllResults(false) 避免重置查詢建構器
+        $currentCount = $videoLibraryModel->where('user_id', $userId)->countAllResults(false);
         $maxVideos = 10000;
 
         foreach ($guestHistory as $item) {

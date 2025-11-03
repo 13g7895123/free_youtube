@@ -29,7 +29,8 @@ class VideoController extends ResourceController
             $page = $this->request->getVar('page') ?? 1;
             $perPage = $this->request->getVar('per_page') ?? 20;
 
-            $total = $this->model->countAllResults();
+            // 使用 countAll() 避免重置查詢建構器
+            $total = $this->model->countAll();
             $videos = $this->model
                 ->orderBy('created_at', 'DESC')
                 ->paginate($perPage, 'default', $page - 1);

@@ -170,7 +170,8 @@ class PlaylistItemModel extends Model
      */
     public function getPlaylistItemCount(int $playlistId): int
     {
+        // 使用 countAllResults(false) 避免重置查詢建構器
         return $this->where('playlist_id', $playlistId)
-                    ->countAllResults();
+                    ->countAllResults(false);
     }
 }

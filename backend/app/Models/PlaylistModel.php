@@ -82,7 +82,8 @@ class PlaylistModel extends Model
     public function updateItemCount(int $playlistId)
     {
         $itemModel = new PlaylistItemModel();
-        $count = $itemModel->where('playlist_id', $playlistId)->countAllResults();
+        // 使用 countAllResults(false) 避免重置查詢建構器
+        $count = $itemModel->where('playlist_id', $playlistId)->countAllResults(false);
 
         return $this->update($playlistId, ['item_count' => $count]);
     }

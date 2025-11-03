@@ -287,11 +287,12 @@ class Playlists extends BaseController
         }
 
         // 檢查會員總影片數上限（10000）
-        $totalVideos = $this->videoLibraryModel->where('user_id', $userId)->countAllResults();
+        // 使用 countAllResults(false) 避免重置查詢建構器
+        $totalVideos = $this->videoLibraryModel->where('user_id', $userId)->countAllResults(false);
         $totalPlaylistItems = $this->playlistItemModel
             ->join('playlists', 'playlists.id = playlist_items.playlist_id')
             ->where('playlists.user_id', $userId)
-            ->countAllResults();
+            ->countAllResults(false);
 
         if (($totalVideos + $totalPlaylistItems) >= 10000) {
             return $this->fail('影片總數已達上限（10000 部）', 400);

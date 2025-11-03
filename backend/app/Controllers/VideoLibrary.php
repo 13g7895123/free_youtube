@@ -41,8 +41,8 @@ class VideoLibrary extends BaseController
         // 取得影片庫資料
         $videos = $this->videoLibraryModel->getUserLibrary($userId, $perPage, $offset);
 
-        // 取得總數
-        $total = $this->videoLibraryModel->where('user_id', $userId)->countAllResults();
+        // 取得總數 - 使用 countAllResults(false) 避免重置查詢建構器
+        $total = $this->videoLibraryModel->where('user_id', $userId)->countAllResults(false);
 
         return $this->respond([
             'success' => true,
@@ -80,8 +80,8 @@ class VideoLibrary extends BaseController
             return $this->fail('缺少 video_id 參數', 400);
         }
 
-        // 檢查會員影片總數上限（10000）
-        $currentCount = $this->videoLibraryModel->where('user_id', $userId)->countAllResults();
+        // 檢查會員影片總數上限（10000）- 使用 countAllResults(false) 避免重置查詢建構器
+        $currentCount = $this->videoLibraryModel->where('user_id', $userId)->countAllResults(false);
         if ($currentCount >= 10000) {
             return $this->fail('影片庫已達上限（10000 部）', 400);
         }
