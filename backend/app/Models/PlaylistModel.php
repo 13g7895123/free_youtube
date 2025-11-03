@@ -85,6 +85,8 @@ class PlaylistModel extends Model
         if ($playlist) {
             $itemModel = new PlaylistItemModel();
             $playlist->items = $itemModel->getPlaylistVideos($id);
+            // 確保 item_count 是最新的實際數量
+            $playlist->item_count = count($playlist->items);
         }
 
         return $playlist;

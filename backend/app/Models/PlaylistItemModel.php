@@ -47,13 +47,12 @@ class PlaylistItemModel extends Model
     public function getPlaylistVideos(int $playlistId)
     {
         $builder = $this->db->table('playlist_items pi');
-        $builder->select('v.*, pi.position')
-                ->join('videos v', 'v.id = pi.video_id')
+        $builder->select('pi.id as playlist_item_id, pi.playlist_id, pi.video_id, pi.position, pi.created_at as added_at, v.*, v.id as video_db_id')
+                ->join('videos v', 'v.id = pi.video_id', 'left')
                 ->where('pi.playlist_id', $playlistId)
-                ->where('v.deleted_at', null)
                 ->orderBy('pi.position', 'ASC');
 
-        return $builder->get()->getResultObject(\App\Entities\Video::class);
+        return $builder->get()->getResultArray();
     }
 
     /**
