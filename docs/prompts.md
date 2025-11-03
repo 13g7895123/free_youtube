@@ -1,2 +1,2 @@
-INFO - 2025-11-03 07:50:55 --> 🍪 Setting refresh_token cookie: {"expires_in":"2592000s","secure":true,"httponly":true,"samesite":"Lax","domain":"(not set)","path":"\/"}
-DEBUG - 2025-11-03 07:50:55 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"http:\/\/localhost:8080\/index.php\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}
+INFO - 2025-11-03 08:20:45 --> 🍪 Setting refresh_token cookie: {"expires_in":"2592000s","secure":true,"httponly":true,"samesite":"Lax","domain":"(not set)","path":"\/"}
+DEBUG - 2025-11-03 08:20:46 --> 🔍 AuthFilter - Request Details: {"method":"GET","uri":"https:\/\/free.youtube.mercylife.cc\/index.php\/api\/auth\/user","origin":"(none)","cookie_header":"(none)","cookies_available":[],"has_access_token":false}

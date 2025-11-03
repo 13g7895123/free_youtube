@@ -80,6 +80,7 @@ class Filters extends BaseFilters
             // 'invalidchars',
         ],
         'after' => [
+            'cors',  // ✅ 在 response 後設置 CORS headers，確保 Set-Cookie 正確傳遞
             // 'honeypot',
             // 'secureheaders',
         ],
