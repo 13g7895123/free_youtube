@@ -56,6 +56,13 @@ class CorsFilter implements FilterInterface
             $frontendUrl,  // 支援生產環境
         ];
 
+        // 調試日誌：記錄 filter 執行情況
+        log_message('debug', '🔍 CorsFilter after() - Origin: ' . ($origin ?? 'null') . ', Frontend URL: ' . $frontendUrl);
+
+        // 檢查 response 中是否有 Set-Cookie
+        $cookies = $response->getHeader('Set-Cookie');
+        log_message('debug', '🍪 CorsFilter after() - Set-Cookie headers: ' . json_encode($cookies ? $cookies->getValue() : 'none'));
+
         // 只在有 origin 且在允許清單中時設置 CORS headers
         if ($origin && in_array($origin, $allowedOrigins)) {
             $response->setHeader('Access-Control-Allow-Origin', $origin);
@@ -64,7 +71,15 @@ class CorsFilter implements FilterInterface
             $response->setHeader('Access-Control-Expose-Headers', 'Content-Type, X-Total-Count, Set-Cookie');
             $response->setHeader('Access-Control-Max-Age', '7200');
             $response->setHeader('Access-Control-Allow-Credentials', 'true');
+
+            log_message('debug', '✅ CorsFilter after() - CORS headers set for origin: ' . $origin);
+        } else {
+            log_message('warning', '⚠️ CorsFilter after() - Origin not in allowed list or null. Allowed: ' . json_encode($allowedOrigins));
         }
+
+        // 最終檢查所有 headers
+        $allHeaders = $response->headers();
+        log_message('debug', '📤 CorsFilter after() - All response headers: ' . json_encode(array_keys($allHeaders)));
 
         return $response;
     }
