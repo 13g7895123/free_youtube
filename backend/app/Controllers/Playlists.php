@@ -124,12 +124,12 @@ class Playlists extends BaseController
             return $this->fail('找不到該播放清單或無權限存取', 404);
         }
 
-        // 取得播放清單項目
-        $items = $this->playlistItemModel->getPlaylistItems($id);
+        // 取得播放清單項目及完整的影片資訊
+        $items = $this->playlistItemModel->getPlaylistVideos($id);
 
         // 使用物件屬性而非陣列語法，並從資料庫實際計算數量
         $playlist->items = $items;
-        $playlist->item_count = $this->playlistItemModel->getPlaylistItemCount($id);
+        $playlist->item_count = count($items);
 
         return $this->respond([
             'success' => true,
