@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 
 export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
   // State
@@ -9,12 +9,20 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
   const currentIndex = ref(0)
   const isMinimized = ref(false)
   const isVisible = ref(false)
-  const loopMode = ref('playlist') // 'playlist' | 'single'
+  const loopMode = ref('playlist') // 'playlist' | 'single' | 'all'
   const shuffleEnabled = ref(false)
+
+  // Task 6: 改進狀態同步 - 添加播放器狀態管理
+  const playerStatus = ref({
+    state: 'UNINITIALIZED', // UNINITIALIZED, LOADING, READY, ERROR
+    error: null,
+    retryCount: 0
+  })
 
   // Computed
   const hasVideo = computed(() => currentVideo.value !== null)
   const hasPlaylist = computed(() => currentPlaylist.value !== null && currentPlaylist.value.items?.length > 0)
+  const isPlayerReady = computed(() => playerStatus.value.state === 'READY')
 
   // Actions
   const playVideo = (videoInfo) => {
@@ -50,44 +58,50 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     isPlaying.value = !isPlaying.value
   }
 
-  const next = () => {
+  // Task 4: 改進 next() 函數，添加 async/await 和更好的狀態管理
+  const next = async () => {
     if (!hasPlaylist.value) return
 
     const playlistLength = currentPlaylist.value.items.length
 
-    // 如果是單曲循環模式，重播當前歌曲
+    // 單曲循環模式
     if (loopMode.value === 'single') {
       currentVideo.value = { ...currentPlaylist.value.items[currentIndex.value] }
+      // 延遲設置播放狀態
+      await nextTick()
       isPlaying.value = true
       return
     }
 
+    // 隨機播放邏輯
     let nextIndex
-
-    // 如果啟用隨機播放
     if (shuffleEnabled.value) {
-      // 選擇一首不是當前歌曲的隨機歌曲
       const availableIndices = Array.from({ length: playlistLength }, (_, i) => i)
         .filter(i => i !== currentIndex.value)
-
-      if (availableIndices.length === 0) {
-        // 如果播放清單只有一首歌，就重播
-        nextIndex = currentIndex.value
-      } else {
-        // 隨機選擇
-        nextIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
-      }
+      nextIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
     } else {
-      // 正常順序播放
+      // 順序播放
       nextIndex = currentIndex.value + 1
       if (nextIndex >= playlistLength) {
-        // 播放清單循環模式：回到第一首
-        nextIndex = 0
+        if (loopMode.value === 'all') {
+          nextIndex = 0
+        } else {
+          // 播放完畢
+          isPlaying.value = false
+          return
+        }
       }
     }
 
+    // 先暫停，避免狀態不一致
+    isPlaying.value = false
+
+    // 更新當前影片
     currentIndex.value = nextIndex
     currentVideo.value = currentPlaylist.value.items[nextIndex]
+
+    // 使用 nextTick 確保 DOM 更新完成後再設置播放
+    await nextTick()
     isPlaying.value = true
   }
 
@@ -142,6 +156,15 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     console.log('toggleShuffle: changed from', oldValue, 'to', shuffleEnabled.value)
   }
 
+  // Task 6: 狀態更新函數
+  const updatePlayerStatus = (state, error = null) => {
+    playerStatus.value = {
+      state,
+      error,
+      retryCount: state === 'ERROR' ? playerStatus.value.retryCount + 1 : 0
+    }
+  }
+
   return {
     // State
     isPlaying,
@@ -152,9 +175,11 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     isVisible,
     loopMode,
     shuffleEnabled,
+    playerStatus,
     // Computed
     hasVideo,
     hasPlaylist,
+    isPlayerReady,
     // Actions
     playVideo,
     playPlaylist,
@@ -168,6 +193,7 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     close,
     clear,
     toggleLoopMode,
-    toggleShuffle
+    toggleShuffle,
+    updatePlayerStatus
   }
 })
