@@ -127,9 +127,9 @@ class Playlists extends BaseController
         // 取得播放清單項目
         $items = $this->playlistItemModel->getPlaylistItems($id);
 
-        // 使用物件屬性而非陣列語法
+        // 使用物件屬性而非陣列語法，並從資料庫實際計算數量
         $playlist->items = $items;
-        $playlist->items_count = count($items);
+        $playlist->item_count = $this->playlistItemModel->getPlaylistItemCount($id);
 
         return $this->respond([
             'success' => true,
@@ -331,6 +331,9 @@ class Playlists extends BaseController
             return $this->fail('新增影片失敗', 500);
         }
 
+        // 更新播放清單項目計數
+        $this->playlistModel->updateItemCount($id);
+
         // 取得剛新增的項目
         $item = $this->playlistItemModel->find($inserted);
 
@@ -395,6 +398,9 @@ class Playlists extends BaseController
             ->where('position >', $removedPosition)
             ->set('position', 'position - 1', false)
             ->update();
+
+        // 更新播放清單項目計數
+        $this->playlistModel->updateItemCount($playlistId);
 
         return $this->respond([
             'success' => true,
