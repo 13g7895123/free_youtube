@@ -47,6 +47,9 @@ services:
       - ./backend:/var/www/html
     environment:
       CI_ENVIRONMENT: ${APP_ENV:-development}
+      # 認證環境變數
+      AUTH_MODE: ${AUTH_MODE:-mock}
+      MOCK_USER_ID: ${MOCK_USER_ID:-1}
       # MySQL 環境變數（用於 docker-entrypoint.sh）
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
