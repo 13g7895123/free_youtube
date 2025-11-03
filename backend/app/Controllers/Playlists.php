@@ -312,6 +312,7 @@ class Playlists extends BaseController
         $maxPosition = $this->playlistItemModel
             ->selectMax('position')
             ->where('playlist_id', $id)
+            ->asArray()
             ->first();
 
         $position = ($maxPosition['position'] ?? -1) + 1;

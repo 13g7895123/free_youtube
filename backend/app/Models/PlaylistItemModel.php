@@ -61,7 +61,7 @@ class PlaylistItemModel extends Model
      */
     public function addVideo(int $playlistId, int $videoId)
     {
-        // 取得最大位置
+        // 取得最大位置 - 使用 asArray() 因為 selectMax 需要陣列格式
         $maxPosition = $this->where('playlist_id', $playlistId)
                             ->selectMax('position')
                             ->asArray()
@@ -109,9 +109,10 @@ class PlaylistItemModel extends Model
      */
     public function isVideoInPlaylist(int $playlistId, int $videoId): bool
     {
+        // 使用 countAllResults() 直接計數
         return $this->where('playlist_id', $playlistId)
                     ->where('video_id', $videoId)
-                    ->first() !== null;
+                    ->countAllResults() > 0;
     }
 
     /**
@@ -173,7 +174,7 @@ class PlaylistItemModel extends Model
      */
     public function getPlaylistItemCount(int $playlistId): int
     {
-        // 使用 countAllResults(false) 避免重置查詢建構器
+        // 使用 countAllResults() 直接計數
         return $this->where('playlist_id', $playlistId)
                     ->countAllResults(false);
     }
