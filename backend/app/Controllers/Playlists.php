@@ -36,6 +36,11 @@ class Playlists extends BaseController
         // 取得會員的所有播放清單
         $playlists = $this->playlistModel->getUserPlaylists($userId);
 
+        // 確保每個播放清單的 item_count 都是實際計算的最新值
+        foreach ($playlists as $playlist) {
+            $playlist->item_count = $this->playlistItemModel->getPlaylistItemCount($playlist->id);
+        }
+
         return $this->respond([
             'success' => true,
             'data' => $playlists
