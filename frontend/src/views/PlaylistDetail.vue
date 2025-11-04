@@ -220,6 +220,9 @@ const selectVideo = (index) => {
       name: playlist.value.name,
       items: items.value
     }, index)
+
+    // 保持播放器最小化，避免視覺上"跳轉"到播放器頁面
+    globalPlayerStore.minimize()
   }
 }
 
