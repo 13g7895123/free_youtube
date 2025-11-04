@@ -87,7 +87,8 @@
       "Bash(/dev/null)",
       "Bash(docker network:*)",
       "Bash(docker start:*)",
-      "Bash(./deploy-prod.sh:*)"
+      "Bash(./deploy-prod.sh:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
