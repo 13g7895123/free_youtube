@@ -277,42 +277,48 @@ const initPlayer = async (videoId) => {
   }
 
   await nextTick()
+  await nextTick()  // 雙重 nextTick 確保 DOM 完全更新
 
   // 根據最小化狀態選擇正確的容器
   const containerId = playerStore.isMinimized ? 'floating-youtube-player-minimized' : 'floating-youtube-player'
   const container = document.getElementById(containerId)
   if (!container) {
-    console.log('FloatingPlayer: Container not found:', containerId)
+    console.error('FloatingPlayer: Container not found:', containerId)
+    console.error('FloatingPlayer: DOM state:', {
+      isMinimized: playerStore.isMinimized,
+      isVisible: playerStore.isVisible,
+      expandedContainer: !!document.getElementById('floating-youtube-player'),
+      minimizedContainer: !!document.getElementById('floating-youtube-player-minimized')
+    })
     return
   }
-  
+
   console.log('FloatingPlayer: Using container:', containerId)
 
-  // 如果播放器存在，嘗試更新影片
-  if (ytPlayer.value) {
-    try {
-      // 檢查播放器是否仍然附加到 DOM
-      const iframe = container.querySelector('iframe')
-      if (iframe) {
-        console.log('FloatingPlayer: Updating existing player with video', videoId)
-        ytPlayer.value.loadVideoById(videoId)
-        if (playerStore.isPlaying) {
-          ytPlayer.value.playVideo()
-        }
-        return
-      } else {
-        // 播放器不在 DOM 中，需要重新創建
-        console.log('FloatingPlayer: Player not in DOM, recreating...')
-        ytPlayer.value = null
-        playerReady.value = false
-      }
-    } catch (error) {
-      console.error('FloatingPlayer: Error updating player, will recreate:', error)
-      ytPlayer.value = null
-      playerReady.value = false
-    }
+  // 🔧 修復：清除兩個容器中的舊 iframe
+  const existingIframe = container.querySelector('iframe')
+  if (existingIframe) {
+    console.log('FloatingPlayer: Removing existing iframe from container:', containerId)
+    existingIframe.remove()
   }
 
+  // 同時確保另一個容器也是乾淨的
+  const otherContainerId = playerStore.isMinimized ? 'floating-youtube-player' : 'floating-youtube-player-minimized'
+  const otherContainer = document.getElementById(otherContainerId)
+  const otherIframe = otherContainer?.querySelector('iframe')
+  if (otherIframe) {
+    console.log('FloatingPlayer: Removing iframe from other container:', otherContainerId)
+    otherIframe.remove()
+  }
+
+  // 重置播放器狀態（確保乾淨的初始化環境）
+  if (ytPlayer.value) {
+    console.log('FloatingPlayer: Resetting ytPlayer reference before creating new player')
+    ytPlayer.value = null
+    playerReady.value = false
+  }
+
+  // 由於我們已經清理了所有 iframe，現在總是創建新的播放器
   console.log('FloatingPlayer: Creating new YouTube player with video', videoId, 'in container', containerId)
   playerReady.value = false
   ytPlayer.value = new window.YT.Player(containerId, {
