@@ -208,7 +208,6 @@
 <script setup>
 import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
-import youtubeApiService from '@/services/youtubeApiService'
 import {
   PlayIcon,
   PauseIcon,
@@ -238,40 +237,57 @@ watch(() => playerStore.currentVideo, (val) => {
 
 console.log('FloatingPlayer: Component mounted')
 
-// Task 1: 修復播放器狀態追蹤 - 改為響應式
-const ytPlayer = ref(null)
-const apiReady = ref(false)
-const playerReady = ref(false)
-
-// Task 2: 添加防抖機制相關變數
-let videoChangeTimeout = null
-let retryCount = 0
-const MAX_RETRIES = 3
+let ytPlayer = null
+let apiReady = false
+let playerReady = false
 
 // 全螢幕切換
 const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
 }
 
-// Task 5: 使用統一的 YouTube API 載入服務
-const loadYouTubeAPI = async () => {
-  try {
-    await youtubeApiService.loadApi()
-    apiReady.value = true
-  } catch (error) {
-    console.error('Failed to load YouTube API:', error)
-    throw error
-  }
+// 載入 YouTube IFrame API
+const loadYouTubeAPI = () => {
+  return new Promise((resolve, reject) => {
+    if (window.YT && window.YT.Player) {
+      apiReady = true
+      resolve()
+      return
+    }
+
+    if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+      // Script already loading
+      const checkInterval = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          clearInterval(checkInterval)
+          apiReady = true
+          resolve()
+        }
+      }, 100)
+      return
+    }
+
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+    tag.onerror = () => reject(new Error('Failed to load YouTube API'))
+
+    window.onYouTubeIframeAPIReady = () => {
+      apiReady = true
+      resolve()
+    }
+
+    const firstScriptTag = document.getElementsByTagName('script')[0]
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag)
+  })
 }
 
 // 初始化播放器
 const initPlayer = async (videoId) => {
-  if (!apiReady.value) {
+  if (!apiReady) {
     try {
       await loadYouTubeAPI()
     } catch (error) {
       console.error('Failed to load YouTube API:', error)
-      handlePlayerError(error)
       return
     }
   }
@@ -285,33 +301,33 @@ const initPlayer = async (videoId) => {
   }
 
   // 如果播放器存在，嘗試更新影片
-  if (ytPlayer.value) {
+  if (ytPlayer) {
     try {
       // 檢查播放器是否仍然附加到 DOM
       const iframe = container.querySelector('iframe')
       if (iframe) {
         console.log('FloatingPlayer: Updating existing player with video', videoId)
-        ytPlayer.value.loadVideoById(videoId)
+        ytPlayer.loadVideoById(videoId)
         if (playerStore.isPlaying) {
-          ytPlayer.value.playVideo()
+          ytPlayer.playVideo()
         }
         return
       } else {
         // 播放器不在 DOM 中，需要重新創建
         console.log('FloatingPlayer: Player not in DOM, recreating...')
-        ytPlayer.value = null
-        playerReady.value = false
+        ytPlayer = null
+        playerReady = false
       }
     } catch (error) {
       console.error('FloatingPlayer: Error updating player, will recreate:', error)
-      ytPlayer.value = null
-      playerReady.value = false
+      ytPlayer = null
+      playerReady = false
     }
   }
 
   console.log('FloatingPlayer: Creating new YouTube player with video', videoId)
-  playerReady.value = false
-  ytPlayer.value = new window.YT.Player('floating-youtube-player', {
+  playerReady = false
+  ytPlayer = new window.YT.Player('floating-youtube-player', {
     height: '100%',
     width: '100%',
     videoId: videoId,
@@ -324,10 +340,7 @@ const initPlayer = async (videoId) => {
     events: {
       onReady: (event) => {
         console.log('FloatingPlayer: YouTube player ready, isPlaying:', playerStore.isPlaying)
-        playerReady.value = true
-        if (playerStore.playerStatus) {
-          playerStore.updatePlayerStatus('READY')
-        }
+        playerReady = true
         if (playerStore.isPlaying) {
           event.target.playVideo()
         }
@@ -342,8 +355,8 @@ const initPlayer = async (videoId) => {
           } else {
             // Single video - replay it
             console.log('FloatingPlayer: Single video ended, replaying')
-            ytPlayer.value.seekTo(0)
-            ytPlayer.value.playVideo()
+            ytPlayer.seekTo(0)
+            ytPlayer.playVideo()
           }
         } else if (event.data === window.YT.PlayerState.PLAYING) {
           console.log('FloatingPlayer: Video playing, calling playerStore.play()')
@@ -356,38 +369,9 @@ const initPlayer = async (videoId) => {
           playerStore.pause()
           setTimeout(() => { isUpdatingFromYouTube = false }, 50)
         }
-      },
-      onError: (event) => {
-        console.error('FloatingPlayer: YouTube player error:', event.data)
-        handlePlayerError(new Error(`YouTube player error: ${event.data}`))
       }
     }
   })
-}
-
-// Task 2 & 3: 抽取影片切換邏輯到獨立函數，實現防抖和重試機制
-const handleVideoChange = (videoId) => {
-  if (!videoId) return
-
-  if (ytPlayer.value && playerReady.value) {
-    // 播放器已就緒
-    console.log('FloatingPlayer: Loading video', videoId, 'with ready player')
-    ytPlayer.value.loadVideoById(videoId)
-    if (playerStore.isPlaying) {
-      ytPlayer.value.playVideo()
-    }
-  } else if (ytPlayer.value && !playerReady.value && retryCount < MAX_RETRIES) {
-    // 播放器存在但未就緒，重試
-    console.log(`FloatingPlayer: 播放器未就緒，第 ${retryCount + 1} 次重試...`)
-    retryCount++
-    setTimeout(() => handleVideoChange(videoId), 300)  // 300ms 後重試
-  } else {
-    // 超過重試次數或播放器不存在，重新初始化
-    console.log('FloatingPlayer: 重新初始化播放器')
-    ytPlayer.value = null
-    playerReady.value = false
-    initPlayer(videoId)
-  }
 }
 
 // 監聽當前影片的 video_id 變化（更精確的監聽）
@@ -400,23 +384,56 @@ watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
 
   // 只有當 video_id 真的改變時才更新
   if (newVideoId && newVideoId !== oldVideoId) {
-    // Task 2: 清除之前的計時器
-    if (videoChangeTimeout) {
-      clearTimeout(videoChangeTimeout)
-      videoChangeTimeout = null
-    }
-
-    // 重置重試計數
-    retryCount = 0
-
     const videoId = newVideoId || extractVideoId(playerStore.currentVideo?.youtube_url)
-    console.log('FloatingPlayer: Extracted video ID:', videoId)
+    console.log('FloatingPlayer: Extracted video ID:', videoId, 'ytPlayer exists:', !!ytPlayer, 'isMinimized:', playerStore.isMinimized)
 
     if (videoId) {
-      // Task 2: 使用防抖處理影片切換
-      videoChangeTimeout = setTimeout(() => {
-        handleVideoChange(videoId)
-      }, 100)  // 100ms 防抖延遲
+      // 無論是否最小化都要更新影片
+      if (ytPlayer && playerReady) {
+        // 如果播放器已存在且準備好，直接載入新影片
+        console.log('FloatingPlayer: Loading new video', videoId, 'playerReady:', playerReady)
+        try {
+          ytPlayer.loadVideoById(videoId)
+          if (playerStore.isPlaying) {
+            console.log('FloatingPlayer: Auto-playing after load')
+            ytPlayer.playVideo()
+          }
+        } catch (error) {
+          console.error('FloatingPlayer: Error loading video:', error)
+          // 如果載入失敗，可能是播放器實例有問題，嘗試重新初始化
+          ytPlayer = null
+          playerReady = false
+          initPlayer(videoId)
+        }
+      } else if (ytPlayer && !playerReady) {
+        // 播放器存在但尚未準備好，等待一下再重試
+        console.log('FloatingPlayer: Player exists but not ready, waiting...')
+        setTimeout(() => {
+          if (playerReady) {
+            console.log('FloatingPlayer: Player now ready, loading video', videoId)
+            try {
+              ytPlayer.loadVideoById(videoId)
+              if (playerStore.isPlaying) {
+                ytPlayer.playVideo()
+              }
+            } catch (error) {
+              console.error('FloatingPlayer: Error loading video after wait:', error)
+              ytPlayer = null
+              playerReady = false
+              initPlayer(videoId)
+            }
+          } else {
+            console.log('FloatingPlayer: Player still not ready after wait, reinitializing')
+            ytPlayer = null
+            playerReady = false
+            initPlayer(videoId)
+          }
+        }, 1000)
+      } else {
+        // 播放器不存在時，初始化播放器（無論是否最小化）
+        console.log('FloatingPlayer: Initializing new player (minimized:', playerStore.isMinimized, ')')
+        initPlayer(videoId)
+      }
     }
   }
 })
@@ -426,7 +443,7 @@ let isUpdatingFromYouTube = false
 
 // 監聽播放狀態變化
 watch(() => playerStore.isPlaying, (isPlaying) => {
-  console.log('FloatingPlayer: isPlaying changed to', isPlaying, 'ytPlayer exists:', !!ytPlayer.value, 'isUpdatingFromYouTube:', isUpdatingFromYouTube)
+  console.log('FloatingPlayer: isPlaying changed to', isPlaying, 'ytPlayer exists:', !!ytPlayer, 'isUpdatingFromYouTube:', isUpdatingFromYouTube)
 
   // 如果是 YouTube 播放器觸發的狀態變化，不要再次控制播放器
   if (isUpdatingFromYouTube) {
@@ -434,14 +451,14 @@ watch(() => playerStore.isPlaying, (isPlaying) => {
     return
   }
 
-  if (ytPlayer.value) {
+  if (ytPlayer) {
     try {
       if (isPlaying) {
         console.log('FloatingPlayer: Calling playVideo()')
-        ytPlayer.value.playVideo()
+        ytPlayer.playVideo()
       } else {
         console.log('FloatingPlayer: Calling pauseVideo()')
-        ytPlayer.value.pauseVideo()
+        ytPlayer.pauseVideo()
       }
     } catch (error) {
       console.error('FloatingPlayer: Error controlling player:', error)
@@ -476,7 +493,7 @@ watch(() => playerStore.isMinimized, async (minimized) => {
     }
 
     // 只有當播放器不存在時才重新初始化
-    if (!ytPlayer.value && playerStore.currentVideo) {
+    if (!ytPlayer && playerStore.currentVideo) {
       const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
       if (videoId) {
         initPlayer(videoId)
@@ -487,15 +504,14 @@ watch(() => playerStore.isMinimized, async (minimized) => {
 
 // 監聽播放器可見狀態
 watch(() => playerStore.isVisible, (isVisible) => {
-  if (!isVisible && ytPlayer.value) {
+  if (!isVisible && ytPlayer) {
     // 當播放器關閉時，銷毀 YouTube 實例
     console.log('FloatingPlayer: Destroying YouTube player instance')
-    if (ytPlayer.value.destroy) {
-      ytPlayer.value.destroy()
+    if (ytPlayer.destroy) {
+      ytPlayer.destroy()
     }
-    ytPlayer.value = null
-    playerReady.value = false
-  } else if (isVisible && !ytPlayer.value && playerStore.currentVideo && !playerStore.isMinimized) {
+    ytPlayer = null
+  } else if (isVisible && !ytPlayer && playerStore.currentVideo && !playerStore.isMinimized) {
     // 當播放器重新打開時，重新初始化
     console.log('FloatingPlayer: Reinitializing YouTube player')
     const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
@@ -504,39 +520,6 @@ watch(() => playerStore.isVisible, (isVisible) => {
     }
   }
 })
-
-// Task 7: 添加錯誤恢復機制
-const handlePlayerError = (error) => {
-  console.error('播放器錯誤:', error)
-
-  // 更新狀態（如果 store 支援）
-  if (playerStore.updatePlayerStatus) {
-    playerStore.updatePlayerStatus('ERROR', error.message)
-  }
-
-  // 自動重試邏輯
-  if (playerStore.playerStatus && playerStore.playerStatus.retryCount < 3) {
-    setTimeout(() => {
-      console.log(`嘗試恢復播放器 (第 ${playerStore.playerStatus.retryCount + 1} 次)`)
-      reinitializePlayer()
-    }, 2000)
-  } else {
-    console.error('播放器載入失敗，已達最大重試次數')
-  }
-}
-
-// 手動重新初始化
-const reinitializePlayer = () => {
-  ytPlayer.value = null
-  playerReady.value = false
-  apiReady.value = false
-  if (playerStore.currentVideo) {
-    const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
-    if (videoId) {
-      initPlayer(videoId)
-    }
-  }
-}
 
 // 提取 video ID
 const extractVideoId = (url) => {
@@ -556,13 +539,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // 清理計時器
-  if (videoChangeTimeout) {
-    clearTimeout(videoChangeTimeout)
-  }
-
-  if (ytPlayer.value && ytPlayer.value.destroy) {
-    ytPlayer.value.destroy()
+  if (ytPlayer && ytPlayer.destroy) {
+    ytPlayer.destroy()
   }
 })
 </script>
