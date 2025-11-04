@@ -88,15 +88,13 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
       }
     }
 
-    // 先暫停，避免狀態不一致
-    isPlaying.value = false
-
     // 更新當前影片
     currentIndex.value = nextIndex
     currentVideo.value = currentPlaylist.value.items[nextIndex]
 
     // 使用 nextTick 確保 DOM 更新完成後再設置播放
     await nextTick()
+    // 確保播放狀態為 true（循環播放）
     isPlaying.value = true
   }
 
