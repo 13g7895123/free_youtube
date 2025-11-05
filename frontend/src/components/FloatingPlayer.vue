@@ -139,6 +139,32 @@
         <div class="player-body">
           <div id="floating-youtube-player" class="youtube-container"></div>
         </div>
+        <!-- 音量控制區域 - 放在影片下方 -->
+        <div class="volume-control-section">
+          <button
+            @click.stop="playerStore.toggleMute"
+            class="btn-volume"
+            :class="{ muted: playerStore.isMuted }"
+            v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
+            :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
+            :aria-pressed="playerStore.isMuted"
+          >
+            <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
+            <SpeakerWaveIcon v-else-if="playerStore.volume > 50" class="icon" />
+            <SpeakerWaveIcon v-else class="icon" />
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            v-model="playerStore.volume"
+            @input="handleVolumeChange"
+            class="volume-slider"
+            :style="`--volume-percentage: ${playerStore.volume}%`"
+            :aria-label="'音量：' + playerStore.volume + '%'"
+          />
+          <span class="volume-value">{{ playerStore.volume }}%</span>
+        </div>
         <div class="player-controls">
           <!-- 播放列表控制 -->
           <template v-if="playerStore.hasPlaylist">
@@ -193,30 +219,6 @@
                 <ArrowsRightLeftIcon class="icon" />
               </button>
             </div>
-            <div class="volume-controls">
-              <button
-                @click.stop="playerStore.toggleMute"
-                class="btn-volume"
-                :class="{ muted: playerStore.isMuted }"
-                v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
-                :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
-                :aria-pressed="playerStore.isMuted"
-              >
-                <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
-                <SpeakerWaveIcon v-else-if="playerStore.volume > 50" class="icon" />
-                <SpeakerWaveIcon v-else class="icon" />
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                v-model="playerStore.volume"
-                @input="handleVolumeChange"
-                class="volume-slider"
-                :aria-label="'音量：' + playerStore.volume + '%'"
-              />
-              <span class="volume-value">{{ playerStore.volume }}%</span>
-            </div>
             <div class="track-info" aria-live="polite">
               {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
             </div>
@@ -233,30 +235,6 @@
               <PauseIcon v-if="playerStore.isPlaying" class="icon-lg" />
               <PlayIcon v-else class="icon-lg" />
             </button>
-            <div class="volume-controls">
-              <button
-                @click.stop="playerStore.toggleMute"
-                class="btn-volume"
-                :class="{ muted: playerStore.isMuted }"
-                v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
-                :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
-                :aria-pressed="playerStore.isMuted"
-              >
-                <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
-                <SpeakerWaveIcon v-else-if="playerStore.volume > 50" class="icon" />
-                <SpeakerWaveIcon v-else class="icon" />
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                v-model="playerStore.volume"
-                @input="handleVolumeChange"
-                class="volume-slider"
-                :aria-label="'音量：' + playerStore.volume + '%'"
-              />
-              <span class="volume-value">{{ playerStore.volume }}%</span>
-            </div>
           </template>
         </div>
       </div>
@@ -903,40 +881,36 @@ onUnmounted(() => {
 
 .player-controls {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 16px;
   background: #fafafa;
-  border-top: 1px solid #e0e0e0;
 }
 
 .playback-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 8px;
 }
 
 .mode-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 8px;
 }
 
 .player-controls .btn-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  width: 48px;
+  height: 40px;
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  flex: 1;
-  min-height: var(--touch-target-comfortable);
   color: var(--text-primary);
 }
 
@@ -974,14 +948,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  width: 40px;
+  height: 40px;
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  flex: 1;
   color: var(--text-secondary);
 }
 
@@ -1030,35 +1003,42 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 音量控制樣式 */
-.volume-controls {
+/* 音量控制區域 - 滿版寬度 */
+.volume-control-section {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .btn-volume {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border: 1px solid #e0e0e0;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .btn-volume:hover {
   background: var(--color-neutral-100);
   color: var(--text-primary);
+  border-color: var(--border-color-hover);
 }
 
 .btn-volume.muted {
   color: var(--color-error);
+  border-color: var(--color-error-alpha);
+  background: #fff5f5;
 }
 
 .btn-volume .icon {
@@ -1069,56 +1049,66 @@ onUnmounted(() => {
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
-  height: 4px;
-  background: #ddd;
+  flex: 1;
+  height: 6px;
+  background: linear-gradient(to right,
+    var(--color-info) 0%,
+    var(--color-info) var(--volume-percentage, 50%),
+    #ddd var(--volume-percentage, 50%),
+    #ddd 100%);
   outline: none;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-  border-radius: 2px;
+  transition: all 0.2s;
+  border-radius: 3px;
   cursor: pointer;
 }
 
 .volume-slider:hover {
-  opacity: 1;
+  transform: scaleY(1.1);
 }
 
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   background: var(--color-info);
   cursor: pointer;
   border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
 }
 
 .volume-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
   background: var(--color-info-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   background: var(--color-info);
   cursor: pointer;
   border-radius: 50%;
-  border: none;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
 }
 
 .volume-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
   background: var(--color-info-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .volume-value {
-  font-size: 12px;
-  color: var(--text-secondary);
-  width: 35px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  width: 45px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* 響應式 */
@@ -1134,6 +1124,14 @@ onUnmounted(() => {
 
   .floating-player.expanded {
     width: calc(100vw - 20px);
+  }
+
+  .volume-control-section {
+    padding: 10px 12px;
+  }
+
+  .volume-slider {
+    height: 5px;
   }
 
   .thumbnail {
