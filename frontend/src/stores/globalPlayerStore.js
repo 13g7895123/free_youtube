@@ -78,6 +78,14 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     if (shuffleEnabled.value) {
       const availableIndices = Array.from({ length: playlistLength }, (_, i) => i)
         .filter(i => i !== currentIndex.value)
+
+      if (availableIndices.length === 0) {
+        currentVideo.value = { ...currentPlaylist.value.items[currentIndex.value] }
+        await nextTick()
+        isPlaying.value = true
+        return
+      }
+
       nextIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
     } else {
       // 順序播放

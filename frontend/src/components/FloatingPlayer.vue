@@ -241,6 +241,18 @@ let ytPlayer = null
 let apiReady = false
 let playerReady = false
 
+const disposePlayerInstance = () => {
+  if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+    try {
+      ytPlayer.destroy()
+    } catch (error) {
+      console.warn('FloatingPlayer: Failed to destroy YouTube player instance', error)
+    }
+  }
+  ytPlayer = null
+  playerReady = false
+}
+
 // 全螢幕切換
 const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
@@ -292,6 +304,11 @@ const initPlayer = async (videoId) => {
     }
   }
 
+  if (!playerStore.isVisible) {
+    console.log('FloatingPlayer: Skipping initialization while player is hidden')
+    return
+  }
+
   await nextTick()
 
   // 根據最小化狀態選擇正確的容器
@@ -319,13 +336,11 @@ const initPlayer = async (videoId) => {
       } else {
         // 播放器不在 DOM 中，需要重新創建
         console.log('FloatingPlayer: Player not in DOM, recreating...')
-        ytPlayer = null
-        playerReady = false
+        disposePlayerInstance()
       }
     } catch (error) {
       console.error('FloatingPlayer: Error updating player, will recreate:', error)
-      ytPlayer = null
-      playerReady = false
+      disposePlayerInstance()
     }
   }
 
@@ -405,8 +420,7 @@ watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
         } catch (error) {
           console.error('FloatingPlayer: Error loading video:', error)
           // 如果載入失敗，可能是播放器實例有問題，嘗試重新初始化
-          ytPlayer = null
-          playerReady = false
+          disposePlayerInstance()
           initPlayer(videoId)
         }
       } else if (ytPlayer && !playerReady) {
@@ -422,14 +436,12 @@ watch(() => playerStore.currentVideo?.video_id, (newVideoId, oldVideoId) => {
               }
             } catch (error) {
               console.error('FloatingPlayer: Error loading video after wait:', error)
-              ytPlayer = null
-              playerReady = false
+              disposePlayerInstance()
               initPlayer(videoId)
             }
           } else {
             console.log('FloatingPlayer: Player still not ready after wait, reinitializing')
-            ytPlayer = null
-            playerReady = false
+            disposePlayerInstance()
             initPlayer(videoId)
           }
         }, 1000)
@@ -519,11 +531,7 @@ watch(() => playerStore.isVisible, (isVisible) => {
   if (!isVisible && ytPlayer) {
     // 當播放器關閉時，銷毀 YouTube 實例
     console.log('FloatingPlayer: Destroying YouTube player instance')
-    if (ytPlayer.destroy) {
-      ytPlayer.destroy()
-    }
-    ytPlayer = null
-    playerReady = false
+    disposePlayerInstance()
   } else if (isVisible && !ytPlayer && playerStore.currentVideo) {
     // 當播放器重新打開時，重新初始化（無論是否最小化）
     console.log('FloatingPlayer: Reinitializing YouTube player, isMinimized:', playerStore.isMinimized)
@@ -552,9 +560,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (ytPlayer && ytPlayer.destroy) {
-    ytPlayer.destroy()
-  }
+  disposePlayerInstance()
 })
 </script>
 
