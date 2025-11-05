@@ -69,6 +69,8 @@ $routes->group('api', static function ($routes) {
     // 通知路由（公開，不需認證）
     $routes->group('notifications', static function ($routes) {
         $routes->post('/', 'Notification::create');                         // 建立通知
+        $routes->get('create-test', 'Notification::createTest');            // 建立單筆測試通知（GET）
+        $routes->post('test-data', 'Notification::createTestData');         // 建立多筆測試資料（POST）
         $routes->patch('(:num)/status', 'Notification::updateStatus/$1');   // 更新狀態
         $routes->get('/', 'Notification::index');                           // 列表（選用）
         $routes->get('(:num)', 'Notification::show/$1');                    // 詳情（選用）
