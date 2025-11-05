@@ -294,11 +294,15 @@ const initPlayer = async (videoId) => {
 
   await nextTick()
 
-  const container = document.getElementById('floating-youtube-player')
+  // 根據最小化狀態選擇正確的容器
+  const containerId = playerStore.isMinimized ? 'floating-youtube-player-minimized' : 'floating-youtube-player'
+  const container = document.getElementById(containerId)
   if (!container) {
-    console.log('FloatingPlayer: Container not found')
+    console.log('FloatingPlayer: Container not found:', containerId)
     return
   }
+  
+  console.log('FloatingPlayer: Using container:', containerId)
 
   // 如果播放器存在，嘗試更新影片
   if (ytPlayer) {
@@ -325,9 +329,9 @@ const initPlayer = async (videoId) => {
     }
   }
 
-  console.log('FloatingPlayer: Creating new YouTube player with video', videoId)
+  console.log('FloatingPlayer: Creating new YouTube player with video', videoId, 'in container', containerId)
   playerReady = false
-  ytPlayer = new window.YT.Player('floating-youtube-player', {
+  ytPlayer = new window.YT.Player(containerId, {
     height: '100%',
     width: '100%',
     videoId: videoId,
@@ -477,10 +481,18 @@ watch(() => playerStore.isMinimized, async (minimized) => {
 
   if (minimized) {
     // 縮小時：移動播放器到隱藏容器
-    if (playerContainer && minimizedContainer && !minimizedContainer.contains(playerContainer.querySelector('iframe'))) {
+    if (playerContainer && minimizedContainer) {
       const iframe = playerContainer.querySelector('iframe')
       if (iframe) {
         minimizedContainer.appendChild(iframe)
+        console.log('FloatingPlayer: Moved iframe to minimized container')
+      } else if (!ytPlayer && playerStore.currentVideo) {
+        // 如果沒有 iframe 且播放器不存在，需要初始化
+        console.log('FloatingPlayer: No player found, initializing in minimized mode')
+        const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
+        if (videoId) {
+          initPlayer(videoId)
+        }
       }
     }
   } else {
@@ -489,14 +501,14 @@ watch(() => playerStore.isMinimized, async (minimized) => {
       const iframe = minimizedContainer.querySelector('iframe')
       if (iframe) {
         playerContainer.appendChild(iframe)
-      }
-    }
-
-    // 只有當播放器不存在時才重新初始化
-    if (!ytPlayer && playerStore.currentVideo) {
-      const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
-      if (videoId) {
-        initPlayer(videoId)
+        console.log('FloatingPlayer: Moved iframe to expanded container')
+      } else if (!ytPlayer && playerStore.currentVideo) {
+        // 如果沒有 iframe 且播放器不存在，需要初始化
+        console.log('FloatingPlayer: No player found, initializing in expanded mode')
+        const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
+        if (videoId) {
+          initPlayer(videoId)
+        }
       }
     }
   }
@@ -511,9 +523,10 @@ watch(() => playerStore.isVisible, (isVisible) => {
       ytPlayer.destroy()
     }
     ytPlayer = null
-  } else if (isVisible && !ytPlayer && playerStore.currentVideo && !playerStore.isMinimized) {
-    // 當播放器重新打開時，重新初始化
-    console.log('FloatingPlayer: Reinitializing YouTube player')
+    playerReady = false
+  } else if (isVisible && !ytPlayer && playerStore.currentVideo) {
+    // 當播放器重新打開時，重新初始化（無論是否最小化）
+    console.log('FloatingPlayer: Reinitializing YouTube player, isMinimized:', playerStore.isMinimized)
     const videoId = playerStore.currentVideo.video_id || extractVideoId(playerStore.currentVideo.youtube_url)
     if (videoId) {
       nextTick(() => initPlayer(videoId))
