@@ -12,6 +12,10 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
   const loopMode = ref('playlist') // 'playlist' | 'single' | 'all'
   const shuffleEnabled = ref(false)
 
+  // 音量控制狀態
+  const volume = ref(parseInt(localStorage.getItem('playerVolume')) || 100)
+  const isMuted = ref(localStorage.getItem('playerMuted') === 'true')
+
   // Task 6: 改進狀態同步 - 添加播放器狀態管理
   const playerStatus = ref({
     state: 'UNINITIALIZED', // UNINITIALIZED, LOADING, READY, ERROR
@@ -159,6 +163,24 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     console.log('toggleShuffle: changed from', oldValue, 'to', shuffleEnabled.value)
   }
 
+  // 音量控制方法
+  const setVolume = (newVolume) => {
+    const clampedVolume = Math.max(0, Math.min(100, newVolume))
+    volume.value = clampedVolume
+    localStorage.setItem('playerVolume', clampedVolume.toString())
+
+    // 如果設定音量大於 0，自動取消靜音
+    if (clampedVolume > 0 && isMuted.value) {
+      isMuted.value = false
+      localStorage.setItem('playerMuted', 'false')
+    }
+  }
+
+  const toggleMute = () => {
+    isMuted.value = !isMuted.value
+    localStorage.setItem('playerMuted', isMuted.value.toString())
+  }
+
   // Task 6: 狀態更新函數
   const updatePlayerStatus = (state, error = null) => {
     playerStatus.value = {
@@ -179,6 +201,8 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     loopMode,
     shuffleEnabled,
     playerStatus,
+    volume,
+    isMuted,
     // Computed
     hasVideo,
     hasPlaylist,
@@ -197,6 +221,8 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     clear,
     toggleLoopMode,
     toggleShuffle,
+    setVolume,
+    toggleMute,
     updatePlayerStatus
   }
 })

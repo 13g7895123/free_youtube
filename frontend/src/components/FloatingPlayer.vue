@@ -70,6 +70,17 @@
               <ArrowsRightLeftIcon class="icon" />
             </button>
             <button
+              @click.stop="playerStore.toggleMute"
+              class="btn-control btn-volume"
+              :class="{ muted: playerStore.isMuted }"
+              v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
+              :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
+              :aria-pressed="playerStore.isMuted"
+            >
+              <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
+              <SpeakerWaveIcon v-else class="icon" />
+            </button>
+            <button
               @click="playerStore.maximize"
               class="btn-control"
               v-tooltip="'展開'"
@@ -182,6 +193,30 @@
                 <ArrowsRightLeftIcon class="icon" />
               </button>
             </div>
+            <div class="volume-controls">
+              <button
+                @click.stop="playerStore.toggleMute"
+                class="btn-volume"
+                :class="{ muted: playerStore.isMuted }"
+                v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
+                :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
+                :aria-pressed="playerStore.isMuted"
+              >
+                <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
+                <SpeakerWaveIcon v-else-if="playerStore.volume > 50" class="icon" />
+                <SpeakerWaveIcon v-else class="icon" />
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                v-model="playerStore.volume"
+                @input="handleVolumeChange"
+                class="volume-slider"
+                :aria-label="'音量：' + playerStore.volume + '%'"
+              />
+              <span class="volume-value">{{ playerStore.volume }}%</span>
+            </div>
             <div class="track-info" aria-live="polite">
               {{ playerStore.currentIndex + 1 }} / {{ playerStore.currentPlaylist.items.length }}
             </div>
@@ -198,6 +233,30 @@
               <PauseIcon v-if="playerStore.isPlaying" class="icon-lg" />
               <PlayIcon v-else class="icon-lg" />
             </button>
+            <div class="volume-controls">
+              <button
+                @click.stop="playerStore.toggleMute"
+                class="btn-volume"
+                :class="{ muted: playerStore.isMuted }"
+                v-tooltip="playerStore.isMuted ? '取消靜音' : '靜音'"
+                :aria-label="playerStore.isMuted ? '取消靜音' : '靜音'"
+                :aria-pressed="playerStore.isMuted"
+              >
+                <SpeakerXMarkIcon v-if="playerStore.isMuted" class="icon" />
+                <SpeakerWaveIcon v-else-if="playerStore.volume > 50" class="icon" />
+                <SpeakerWaveIcon v-else class="icon" />
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                v-model="playerStore.volume"
+                @input="handleVolumeChange"
+                class="volume-slider"
+                :aria-label="'音量：' + playerStore.volume + '%'"
+              />
+              <span class="volume-value">{{ playerStore.volume }}%</span>
+            </div>
           </template>
         </div>
       </div>
@@ -220,7 +279,9 @@ import {
   ChevronDownIcon,
   XMarkIcon,
   ArrowsPointingInIcon,
-  ArrowsPointingOutIcon
+  ArrowsPointingOutIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon
 } from '@heroicons/vue/24/solid'
 
 const playerStore = useGlobalPlayerStore()
@@ -360,6 +421,13 @@ const initPlayer = async (videoId) => {
       onReady: (event) => {
         console.log('FloatingPlayer: YouTube player ready, isPlaying:', playerStore.isPlaying)
         playerReady = true
+
+        // 設定初始音量和靜音狀態
+        event.target.setVolume(playerStore.volume)
+        if (playerStore.isMuted) {
+          event.target.mute()
+        }
+
         if (playerStore.isPlaying) {
           event.target.playVideo()
         }
@@ -484,6 +552,35 @@ watch(() => playerStore.isPlaying, (isPlaying) => {
   }
 })
 
+// 監聽音量變化
+watch(() => playerStore.volume, (newVolume) => {
+  if (ytPlayer && playerReady) {
+    try {
+      ytPlayer.setVolume(newVolume)
+      console.log('FloatingPlayer: Volume set to', newVolume)
+    } catch (error) {
+      console.error('FloatingPlayer: Error setting volume:', error)
+    }
+  }
+})
+
+// 監聽靜音狀態變化
+watch(() => playerStore.isMuted, (muted) => {
+  if (ytPlayer && playerReady) {
+    try {
+      if (muted) {
+        ytPlayer.mute()
+        console.log('FloatingPlayer: Player muted')
+      } else {
+        ytPlayer.unMute()
+        console.log('FloatingPlayer: Player unmuted')
+      }
+    } catch (error) {
+      console.error('FloatingPlayer: Error setting mute state:', error)
+    }
+  }
+})
+
 // 監聽最小化狀態
 watch(() => playerStore.isMinimized, async (minimized) => {
   await nextTick()
@@ -553,6 +650,12 @@ const extractVideoId = (url) => {
 const truncateTitle = (title, maxLength) => {
   if (!title) return ''
   return title.length > maxLength ? title.substring(0, maxLength) + '...' : title
+}
+
+// 處理音量變更
+const handleVolumeChange = (event) => {
+  const newVolume = parseInt(event.target.value)
+  playerStore.setVolume(newVolume)
 }
 
 onMounted(() => {
@@ -925,6 +1028,97 @@ onUnmounted(() => {
   font-size: 12px;
   color: #757575;
   text-align: center;
+}
+
+/* 音量控制樣式 */
+.volume-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.btn-volume {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.btn-volume:hover {
+  background: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+
+.btn-volume.muted {
+  color: var(--color-error);
+}
+
+.btn-volume .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  background: #ddd;
+  outline: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.volume-slider:hover {
+  opacity: 1;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-info);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: var(--color-info-dark);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--color-info);
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+  transition: all 0.2s;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: var(--color-info-dark);
+}
+
+.volume-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 35px;
+  text-align: right;
 }
 
 /* 響應式 */
