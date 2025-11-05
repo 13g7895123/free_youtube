@@ -126,15 +126,15 @@ services:
     environment:
       PMA_HOST: mariadb
       PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      #PMA_USER: root
+      #PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       PMA_ABSOLUTE_URI: ${PMA_ABSOLUTE_URI:-https://free.youtube.mercylife.cc/pma/}
       UPLOAD_LIMIT: 100M
       MEMORY_LIMIT: 512M
       MAX_EXECUTION_TIME: 600
     # 移除端口映射，改為透過 Nginx 反向代理訪問
-    # ports:
-    #   - "${PHPMYADMIN_PORT:-8081}:80"
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
     depends_on:
       mariadb:
         condition: service_healthy
