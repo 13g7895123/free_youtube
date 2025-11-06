@@ -59,7 +59,7 @@ services:
       database.default.hostname: mariadb
       database.default.database: ${MYSQL_DATABASE:-free_youtube}
       database.default.username: ${MYSQL_USER:-root}
-      database.default.password: ${MYSQL_ROOT_PASSWORD:-secret}
+      database.default.password: ${MYSQL_PASSWORD:-app_password}
       database.default.DBDriver: MySQLi
       database.default.port: 3306
       database.default.charset: utf8mb4

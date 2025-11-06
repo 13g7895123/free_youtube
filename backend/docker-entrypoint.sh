@@ -6,9 +6,9 @@ echo "Starting Backend Initialization"
 echo "================================"
 
 # 設定資料庫連線參數（從環境變數讀取）
-DB_HOST="${database.default.hostname:-mariadb}"
+DB_HOST="mariadb"
 DB_USER="${MYSQL_USER:-root}"
-DB_PASSWORD="${MYSQL_ROOT_PASSWORD:-secret}"
+DB_PASSWORD="${MYSQL_PASSWORD:-app_password}"
 DB_NAME="${MYSQL_DATABASE:-free_youtube}"
 
 echo "Database Configuration:"
