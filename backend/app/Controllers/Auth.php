@@ -731,6 +731,7 @@ class Auth extends BaseController
         // 清除 cookie（需要與 set_cookie 時使用相同的參數）
         $isProduction = getenv('CI_ENVIRONMENT') === 'production';
         delete_cookie('access_token', '', '/', '', $isProduction);
+        delete_cookie('refresh_token', '', '/', '', $isProduction);
 
         return $this->respond([
             'success' => true,

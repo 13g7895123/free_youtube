@@ -22,11 +22,13 @@ $routes->group('api', static function ($routes) {
         // Mock Login（公開，僅開發環境）
         $routes->post('mock/login', 'Auth::mockLogin');
 
+        // 刷新 token（公開，使用 refresh token 驗證）
+        $routes->post('refresh', 'Auth::refresh');
+
         // 需要認證的路由
         $routes->group('', ['filter' => 'auth'], static function ($routes) {
             $routes->get('user', 'Auth::user');                    // 取得當前用戶
             $routes->post('logout', 'Auth::logout');               // 登出
-            $routes->post('refresh', 'Auth::refresh');             // 刷新 token
             $routes->post('migrate-guest-data', 'Auth::migrateGuestData'); // 遷移訪客資料
         });
     });
