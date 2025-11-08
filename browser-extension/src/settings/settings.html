@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Manager - 設定</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>設定</h1>
+      <p class="subtitle">YouTube Video Manager</p>
+    </div>
+
+    <!-- 播放清單模式設定 -->
+    <div class="settings-section">
+      <h2>播放清單模式</h2>
+
+      <div class="setting-group">
+        <label class="radio-label">
+          <input type="radio" name="playlistMode" value="default" id="mode-default">
+          <span>預設模式</span>
+          <p class="help-text">自動加入到指定的預設播放清單</p>
+        </label>
+      </div>
+
+      <div class="setting-group">
+        <label class="radio-label">
+          <input type="radio" name="playlistMode" value="custom" id="mode-custom" checked>
+          <span>自訂模式</span>
+          <p class="help-text">每次選擇要加入的播放清單</p>
+        </label>
+      </div>
+    </div>
+
+    <!-- 預設播放清單選擇 -->
+    <div class="settings-section" id="default-playlist-section" style="display: none;">
+      <h2>預設播放清單</h2>
+
+      <div class="setting-group">
+        <label for="default-playlist-select">選擇播放清單：</label>
+        <select id="default-playlist-select">
+          <option value="">-- 選擇播放清單 --</option>
+        </select>
+        <p class="help-text">預設模式下，影片將加入到此播放清單</p>
+      </div>
+
+      <div id="playlist-loading" class="loading" style="display: none;">
+        <p>載入播放清單中...</p>
+      </div>
+
+      <div id="playlist-error" class="error" style="display: none;">
+        <p></p>
+      </div>
+    </div>
+
+    <!-- 播放庫設定 -->
+    <div class="settings-section">
+      <h2>播放庫設定</h2>
+
+      <div class="setting-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="auto-add-library">
+          <span>自動加入播放庫</span>
+          <p class="help-text">加入播放清單時同時加入播放庫</p>
+        </label>
+      </div>
+    </div>
+
+    <!-- 操作按鈕 -->
+    <div class="button-group">
+      <button id="save-btn" class="btn btn-primary">儲存設定</button>
+      <button id="reset-btn" class="btn btn-secondary">重置為預設</button>
+    </div>
+
+    <!-- 訊息提示 -->
+    <div id="message" class="message hidden"></div>
+
+    <!-- 版本資訊 -->
+    <div class="footer">
+      <p>YouTube Video Manager v1.0.0</p>
+    </div>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

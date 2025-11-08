@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Manager</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Video Manager</h1>
+
+    <!-- 登入區塊 -->
+    <div id="auth-section" class="section">
+      <button id="login-btn" class="btn btn-primary">LINE 登入</button>
+    </div>
+
+    <!-- 主功能區塊 -->
+    <div id="main-section" class="section hidden">
+      <div id="user-info"></div>
+
+      <div class="actions">
+        <button id="add-to-library-btn" class="btn btn-success">加入播放庫</button>
+        <button id="add-to-playlist-btn" class="btn btn-success">加入播放清單</button>
+      </div>
+
+      <div id="message" class="message hidden"></div>
+
+      <div class="footer">
+        <button id="settings-btn" class="btn btn-link">設定</button>
+        <button id="logout-btn" class="btn btn-link">登出</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

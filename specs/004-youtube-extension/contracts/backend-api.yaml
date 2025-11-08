@@ -1,0 +1,557 @@
+openapi: 3.0.3
+info:
+  title: YouTube Extension Backend API
+  description: 後端 API 規格，供 YouTube 瀏覽器擴充程式整合使用
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: 生產環境
+  - url: http://localhost:8080/v1
+    description: 開發環境
+
+tags:
+  - name: Authentication
+    description: 認證相關 API
+  - name: Library
+    description: 播放庫管理 API
+  - name: Playlists
+    description: 播放清單管理 API
+
+paths:
+  /auth/line/callback:
+    post:
+      tags:
+        - Authentication
+      summary: LINE OAuth 回調端點
+      description: 使用 LINE authorization code 換取 access token 與 refresh token
+      operationId: lineOAuthCallback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - redirectUri
+              properties:
+                code:
+                  type: string
+                  description: LINE OAuth authorization code
+                  example: "abc123xyz456"
+                redirectUri:
+                  type: string
+                  description: OAuth redirect URI（必須與 LINE Console 設定一致）
+                  example: "https://extension-id.chromiumapp.org/callback"
+      responses:
+        '200':
+          description: 認證成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: Access token（有效期 1 小時）
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refreshToken:
+                    type: string
+                    description: Refresh token（有效期 7 天）
+                    example: "refresh_abc123xyz456"
+                  expiresIn:
+                    type: integer
+                    description: Access token 有效秒數
+                    example: 3600
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 更新 Access Token
+      description: 使用 refresh token 取得新的 access token
+      operationId: refreshAccessToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token
+                  example: "refresh_abc123xyz456"
+      responses:
+        '200':
+          description: Token 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: 新的 access token
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  expiresIn:
+                    type: integer
+                    description: Access token 有效秒數
+                    example: 3600
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 登出
+      description: 撤銷 refresh token
+      operationId: logout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token
+                  example: "refresh_abc123xyz456"
+      responses:
+        '204':
+          description: 登出成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /library/videos:
+    get:
+      tags:
+        - Library
+      summary: 取得播放庫影片列表
+      description: 取得當前使用者的所有播放庫影片
+      operationId: getLibraryVideos
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: 頁碼（從 1 開始）
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: 每頁筆數
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: sort
+          in: query
+          description: 排序方式
+          schema:
+            type: string
+            enum: [addedAt_desc, addedAt_asc, title_asc, title_desc]
+            default: addedAt_desc
+      responses:
+        '200':
+          description: 成功取得播放庫影片
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LibraryVideo'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Library
+      summary: 新增影片到播放庫
+      description: 將 YouTube 影片加入播放庫
+      operationId: addVideoToLibrary
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - youtubeVideoId
+                - title
+                - thumbnailUrl
+                - duration
+              properties:
+                youtubeVideoId:
+                  type: string
+                  description: YouTube 影片 ID
+                  example: "dQw4w9WgXcQ"
+                  pattern: '^[A-Za-z0-9_-]{11}$'
+                title:
+                  type: string
+                  description: 影片標題
+                  example: "Never Gonna Give You Up"
+                  minLength: 1
+                  maxLength: 200
+                thumbnailUrl:
+                  type: string
+                  description: 縮圖 URL
+                  format: uri
+                  example: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
+                duration:
+                  type: string
+                  description: 影片時長（ISO 8601 duration 格式）
+                  example: "PT3M33S"
+                  pattern: '^PT(\d+H)?(\d+M)?(\d+S)?$'
+      responses:
+        '201':
+          description: 影片成功加入播放庫
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryVideo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 影片已存在於播放庫
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /library/videos/{videoId}:
+    delete:
+      tags:
+        - Library
+      summary: 從播放庫移除影片
+      description: 移除播放庫中的指定影片
+      operationId: removeVideoFromLibrary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          description: 播放庫影片 ID（系統內部 UUID）
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 影片成功移除
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /playlists:
+    get:
+      tags:
+        - Playlists
+      summary: 取得播放清單列表
+      description: 取得當前使用者的所有播放清單
+      operationId: getPlaylists
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功取得播放清單
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  playlists:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Playlist'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /playlists/{playlistId}/videos:
+    post:
+      tags:
+        - Playlists
+      summary: 新增影片到播放清單
+      description: 將 YouTube 影片加入指定播放清單
+      operationId: addVideoToPlaylist
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          description: 播放清單 ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - youtubeVideoId
+                - title
+                - thumbnailUrl
+                - duration
+              properties:
+                youtubeVideoId:
+                  type: string
+                  description: YouTube 影片 ID
+                  example: "dQw4w9WgXcQ"
+                  pattern: '^[A-Za-z0-9_-]{11}$'
+                title:
+                  type: string
+                  description: 影片標題
+                  minLength: 1
+                  maxLength: 200
+                thumbnailUrl:
+                  type: string
+                  format: uri
+                duration:
+                  type: string
+                  pattern: '^PT(\d+H)?(\d+M)?(\d+S)?$'
+      responses:
+        '201':
+          description: 影片成功加入播放清單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistVideo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 影片已存在於播放清單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 使用 access token 進行身份驗證
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 使用者 ID
+        lineUserId:
+          type: string
+          description: LINE User ID
+        displayName:
+          type: string
+          description: 使用者顯示名稱
+        profilePictureUrl:
+          type: string
+          format: uri
+          description: 使用者頭像 URL
+        createdAt:
+          type: string
+          format: date-time
+          description: 註冊時間
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        lineUserId: "U1234567890abcdef"
+        displayName: "John Doe"
+        profilePictureUrl: "https://profile.line-scdn.net/..."
+        createdAt: "2025-11-08T12:00:00Z"
+
+    LibraryVideo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        youtubeVideoId:
+          type: string
+        title:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+        duration:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+      example:
+        id: "660f9511-f3ac-52e5-b827-557766551111"
+        userId: "550e8400-e29b-41d4-a716-446655440000"
+        youtubeVideoId: "dQw4w9WgXcQ"
+        title: "Never Gonna Give You Up"
+        thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
+        duration: "PT3M33S"
+        addedAt: "2025-11-08T14:30:00Z"
+
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        videoCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        id: "770f9622-f4bd-63f6-c938-668877662222"
+        userId: "550e8400-e29b-41d4-a716-446655440000"
+        name: "我的最愛"
+        description: "收藏的精選影片"
+        videoCount: 15
+        createdAt: "2025-11-01T10:00:00Z"
+        updatedAt: "2025-11-08T15:00:00Z"
+
+    PlaylistVideo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        playlistId:
+          type: string
+          format: uuid
+        youtubeVideoId:
+          type: string
+        title:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+        duration:
+          type: string
+        order:
+          type: integer
+        addedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        itemsPerPage:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 錯誤類型
+        message:
+          type: string
+          description: 錯誤訊息
+        details:
+          type: object
+          description: 額外錯誤詳情
+      example:
+        error: "CONFLICT"
+        message: "影片已存在於播放庫"
+        details:
+          youtubeVideoId: "dQw4w9WgXcQ"
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 未授權或 token 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
