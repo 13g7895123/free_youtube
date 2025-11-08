@@ -26,7 +26,6 @@ let playlistEmpty;
 let playlistLoading;
 let playlistError;
 let currentVideoId = null;
-let pendingVideoData = null;
 
 /**
  * 初始化 popup
