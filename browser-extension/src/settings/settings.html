@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="YouTube Video Manager 擴充功能設定頁面">
   <title>YouTube Video Manager - 設定</title>
   <link rel="stylesheet" href="settings.css">
 </head>
-<body>
+<body role="application" aria-label="設定頁面">
   <div class="container">
     <div class="header">
       <h1>設定</h1>
@@ -14,68 +15,109 @@
     </div>
 
     <!-- 播放清單模式設定 -->
-    <div class="settings-section">
-      <h2>播放清單模式</h2>
+    <fieldset class="settings-section">
+      <legend>播放清單模式</legend>
+      <p class="description">選擇新增影片時如何選擇播放清單</p>
 
       <div class="setting-group">
-        <label class="radio-label">
-          <input type="radio" name="playlistMode" value="default" id="mode-default">
+        <label class="radio-label" for="mode-default">
+          <input
+            type="radio"
+            name="playlistMode"
+            value="default"
+            id="mode-default"
+            aria-describedby="mode-default-desc">
           <span>預設模式</span>
-          <p class="help-text">自動加入到指定的預設播放清單</p>
+          <p id="mode-default-desc" class="help-text">自動加入到指定的預設播放清單</p>
         </label>
       </div>
 
       <div class="setting-group">
-        <label class="radio-label">
-          <input type="radio" name="playlistMode" value="custom" id="mode-custom" checked>
+        <label class="radio-label" for="mode-custom">
+          <input
+            type="radio"
+            name="playlistMode"
+            value="custom"
+            id="mode-custom"
+            checked
+            aria-describedby="mode-custom-desc">
           <span>自訂模式</span>
-          <p class="help-text">每次選擇要加入的播放清單</p>
+          <p id="mode-custom-desc" class="help-text">每次選擇要加入的播放清單</p>
         </label>
       </div>
-    </div>
+    </fieldset>
 
     <!-- 預設播放清單選擇 -->
-    <div class="settings-section" id="default-playlist-section" style="display: none;">
-      <h2>預設播放清單</h2>
+    <fieldset class="settings-section" id="default-playlist-section" style="display: none;">
+      <legend>預設播放清單</legend>
 
       <div class="setting-group">
         <label for="default-playlist-select">選擇播放清單：</label>
-        <select id="default-playlist-select">
+        <select
+          id="default-playlist-select"
+          aria-label="預設播放清單選擇"
+          aria-describedby="default-playlist-desc">
           <option value="">-- 選擇播放清單 --</option>
         </select>
-        <p class="help-text">預設模式下，影片將加入到此播放清單</p>
+        <p id="default-playlist-desc" class="help-text">預設模式下，影片將加入到此播放清單</p>
       </div>
 
-      <div id="playlist-loading" class="loading" style="display: none;">
+      <div
+        id="playlist-loading"
+        class="loading"
+        style="display: none;"
+        role="status"
+        aria-live="polite">
         <p>載入播放清單中...</p>
       </div>
 
-      <div id="playlist-error" class="error" style="display: none;">
+      <div
+        id="playlist-error"
+        class="error"
+        style="display: none;"
+        role="alert"
+        aria-live="assertive">
         <p></p>
       </div>
-    </div>
+    </fieldset>
 
     <!-- 播放庫設定 -->
-    <div class="settings-section">
-      <h2>播放庫設定</h2>
+    <fieldset class="settings-section">
+      <legend>播放庫設定</legend>
 
       <div class="setting-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="auto-add-library">
+        <label class="checkbox-label" for="auto-add-library">
+          <input
+            type="checkbox"
+            id="auto-add-library"
+            aria-describedby="auto-add-desc">
           <span>自動加入播放庫</span>
-          <p class="help-text">加入播放清單時同時加入播放庫</p>
+          <p id="auto-add-desc" class="help-text">加入播放清單時同時加入播放庫</p>
         </label>
       </div>
-    </div>
+    </fieldset>
 
     <!-- 操作按鈕 -->
-    <div class="button-group">
-      <button id="save-btn" class="btn btn-primary">儲存設定</button>
-      <button id="reset-btn" class="btn btn-secondary">重置為預設</button>
+    <div class="button-group" role="group" aria-label="設定操作">
+      <button id="save-btn" class="btn btn-primary" aria-label="儲存當前設定">
+        儲存設定
+      </button>
+      <button
+        id="reset-btn"
+        class="btn btn-secondary"
+        aria-label="重置所有設定為預設值">
+        重置為預設
+      </button>
     </div>
 
     <!-- 訊息提示 -->
-    <div id="message" class="message hidden"></div>
+    <div
+      id="message"
+      class="message hidden"
+      role="status"
+      aria-live="assertive"
+      aria-atomic="true">
+    </div>
 
     <!-- 版本資訊 -->
     <div class="footer">

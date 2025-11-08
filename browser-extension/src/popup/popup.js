@@ -18,7 +18,15 @@ let settingsBtn;
 let userInfoDiv;
 let addToLibraryBtn;
 let addToPlaylistBtn;
+let playlistModal;
+let modalCloseBtn;
+let modalCancelBtn;
+let playlistList;
+let playlistEmpty;
+let playlistLoading;
+let playlistError;
 let currentVideoId = null;
+let pendingVideoData = null;
 
 /**
  * 初始化 popup
@@ -34,6 +42,13 @@ async function init() {
     userInfoDiv = document.getElementById('user-info');
     addToLibraryBtn = document.getElementById('add-to-library-btn');
     addToPlaylistBtn = document.getElementById('add-to-playlist-btn');
+    playlistModal = document.getElementById('playlist-modal');
+    modalCloseBtn = document.getElementById('modal-close-btn');
+    modalCancelBtn = document.getElementById('modal-cancel-btn');
+    playlistList = document.getElementById('playlist-list');
+    playlistEmpty = document.getElementById('playlist-empty');
+    playlistLoading = document.getElementById('playlist-loading');
+    playlistError = document.getElementById('playlist-error');
 
     // 註冊事件處理器
     loginBtn.addEventListener('click', handleLogin);
@@ -41,6 +56,8 @@ async function init() {
     settingsBtn.addEventListener('click', handleSettings);
     addToLibraryBtn.addEventListener('click', handleAddToLibrary);
     addToPlaylistBtn.addEventListener('click', handleAddToPlaylist);
+    modalCloseBtn.addEventListener('click', closePlaylistModal);
+    modalCancelBtn.addEventListener('click', closePlaylistModal);
 
     // 檢查當前分頁是否為 YouTube 影片頁
     await checkCurrentTab();
@@ -231,7 +248,7 @@ async function handleSettings() {
   try {
     // 開啟設定頁面於新分頁
     await browser.tabs.create({
-      url: browser.runtime.getURL('src/popup/settings.html')
+      url: browser.runtime.getURL('src/settings/settings.html')
     });
 
     // 關閉 popup
@@ -396,9 +413,11 @@ async function addToDefaultPlaylist(playlistId) {
 
   // 4. 顯示結果
   if (result.success) {
+    // 取得播放清單名稱用於顯示訊息
+    const playlistName = await getPlaylistName(playlistId);
     const message = videoInfo.isFallback
-      ? '已加入播放清單（部分資訊無法取得）'
-      : '已加入播放清單';
+      ? `已加入 ${playlistName || '播放清單'}（部分資訊無法取得）`
+      : `已加入 ${playlistName || '播放清單'}`;
     showSuccess(message);
   } else if (result.error === 'VIDEO_ALREADY_IN_PLAYLIST') {
     showInfo(result.message);
@@ -408,11 +427,169 @@ async function addToDefaultPlaylist(playlistId) {
 }
 
 /**
+ * 取得播放清單名稱
+ * @param {string} playlistId - 播放清單 ID
+ * @returns {Promise<string|null>} 播放清單名稱
+ */
+async function getPlaylistName(playlistId) {
+  try {
+    // 嘗試從快取的播放清單列表取得名稱
+    const cachedPlaylists = await getCache('cache_playlists');
+    if (cachedPlaylists && Array.isArray(cachedPlaylists)) {
+      const playlist = cachedPlaylists.find(p => p.id === playlistId);
+      if (playlist) {
+        return playlist.name;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get playlist name:', error);
+  }
+  return null;
+}
+
+/**
  * 顯示播放清單選擇器（自訂模式）
- * 暫時為 TODO，將在 Phase 6 實作
  */
 async function showPlaylistSelector() {
-  showInfo('自訂播放清單模式將在下一版本推出');
+  try {
+    // 顯示 modal 和載入狀態
+    playlistModal.classList.remove('hidden');
+    playlistList.innerHTML = '';
+    playlistEmpty.classList.add('hidden');
+    playlistLoading.classList.remove('hidden');
+    playlistError.classList.add('hidden');
+
+    // 嘗試從快取取得播放清單
+    let playlists = await getCache('cache_playlists');
+
+    // 如果快取不存在，從 API 取得
+    if (!playlists) {
+      const response = await getPlaylists({ limit: 50 });
+      playlists = response.playlists || [];
+
+      // 快取結果
+      await setCache('cache_playlists', playlists);
+    }
+
+    // 隱藏載入狀態
+    playlistLoading.classList.add('hidden');
+
+    // 渲染播放清單
+    if (playlists && playlists.length > 0) {
+      renderPlaylistItems(playlists);
+      playlistEmpty.classList.add('hidden');
+    } else {
+      playlistEmpty.classList.remove('hidden');
+    }
+
+  } catch (error) {
+    console.error('Failed to load playlists:', error);
+
+    // 顯示錯誤訊息
+    playlistLoading.classList.add('hidden');
+    playlistEmpty.classList.add('hidden');
+    playlistError.classList.remove('hidden');
+    playlistError.querySelector('p').textContent = '無法載入播放清單列表';
+  }
+}
+
+/**
+ * 渲染播放清單項目
+ * @param {Array} playlists - 播放清單陣列
+ */
+function renderPlaylistItems(playlists) {
+  playlistList.innerHTML = '';
+
+  playlists.forEach(playlist => {
+    const item = document.createElement('div');
+    item.className = 'playlist-item';
+    item.innerHTML = `
+      <div class="playlist-name">${playlist.name}</div>
+      <div class="playlist-count">${playlist.videoCount || 0} 個影片</div>
+    `;
+
+    // 添加點擊事件處理器
+    item.addEventListener('click', () => {
+      handlePlaylistSelection(playlist);
+    });
+
+    playlistList.appendChild(item);
+  });
+}
+
+/**
+ * 處理播放清單選擇
+ * @param {Object} playlist - 選定的播放清單
+ */
+async function handlePlaylistSelection(playlist) {
+  try {
+    // 禁用 modal 交互
+    playlistModal.classList.add('loading');
+
+    // 取得影片資訊
+    let videoInfo;
+    try {
+      showInfo('正在取得影片資訊...');
+      videoInfo = await getVideoInfo(currentVideoId);
+    } catch (error) {
+      console.error('Failed to get video info:', error);
+      showError('無法取得影片資訊');
+      playlistModal.classList.remove('loading');
+      return;
+    }
+
+    // 準備影片資料
+    const videoData = {
+      youtubeVideoId: currentVideoId,
+      title: videoInfo.title,
+      thumbnailUrl: videoInfo.thumbnailUrl,
+      duration: videoInfo.duration,
+      channelTitle: videoInfo.channelTitle
+    };
+
+    // 呼叫後端 API 加入播放清單
+    const result = await addVideoToPlaylist(playlist.id, videoData);
+
+    // 關閉 modal
+    closePlaylistModal();
+
+    // 顯示結果
+    if (result.success) {
+      const message = videoInfo.isFallback
+        ? `已加入 ${playlist.name}（部分資訊無法取得）`
+        : `已加入 ${playlist.name}`;
+      showSuccess(message);
+    } else if (result.error === 'VIDEO_ALREADY_IN_PLAYLIST') {
+      showInfo(result.message);
+    } else {
+      showError('加入播放清單失敗');
+    }
+
+  } catch (error) {
+    console.error('Failed to add video to playlist:', error);
+
+    // 處理不同類型的錯誤
+    if (error.message.includes('not authenticated') || error.message.includes('401')) {
+      showError('請先登入');
+    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+      showError('網路連線失敗，請稍後再試');
+    } else {
+      showError('加入播放清單失敗');
+    }
+
+    playlistModal.classList.remove('loading');
+  }
+}
+
+/**
+ * 關閉播放清單選擇器 Modal
+ */
+function closePlaylistModal() {
+  playlistModal.classList.add('hidden');
+  playlistList.innerHTML = '';
+  playlistEmpty.classList.add('hidden');
+  playlistLoading.classList.add('hidden');
+  playlistError.classList.add('hidden');
 }
 
 /**
