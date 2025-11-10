@@ -151,17 +151,17 @@
         @mute-toggle="player.toggleMute"
       />
 
+      <!-- 儲存影片操作 -->
+      <SaveVideoActions
+        v-if="hasVideo && player.isReady.value"
+        :get-video-info="getVideoInfo"
+      />
+
       <!-- 循環播放控制 -->
       <LoopToggle
         v-if="hasVideo"
         :is-enabled="player.loopEnabled.value"
         @toggle="handleLoopToggle"
-      />
-
-      <!-- 儲存影片操作 -->
-      <SaveVideoActions
-        v-if="hasVideo && player.isReady.value"
-        :get-video-info="getVideoInfo"
       />
 
       <!-- 初始狀態提示 -->
@@ -419,7 +419,25 @@ function handleLoopToggle(enabled) {
  * @param {number} volume - 新的音量值（0-100）
  */
 function handleVolumeChange(volume) {
+  console.log('音量變更請求:', volume)
+  console.log('播放器就緒狀態:', player.isReady.value)
+  console.log('當前靜音狀態:', player.isMuted.value)
+
+  // 檢查播放器是否就緒
+  if (!player.isReady.value) {
+    console.warn('播放器尚未就緒，無法更改音量')
+    return
+  }
+
+  // 如果正在靜音，調整音量時自動取消靜音
+  if (player.isMuted.value && volume > 0) {
+    console.log('自動取消靜音')
+    player.unmute()
+  }
+
+  // 設置音量
   player.setVolume(volume)
+  console.log('音量已設置為:', volume)
 }
 
 /**

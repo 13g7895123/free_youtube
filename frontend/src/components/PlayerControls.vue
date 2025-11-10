@@ -102,6 +102,7 @@
             :value="volume"
             :aria-label="`音量: ${volume}%`"
             @input="handleVolumeChange"
+            @change="handleVolumeChange"
           />
           <div class="volume-fill" :style="{ width: `${volume}%` }"></div>
         </div>
@@ -237,15 +238,31 @@ function handleMuteToggle() {
 .volume-slider-container {
   position: relative;
   flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* 使用偽元素創建 6px 高度的灰色軌道背景 */
+.volume-slider-container::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 100%;
   height: 6px;
   background-color: #e0e0e0;
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  z-index: 0;
 }
 
 /* 音量滑桿 */
 .volume-slider {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -254,49 +271,85 @@ function handleMuteToggle() {
   background: transparent;
   cursor: pointer;
   z-index: 2;
+  pointer-events: auto;
+}
+
+/* 滑桿軌道樣式 */
+.volume-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background-color: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background-color: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 /* WebKit 瀏覽器滑桿樣式 */
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background-color: #ff0000;
   border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
+  margin-top: -6px;
+  position: relative;
+  z-index: 3;
 }
 
 .volume-slider::-webkit-slider-thumb:hover {
   background-color: #cc0000;
-  transform: scale(1.2);
+  transform: scale(1.3);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.volume-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
 }
 
 /* Firefox 滑桿樣式 */
 .volume-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background-color: #ff0000;
   border: none;
   border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 3;
 }
 
 .volume-slider::-moz-range-thumb:hover {
   background-color: #cc0000;
-  transform: scale(1.2);
+  transform: scale(1.3);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.volume-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
 }
 
 /* 音量填充 */
 .volume-fill {
   position: absolute;
-  top: 0;
+  top: 50%;
   left: 0;
-  height: 100%;
+  transform: translateY(-50%);
+  height: 6px;
   background-color: #ff0000;
   border-radius: var(--radius-sm);
   transition: width 0.1s ease;

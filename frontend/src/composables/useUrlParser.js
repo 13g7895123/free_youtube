@@ -40,20 +40,15 @@ export function useUrlParser() {
       return
     }
 
-    // 提取播放清單 ID（優先）
-    const extractedPlaylistId = extractPlaylistId(url)
-    if (extractedPlaylistId) {
-      playlistId.value = extractedPlaylistId
-    }
-
-    // 提取影片 ID
+    // 只提取影片 ID，忽略 list 參數
+    // 即使 URL 中有播放清單（list 參數），也只取當前影片的 video ID
     const extractedVideoId = extractVideoId(url)
     if (extractedVideoId) {
       videoId.value = extractedVideoId
     }
 
-    // 驗證是否至少有一個有效的 ID
-    if (playlistId.value || videoId.value) {
+    // 驗證是否有有效的影片 ID
+    if (videoId.value) {
       isValid.value = true
       errorMessage.value = ''
     } else {

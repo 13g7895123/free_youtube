@@ -77,6 +77,15 @@ function handleSubmit() {
   /* 使用統一的 input 樣式，額外的自訂在這裡覆蓋 */
   font-size: var(--font-size-base);
   padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: #ff0000;
+  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
 }
 
 .validation-error {
