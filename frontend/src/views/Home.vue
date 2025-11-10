@@ -195,7 +195,7 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import UrlInput from '../components/UrlInput.vue'
 import VideoPlayer from '../components/VideoPlayer.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
@@ -545,6 +545,40 @@ function clearDebugLogs() {
   debugLogs.value = []
   addDebugLog('info', 'Debug 日誌已清除')
 }
+
+/**
+ * 路由守衛：離開頁面時處理播放器狀態
+ * 如果正在播放影片，將狀態轉移到 FloatingPlayer 並以展開模式顯示
+ */
+onBeforeRouteLeave((to, from) => {
+  // 檢查是否正在播放
+  if (player.isReady.value && player.isPlaying.value) {
+    console.log('離開首頁，正在播放影片，轉移到懸浮視窗')
+
+    // 獲取當前影片資訊
+    const videoInfo = player.getCurrentVideoInfo()
+
+    if (videoInfo) {
+      // 將當前播放狀態轉移到 FloatingPlayer
+      globalPlayerStore.playVideo({
+        video_id: videoInfo.videoId,
+        title: videoInfo.title,
+        youtube_url: videoInfo.youtubeUrl,
+        thumbnail_url: videoInfo.thumbnail,
+        duration: videoInfo.duration,
+        channel_name: videoInfo.author
+      })
+
+      // 設為展開模式（不是最小化）
+      globalPlayerStore.show()
+
+      console.log('懸浮視窗已啟用（展開模式）')
+    }
+  }
+
+  // 允許導航
+  return true
+})
 
 // 組件掛載時預先載入 YouTube API（但不初始化播放器）
 onMounted(async () => {
