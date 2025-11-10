@@ -55,6 +55,9 @@ export const useVideoStore = defineStore('video', () => {
     try {
       const response = await videoService.searchVideos(query)
       videos.value = response.data.data
+      // 重置分頁狀態（搜尋不支援分頁）
+      currentPage.value = 1
+      total.value = response.data.data.length
       return response
     } catch (err) {
       error.value = err.message || '搜尋失敗'

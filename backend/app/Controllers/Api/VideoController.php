@@ -40,7 +40,7 @@ class VideoController extends ResourceController
             $videos = $this->model
                 ->where('user_id', $userId)
                 ->orderBy('created_at', 'DESC')
-                ->paginate($perPage, 'default', $page - 1);
+                ->paginate($perPage, 'default', $page);
 
             return $this->respond(api_paginated($videos, $page, $perPage, $total), 200);
         } catch (\Exception $e) {

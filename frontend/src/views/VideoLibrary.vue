@@ -49,7 +49,7 @@
         />
       </div>
 
-      <div class="pagination" v-if="totalPages > 1">
+      <div class="pagination" v-if="!searchQuery && totalPages > 1">
         <BaseButton
           variant="secondary"
           :disabled="currentPage === 1"
