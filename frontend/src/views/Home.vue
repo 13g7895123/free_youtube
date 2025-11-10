@@ -45,7 +45,7 @@
 
       <!-- 錯誤訊息 -->
       <ErrorMessage
-        :message="player.errorMessage.value"
+        :message="errorMessage"
         @close="clearError"
       />
 
@@ -209,6 +209,7 @@ const isLoading = ref(false)
 const apiReady = ref(false)
 const showAuthRequiredMessage = ref(false)
 const showSessionExpiredMessage = ref(false)
+const errorMessage = ref('')
 
 // DEBUG 模式相關
 const debugMode = ref(false) // 預設關閉 DEBUG 模式，需要時可改為 true
@@ -317,8 +318,7 @@ async function handleUrlSubmit(url) {
  * 清除錯誤訊息
  */
 function clearError() {
-  player.errorMessage.value = ''
-  player.hasError.value = false
+  errorMessage.value = ''
 }
 
 /**
@@ -543,12 +543,12 @@ onMounted(async () => {
             hasAccessToken: hasAccessTokenCookie.value
           }
         })
-        player.errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
+        errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
       }
     } else if (loginStatus === 'cancelled') {
-      player.errorMessage.value = message || '您已取消 LINE 登入'
+      errorMessage.value = message || '您已取消 LINE 登入'
     } else if (loginStatus === 'error') {
-      player.errorMessage.value = message || '登入失敗，請重試'
+      errorMessage.value = message || '登入失敗，請重試'
     }
 
     // 清除 query 參數
