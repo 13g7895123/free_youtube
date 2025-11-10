@@ -1,6 +1,13 @@
 <template>
-  <Teleport to="body">
-    <div v-if="playerStore.isVisible && playerStore.currentVideo" class="floating-player-container">
+  <!-- 動態容器：根據 displayMode 決定是否使用 Teleport -->
+  <component
+    :is="playerStore.displayMode === 'floating' ? 'Teleport' : 'div'"
+    :to="playerStore.displayMode === 'floating' ? 'body' : undefined"
+  >
+    <div v-if="playerStore.isVisible && playerStore.currentVideo"
+         :class="[
+           playerStore.displayMode === 'floating' ? 'floating-player-container' : 'embedded-player-container'
+         ]">
       <!-- Minimized View -->
       <div v-show="playerStore.isMinimized" class="floating-player minimized" role="region" aria-label="播放器控制">
         <div class="minimized-content">
@@ -239,11 +246,12 @@
         </div>
       </div>
     </div>
-  </Teleport>
+  </component>
 </template>
 
 <script setup>
 import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import {
   PlayIcon,
@@ -262,12 +270,30 @@ import {
   SpeakerXMarkIcon
 } from '@heroicons/vue/24/solid'
 
+const route = useRoute()
 const playerStore = useGlobalPlayerStore()
 const isFullscreen = ref(false)
+
+// 監聽路由變化，自動切換顯示模式
+watch(() => route.path, (newPath) => {
+  if (playerStore.isVisible) {
+    if (newPath === '/') {
+      // 在首頁時，使用嵌入模式
+      playerStore.setDisplayMode('embedded')
+    } else {
+      // 在其他頁面時，使用懸浮模式
+      playerStore.setDisplayMode('floating')
+    }
+  }
+}, { immediate: true })
 
 // Debug logging
 watch(() => playerStore.isVisible, (val) => {
   console.log('FloatingPlayer: isVisible changed to', val)
+})
+
+watch(() => playerStore.displayMode, (val) => {
+  console.log('FloatingPlayer: displayMode changed to', val)
 })
 
 watch(() => playerStore.currentVideo, (val) => {
@@ -646,11 +672,29 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 懸浮模式容器 - 固定在右下角 */
 .floating-player-container {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 9999;
+}
+
+/* 嵌入模式容器 - 在首頁顯示為主播放器 */
+.embedded-player-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 1.5rem auto;
+}
+
+.embedded-player-container .floating-player {
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.embedded-player-container .floating-player .player-body {
+  height: 600px;
+  max-height: 70vh;
 }
 
 /* Hidden player for minimized mode */

@@ -128,40 +128,33 @@
         </div>
       </div>
 
-      <!-- 影片播放器 -->
-      <VideoPlayer
-        v-if="hasVideo"
-        :is-loading="isLoading"
-        :is-ready="player.isReady.value"
-        :is-playing="player.isPlaying.value"
-        :is-paused="player.isPaused.value"
-        :is-buffering="player.isBuffering.value"
-      />
+      <!-- FloatingPlayer 會在這裡以嵌入模式顯示 -->
+      <!-- 實際渲染由 FloatingPlayer 組件控制 -->
 
       <!-- 播放控制 -->
       <PlayerControls
-        v-if="hasVideo && player.isReady.value"
-        :is-playing="player.isPlaying.value"
-        :is-paused="player.isPaused.value"
-        :volume="player.volume.value"
-        :is-muted="player.isMuted.value"
-        @play="player.play"
-        @pause="player.pause"
-        @volume-change="handleVolumeChange"
-        @mute-toggle="player.toggleMute"
+        v-if="globalPlayerStore.isVisible"
+        :is-playing="globalPlayerStore.isPlaying"
+        :is-paused="!globalPlayerStore.isPlaying"
+        :volume="globalPlayerStore.volume"
+        :is-muted="globalPlayerStore.isMuted"
+        @play="globalPlayerStore.play"
+        @pause="globalPlayerStore.pause"
+        @volume-change="globalPlayerStore.setVolume"
+        @mute-toggle="globalPlayerStore.toggleMute"
       />
 
       <!-- 儲存影片操作 -->
       <SaveVideoActions
-        v-if="hasVideo && player.isReady.value"
-        :get-video-info="getVideoInfo"
+        v-if="globalPlayerStore.isVisible && globalPlayerStore.currentVideo"
+        :get-video-info="getGlobalVideoInfo"
       />
 
       <!-- 循環播放控制 -->
       <LoopToggle
-        v-if="hasVideo"
-        :is-enabled="player.loopEnabled.value"
-        @toggle="handleLoopToggle"
+        v-if="globalPlayerStore.isVisible"
+        :is-enabled="globalPlayerStore.loopMode === 'single'"
+        @toggle="globalPlayerStore.toggleLoopMode"
       />
 
       <!-- 初始狀態提示 -->
@@ -195,17 +188,14 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import UrlInput from '../components/UrlInput.vue'
-import VideoPlayer from '../components/VideoPlayer.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import PlayerControls from '../components/PlayerControls.vue'
 import LoopToggle from '../components/LoopToggle.vue'
 import SaveVideoActions from '../components/SaveVideoActions.vue'
 import GuestHistory from '../components/GuestHistory.vue'
 import { useUrlParser } from '../composables/useUrlParser'
-import { useYouTubePlayer } from '../composables/useYouTubePlayer'
-import { useLocalStorage } from '../composables/useLocalStorage'
 import { useGlobalPlayerStore } from '../stores/globalPlayerStore'
 import { useGuestHistory } from '../composables/useGuestHistory'
 import { useAuthStore } from '../stores/auth'
@@ -216,7 +206,6 @@ const router = useRouter()
 
 // 狀態管理
 const isLoading = ref(false)
-const hasVideo = ref(false)
 const apiReady = ref(false)
 const showAuthRequiredMessage = ref(false)
 const showSessionExpiredMessage = ref(false)
@@ -229,56 +218,25 @@ const hasAccessTokenCookie = ref(false)
 const apiUrl = import.meta.env.VITE_API_URL || '/api'
 const authMode = import.meta.env.VITE_AUTH_MODE || 'line'
 
-// 從 LocalStorage 載入用戶偏好設定
-const settingsStorage = useLocalStorage('youtube-loop-player-settings', {
-  loopEnabled: true,
-  volume: 100,
-  isMuted: false
-})
-
 // Composables
 const parser = useUrlParser()
-const player = useYouTubePlayer('youtube-player', {
-  loopEnabled: settingsStorage.value?.loopEnabled ?? true,
-  volume: settingsStorage.value?.volume ?? 100,
-  isMuted: settingsStorage.value?.isMuted ?? false
-})
 const globalPlayerStore = useGlobalPlayerStore()
 const guestHistory = useGuestHistory()
 const authStore = useAuthStore()
 
-// 監聽設定變化，自動保存到 LocalStorage
-watch(() => player.loopEnabled.value, (newValue) => {
-  settingsStorage.value = {
-    ...settingsStorage.value,
-    loopEnabled: newValue
-  }
-})
-
-watch(() => player.volume.value, (newValue) => {
-  settingsStorage.value = {
-    ...settingsStorage.value,
-    volume: newValue
-  }
-})
-
-watch(() => player.isMuted.value, (newValue) => {
-  settingsStorage.value = {
-    ...settingsStorage.value,
-    isMuted: newValue
-  }
-})
+// 計算屬性：根據 globalPlayerStore 判斷是否有影片
+const hasVideo = computed(() => globalPlayerStore.isVisible && globalPlayerStore.currentVideo !== null)
 
 // 監聽播放狀態，自動記錄到訪客歷史
-watch(() => player.isPlaying.value, (isNowPlaying) => {
-  if (isNowPlaying && player.isReady.value) {
-    // 當影片開始播放時，取得影片資訊並加入歷史記錄
-    const videoInfo = player.getCurrentVideoInfo()
-    if (videoInfo && videoInfo.videoId) {
+watch(() => globalPlayerStore.isPlaying, (isNowPlaying) => {
+  if (isNowPlaying && globalPlayerStore.currentVideo) {
+    // 當影片開始播放時，加入歷史記錄
+    const videoInfo = globalPlayerStore.currentVideo
+    if (videoInfo && videoInfo.video_id) {
       guestHistory.addToHistory({
-        videoId: videoInfo.videoId,
+        videoId: videoInfo.video_id,
         title: videoInfo.title,
-        thumbnail: videoInfo.thumbnail
+        thumbnail: videoInfo.thumbnail_url
       })
     }
   }
@@ -330,72 +288,29 @@ async function handleUrlSubmit(url) {
 
   isLoading.value = true
 
-  // 步驟 1: 確保 API 已載入
-  if (!apiReady.value) {
-    try {
-      await loadYouTubeAPI()
-    } catch (error) {
-      console.error('Failed to load YouTube API:', error)
-      player.errorMessage.value = '無法載入 YouTube 播放器，請檢查網路連線'
-      isLoading.value = false
-      return
+  try {
+    // 只取影片 ID（已經在 parser 中排除 list 參數）
+    if (parser.videoId.value) {
+      // 使用 globalPlayerStore 播放影片
+      globalPlayerStore.playVideo({
+        video_id: parser.videoId.value,
+        title: '載入中...',
+        youtube_url: url,
+        thumbnail_url: `https://img.youtube.com/vi/${parser.videoId.value}/hqdefault.jpg`,
+        duration: 0,
+        channel_name: ''
+      })
+
+      // 設為嵌入模式
+      globalPlayerStore.setDisplayMode('embedded')
+
+      console.log('影片已加入 FloatingPlayer:', parser.videoId.value)
     }
+  } catch (error) {
+    console.error('播放影片時發生錯誤:', error)
+  } finally {
+    isLoading.value = false
   }
-
-  // 步驟 2: 確保 DOM 元素存在
-  hasVideo.value = true
-  await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 200))
-
-  // 步驟 3: 初始化播放器（如果尚未初始化）
-  if (!player.isReady.value) {
-    const initSuccess = player.initPlayer()
-    if (!initSuccess) {
-      player.errorMessage.value = '無法初始化播放器，請重新整理頁面'
-      isLoading.value = false
-      hasVideo.value = false
-      return
-    }
-
-    // 步驟 4: 等待播放器就緒
-    const maxWaitTime = 10000
-    const startTime = Date.now()
-
-    await new Promise((resolve, reject) => {
-      const checkInterval = setInterval(() => {
-        if (player.isReady.value) {
-          clearInterval(checkInterval)
-          resolve()
-        } else if (Date.now() - startTime > maxWaitTime) {
-          clearInterval(checkInterval)
-          reject(new Error('播放器初始化超時'))
-        }
-      }, 100)
-    }).catch(error => {
-      console.error('Player initialization timeout:', error)
-      player.errorMessage.value = '播放器初始化超時，請重新整理頁面'
-      isLoading.value = false
-      hasVideo.value = false
-      throw error
-    })
-  }
-
-  // 步驟 5: 載入內容
-  await loadContent()
-}
-
-/**
- * 載入影片或播放清單
- */
-async function loadContent() {
-  // 優先載入播放清單
-  if (parser.playlistId.value) {
-    player.loadPlaylist(parser.playlistId.value)
-  } else if (parser.videoId.value) {
-    player.loadVideo(parser.videoId.value)
-  }
-
-  isLoading.value = false
 }
 
 /**
@@ -407,45 +322,23 @@ function clearError() {
 }
 
 /**
- * 處理循環播放切換
- * @param {boolean} enabled - 是否啟用循環
- */
-function handleLoopToggle(enabled) {
-  player.setLoop(enabled)
-}
-
-/**
- * 處理音量變化
- * @param {number} volume - 新的音量值（0-100）
- */
-function handleVolumeChange(volume) {
-  console.log('音量變更請求:', volume)
-  console.log('播放器就緒狀態:', player.isReady.value)
-  console.log('當前靜音狀態:', player.isMuted.value)
-
-  // 檢查播放器是否就緒
-  if (!player.isReady.value) {
-    console.warn('播放器尚未就緒，無法更改音量')
-    return
-  }
-
-  // 如果正在靜音，調整音量時自動取消靜音
-  if (player.isMuted.value && volume > 0) {
-    console.log('自動取消靜音')
-    player.unmute()
-  }
-
-  // 設置音量
-  player.setVolume(volume)
-  console.log('音量已設置為:', volume)
-}
-
-/**
  * 取得當前影片資訊（供 SaveVideoActions 使用）
  * @returns {Object|null} 影片資訊
  */
-function getVideoInfo() {
-  return player.getCurrentVideoInfo()
+function getGlobalVideoInfo() {
+  if (!globalPlayerStore.currentVideo) {
+    return null
+  }
+
+  const video = globalPlayerStore.currentVideo
+  return {
+    videoId: video.video_id,
+    title: video.title,
+    author: video.channel_name || '',
+    duration: video.duration || 0,
+    thumbnail: video.thumbnail_url,
+    youtubeUrl: video.youtube_url
+  }
 }
 
 /**
@@ -545,40 +438,6 @@ function clearDebugLogs() {
   debugLogs.value = []
   addDebugLog('info', 'Debug 日誌已清除')
 }
-
-/**
- * 路由守衛：離開頁面時處理播放器狀態
- * 如果正在播放影片，將狀態轉移到 FloatingPlayer 並以展開模式顯示
- */
-onBeforeRouteLeave((to, from) => {
-  // 檢查是否正在播放
-  if (player.isReady.value && player.isPlaying.value) {
-    console.log('離開首頁，正在播放影片，轉移到懸浮視窗')
-
-    // 獲取當前影片資訊
-    const videoInfo = player.getCurrentVideoInfo()
-
-    if (videoInfo) {
-      // 將當前播放狀態轉移到 FloatingPlayer
-      globalPlayerStore.playVideo({
-        video_id: videoInfo.videoId,
-        title: videoInfo.title,
-        youtube_url: videoInfo.youtubeUrl,
-        thumbnail_url: videoInfo.thumbnail,
-        duration: videoInfo.duration,
-        channel_name: videoInfo.author
-      })
-
-      // 設為展開模式（不是最小化）
-      globalPlayerStore.show()
-
-      console.log('懸浮視窗已啟用（展開模式）')
-    }
-  }
-
-  // 允許導航
-  return true
-})
 
 // 組件掛載時預先載入 YouTube API（但不初始化播放器）
 onMounted(async () => {
