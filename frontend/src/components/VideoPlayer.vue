@@ -92,10 +92,11 @@ const statusText = computed(() => {
 
 /* 確保 YouTube iframe 完全填滿容器 */
 .youtube-player :deep(iframe) {
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
-  display: block !important;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  /* 移除 !important，讓樣式與 API 初始化配合更好 */
 }
 
 .youtube-player.is-loading {

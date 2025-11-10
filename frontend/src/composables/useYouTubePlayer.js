@@ -127,7 +127,9 @@ export function useYouTubePlayer(containerId, options = {}) {
 
     try {
       playerInstance = new window.YT.Player(containerId, {
-        // 不設置 height 和 width，讓 CSS 完全控制尺寸
+        // 設置初始尺寸為 100%，確保 API 正確計算 iframe 大小
+        width: '100%',
+        height: '100%',
         playerVars: {
           autoplay: 0,
           controls: 1,
