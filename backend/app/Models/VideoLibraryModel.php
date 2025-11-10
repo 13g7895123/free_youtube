@@ -62,4 +62,15 @@ class VideoLibraryModel extends Model
                     ->where('video_id', $videoId)
                     ->countAllResults() > 0;
     }
+
+    /**
+     * 取得會員的影片總數
+     */
+    public function getUserLibraryCount(int $userId): int
+    {
+        // 使用新的查詢建構器實例，避免查詢狀態衝突
+        return $this->builder()
+                    ->where('user_id', $userId)
+                    ->countAllResults();
+    }
 }

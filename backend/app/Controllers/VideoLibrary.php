@@ -41,8 +41,8 @@ class VideoLibrary extends BaseController
         // 取得影片庫資料
         $videos = $this->videoLibraryModel->getUserLibrary($userId, $perPage, $offset);
 
-        // 取得總數 - 使用 countAllResults(false) 避免重置查詢建構器
-        $total = $this->videoLibraryModel->where('user_id', $userId)->countAllResults(false);
+        // 取得總數 - 使用獨立的查詢建構器實例
+        $total = $this->videoLibraryModel->getUserLibraryCount($userId);
 
         return $this->respond([
             'success' => true,
