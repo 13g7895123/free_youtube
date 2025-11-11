@@ -155,7 +155,7 @@ return {
 
 #### 2. PlaylistManager.vue - 更新為使用 fetchAllVideos()
 
-**修改位置：** 第 310 行
+**修改位置 1：** 第 310 行（handlePlayPlaylist 函數中）
 
 ```javascript
 // 修改前
@@ -164,6 +164,30 @@ await videoStore.fetchVideos()
 // 修改後
 await videoStore.fetchAllVideos()
 ```
+
+**修改位置 2：** 第 410 行（onMounted 生命週期中）
+
+```javascript
+// 修改前
+onMounted(async () => {
+  await fetchPlaylists()
+  // 載入影片數據以顯示「所有影片」播放清單
+  if (!videoStore.videos || videoStore.videos.length === 0) {
+    await videoStore.fetchVideos()  // ❌ 只載入第一頁
+  }
+})
+
+// 修改後
+onMounted(async () => {
+  await fetchPlaylists()
+  // 載入所有影片數據以顯示「所有影片」播放清單
+  if (!videoStore.videos || videoStore.videos.length === 0) {
+    await videoStore.fetchAllVideos()  // ✅ 載入所有頁面
+  }
+})
+```
+
+> **重要：** 這個修改是關鍵！onMounted 時載入的影片數量會直接影響「所有影片」播放清單顯示的 item_count。之前這裡只載入 20 筆，導致即使有 100+ 影片，顯示數量也只有 20。
 
 #### 3. PlaylistDetail.vue - 更新為使用 fetchAllVideos()
 
@@ -231,6 +255,43 @@ await videoStore.fetchAllVideos()
 * 6e28b03 feat: 添加路由守衛以處理離開頁面時的播放器狀態轉移至懸浮視窗
 ```
 
+## 追加修正（2025-11-11）
+
+### 問題發現
+在初次實作後發現，「所有影片」播放清單的數量顯示仍然只有 20，並非所有影片庫的總數。
+
+### 根本原因
+問題出在 `PlaylistManager.vue` 的 `onMounted` 生命週期函數中（第 410 行），這裡使用的是 `fetchVideos()` 而不是 `fetchAllVideos()`。
+
+**流程說明：**
+1. 使用者進入 `/playlists` 頁面
+2. `onMounted` 觸發，呼叫 `fetchVideos()` → 只載入 20 筆影片到 videoStore
+3. 「所有影片」播放清單的 `item_count` 計算自 `videoStore.videos?.length` → 顯示為 20
+4. 即使點擊播放時有正確使用 `fetchAllVideos()`，但顯示的數量已經固定為 20
+
+### 修正方式
+將 `onMounted` 中的 `fetchVideos()` 改為 `fetchAllVideos()`：
+
+```javascript
+// frontend/src/views/PlaylistManager.vue 第 410 行
+onMounted(async () => {
+  await fetchPlaylists()
+  if (!videoStore.videos || videoStore.videos.length === 0) {
+    await videoStore.fetchAllVideos()  // ✅ 改用這個
+  }
+})
+```
+
+### 影響範圍
+這個修正確保：
+- ✅ 進入播放清單頁面時，就會載入所有影片
+- ✅ 「所有影片」的數量顯示正確（例如 100 而不是 20）
+- ✅ 點擊播放時不需要再重新載入（因為已經有完整資料）
+
+### API 請求變化
+- **修正前：** 進入頁面 → 請求 `/api/videos?page=1&per_page=20` → 只有 20 筆
+- **修正後：** 進入頁面 → 循環請求所有頁面 → 獲得完整資料
+
 ## 總結
 
 成功完成以下操作：
@@ -238,6 +299,7 @@ await videoStore.fetchAllVideos()
 - ✅ 回退到指定 commit（172027b）
 - ✅ 拉取遠端最新代碼（356102f）
 - ✅ 重新套用 fetchAllVideos 功能
+- ✅ 修正 onMounted 中的 API 調用（追加修正）
 - ✅ 驗證修改內容正確
 
 所有步驟執行順利，無衝突，功能已準備好進行測試和 commit。

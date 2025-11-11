@@ -405,9 +405,9 @@ const cancelImport = () => {
 
 onMounted(async () => {
   await fetchPlaylists()
-  // 載入影片數據以顯示「所有影片」播放清單
+  // 載入所有影片數據以顯示「所有影片」播放清單
   if (!videoStore.videos || videoStore.videos.length === 0) {
-    await videoStore.fetchVideos()
+    await videoStore.fetchAllVideos()
   }
 })
 </script>
