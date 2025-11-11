@@ -45,7 +45,7 @@
 
       <!-- 錯誤訊息 -->
       <ErrorMessage
-        :message="errorMessage"
+        :message="player.errorMessage.value"
         @close="clearError"
       />
 
@@ -128,54 +128,57 @@
         </div>
       </div>
 
-      <!-- 播放器區域 - 容器始終存在 -->
-      <div class="player-section">
-        <!-- 嵌入模式播放器容器 - 始終保留在 DOM 中供 Teleport 使用 -->
-        <div id="embedded-player-target"></div>
+      <!-- 影片播放器 -->
+      <VideoPlayer
+        v-if="hasVideo"
+        :is-loading="isLoading"
+        :is-ready="player.isReady.value"
+        :is-playing="player.isPlaying.value"
+        :is-paused="player.isPaused.value"
+        :is-buffering="player.isBuffering.value"
+      />
 
-        <!-- 有影片時顯示控制項 -->
-        <template v-if="globalPlayerStore.isVisible">
-          <!-- 播放控制 -->
-          <PlayerControls
-            :is-playing="globalPlayerStore.isPlaying"
-            :is-paused="!globalPlayerStore.isPlaying"
-            :volume="globalPlayerStore.volume"
-            :is-muted="globalPlayerStore.isMuted"
-            @play="globalPlayerStore.play"
-            @pause="globalPlayerStore.pause"
-            @volume-change="globalPlayerStore.setVolume"
-            @mute-toggle="globalPlayerStore.toggleMute"
-          />
+      <!-- 播放控制 -->
+      <PlayerControls
+        v-if="hasVideo && player.isReady.value"
+        :is-playing="player.isPlaying.value"
+        :is-paused="player.isPaused.value"
+        :volume="player.volume.value"
+        :is-muted="player.isMuted.value"
+        @play="player.play"
+        @pause="player.pause"
+        @volume-change="handleVolumeChange"
+        @mute-toggle="player.toggleMute"
+      />
 
-          <!-- 儲存影片操作 -->
-          <SaveVideoActions
-            v-if="globalPlayerStore.currentVideo"
-            :get-video-info="getGlobalVideoInfo"
-          />
+      <!-- 儲存影片操作 -->
+      <SaveVideoActions
+        v-if="hasVideo && player.isReady.value"
+        :get-video-info="getVideoInfo"
+      />
 
-          <!-- 循環播放控制 -->
-          <LoopToggle
-            :is-enabled="globalPlayerStore.loopMode === 'single'"
-            @toggle="globalPlayerStore.toggleLoopMode"
-          />
-        </template>
+      <!-- 循環播放控制 -->
+      <LoopToggle
+        v-if="hasVideo"
+        :is-enabled="player.loopEnabled.value"
+        @toggle="handleLoopToggle"
+      />
 
-        <!-- 無影片時顯示歡迎訊息 -->
-        <div v-else-if="!isLoading" class="welcome-message">
-          <div class="welcome-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
-            </svg>
-          </div>
-          <h2 class="welcome-title">歡迎使用 YouTube Loop Player</h2>
-          <p class="welcome-text">
-            在上方輸入框貼上 YouTube 影片或播放清單網址，即可開始自動循環播放
-          </p>
+      <!-- 初始狀態提示 -->
+      <div v-if="!hasVideo && !isLoading" class="welcome-message">
+        <div class="welcome-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
+          </svg>
         </div>
+        <h2 class="welcome-title">歡迎使用 YouTube Loop Player</h2>
+        <p class="welcome-text">
+          在上方輸入框貼上 YouTube 影片或播放清單網址，即可開始自動循環播放
+        </p>
       </div>
 
       <!-- 訪客播放歷史 -->
@@ -194,12 +197,15 @@
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UrlInput from '../components/UrlInput.vue'
+import VideoPlayer from '../components/VideoPlayer.vue'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import PlayerControls from '../components/PlayerControls.vue'
 import LoopToggle from '../components/LoopToggle.vue'
 import SaveVideoActions from '../components/SaveVideoActions.vue'
 import GuestHistory from '../components/GuestHistory.vue'
 import { useUrlParser } from '../composables/useUrlParser'
+import { useYouTubePlayer } from '../composables/useYouTubePlayer'
+import { useLocalStorage } from '../composables/useLocalStorage'
 import { useGlobalPlayerStore } from '../stores/globalPlayerStore'
 import { useGuestHistory } from '../composables/useGuestHistory'
 import { useAuthStore } from '../stores/auth'
@@ -210,10 +216,10 @@ const router = useRouter()
 
 // 狀態管理
 const isLoading = ref(false)
+const hasVideo = ref(false)
 const apiReady = ref(false)
 const showAuthRequiredMessage = ref(false)
 const showSessionExpiredMessage = ref(false)
-const errorMessage = ref('')
 
 // DEBUG 模式相關
 const debugMode = ref(false) // 預設關閉 DEBUG 模式，需要時可改為 true
@@ -223,25 +229,56 @@ const hasAccessTokenCookie = ref(false)
 const apiUrl = import.meta.env.VITE_API_URL || '/api'
 const authMode = import.meta.env.VITE_AUTH_MODE || 'line'
 
+// 從 LocalStorage 載入用戶偏好設定
+const settingsStorage = useLocalStorage('youtube-loop-player-settings', {
+  loopEnabled: true,
+  volume: 100,
+  isMuted: false
+})
+
 // Composables
 const parser = useUrlParser()
+const player = useYouTubePlayer('youtube-player', {
+  loopEnabled: settingsStorage.value?.loopEnabled ?? true,
+  volume: settingsStorage.value?.volume ?? 100,
+  isMuted: settingsStorage.value?.isMuted ?? false
+})
 const globalPlayerStore = useGlobalPlayerStore()
 const guestHistory = useGuestHistory()
 const authStore = useAuthStore()
 
-// 計算屬性：根據 globalPlayerStore 判斷是否有影片
-const hasVideo = computed(() => globalPlayerStore.isVisible && globalPlayerStore.currentVideo !== null)
+// 監聽設定變化，自動保存到 LocalStorage
+watch(() => player.loopEnabled.value, (newValue) => {
+  settingsStorage.value = {
+    ...settingsStorage.value,
+    loopEnabled: newValue
+  }
+})
+
+watch(() => player.volume.value, (newValue) => {
+  settingsStorage.value = {
+    ...settingsStorage.value,
+    volume: newValue
+  }
+})
+
+watch(() => player.isMuted.value, (newValue) => {
+  settingsStorage.value = {
+    ...settingsStorage.value,
+    isMuted: newValue
+  }
+})
 
 // 監聽播放狀態，自動記錄到訪客歷史
-watch(() => globalPlayerStore.isPlaying, (isNowPlaying) => {
-  if (isNowPlaying && globalPlayerStore.currentVideo) {
-    // 當影片開始播放時，加入歷史記錄
-    const videoInfo = globalPlayerStore.currentVideo
-    if (videoInfo && videoInfo.video_id) {
+watch(() => player.isPlaying.value, (isNowPlaying) => {
+  if (isNowPlaying && player.isReady.value) {
+    // 當影片開始播放時，取得影片資訊並加入歷史記錄
+    const videoInfo = player.getCurrentVideoInfo()
+    if (videoInfo && videoInfo.videoId) {
       guestHistory.addToHistory({
-        videoId: videoInfo.video_id,
+        videoId: videoInfo.videoId,
         title: videoInfo.title,
-        thumbnail: videoInfo.thumbnail_url
+        thumbnail: videoInfo.thumbnail
       })
     }
   }
@@ -293,60 +330,122 @@ async function handleUrlSubmit(url) {
 
   isLoading.value = true
 
-  try {
-    // 只取影片 ID（已經在 parser 中排除 list 參數）
-    if (parser.videoId.value) {
-      // 先設為嵌入模式
-      globalPlayerStore.setDisplayMode('embedded')
-      console.log('已設置 displayMode 為 embedded')
-
-      // 等待 DOM 更新
-      await nextTick()
-
-      // 使用 globalPlayerStore 播放影片
-      globalPlayerStore.playVideo({
-        video_id: parser.videoId.value,
-        title: '載入中...',
-        youtube_url: url,
-        thumbnail_url: `https://img.youtube.com/vi/${parser.videoId.value}/hqdefault.jpg`,
-        duration: 0,
-        channel_name: ''
-      })
-
-      console.log('影片已加入 FloatingPlayer:', parser.videoId.value, 'displayMode:', globalPlayerStore.displayMode)
+  // 步驟 1: 確保 API 已載入
+  if (!apiReady.value) {
+    try {
+      await loadYouTubeAPI()
+    } catch (error) {
+      console.error('Failed to load YouTube API:', error)
+      player.errorMessage.value = '無法載入 YouTube 播放器，請檢查網路連線'
+      isLoading.value = false
+      return
     }
-  } catch (error) {
-    console.error('播放影片時發生錯誤:', error)
-  } finally {
-    isLoading.value = false
   }
+
+  // 步驟 2: 確保 DOM 元素存在
+  hasVideo.value = true
+  await nextTick()
+  await new Promise(resolve => setTimeout(resolve, 200))
+
+  // 步驟 3: 初始化播放器（如果尚未初始化）
+  if (!player.isReady.value) {
+    const initSuccess = player.initPlayer()
+    if (!initSuccess) {
+      player.errorMessage.value = '無法初始化播放器，請重新整理頁面'
+      isLoading.value = false
+      hasVideo.value = false
+      return
+    }
+
+    // 步驟 4: 等待播放器就緒
+    const maxWaitTime = 10000
+    const startTime = Date.now()
+
+    await new Promise((resolve, reject) => {
+      const checkInterval = setInterval(() => {
+        if (player.isReady.value) {
+          clearInterval(checkInterval)
+          resolve()
+        } else if (Date.now() - startTime > maxWaitTime) {
+          clearInterval(checkInterval)
+          reject(new Error('播放器初始化超時'))
+        }
+      }, 100)
+    }).catch(error => {
+      console.error('Player initialization timeout:', error)
+      player.errorMessage.value = '播放器初始化超時，請重新整理頁面'
+      isLoading.value = false
+      hasVideo.value = false
+      throw error
+    })
+  }
+
+  // 步驟 5: 載入內容
+  await loadContent()
+}
+
+/**
+ * 載入影片或播放清單
+ */
+async function loadContent() {
+  // 優先載入播放清單
+  if (parser.playlistId.value) {
+    player.loadPlaylist(parser.playlistId.value)
+  } else if (parser.videoId.value) {
+    player.loadVideo(parser.videoId.value)
+  }
+
+  isLoading.value = false
 }
 
 /**
  * 清除錯誤訊息
  */
 function clearError() {
-  errorMessage.value = ''
+  player.errorMessage.value = ''
+  player.hasError.value = false
+}
+
+/**
+ * 處理循環播放切換
+ * @param {boolean} enabled - 是否啟用循環
+ */
+function handleLoopToggle(enabled) {
+  player.setLoop(enabled)
+}
+
+/**
+ * 處理音量變化
+ * @param {number} volume - 新的音量值（0-100）
+ */
+function handleVolumeChange(volume) {
+  console.log('音量變更請求:', volume)
+  console.log('播放器就緒狀態:', player.isReady.value)
+  console.log('當前靜音狀態:', player.isMuted.value)
+
+  // 檢查播放器是否就緒
+  if (!player.isReady.value) {
+    console.warn('播放器尚未就緒，無法更改音量')
+    return
+  }
+
+  // 如果正在靜音，調整音量時自動取消靜音
+  if (player.isMuted.value && volume > 0) {
+    console.log('自動取消靜音')
+    player.unmute()
+  }
+
+  // 設置音量
+  player.setVolume(volume)
+  console.log('音量已設置為:', volume)
 }
 
 /**
  * 取得當前影片資訊（供 SaveVideoActions 使用）
  * @returns {Object|null} 影片資訊
  */
-function getGlobalVideoInfo() {
-  if (!globalPlayerStore.currentVideo) {
-    return null
-  }
-
-  const video = globalPlayerStore.currentVideo
-  return {
-    videoId: video.video_id,
-    title: video.title,
-    author: video.channel_name || '',
-    duration: video.duration || 0,
-    thumbnail: video.thumbnail_url,
-    youtubeUrl: video.youtube_url
-  }
+function getVideoInfo() {
+  return player.getCurrentVideoInfo()
 }
 
 /**
@@ -551,12 +650,12 @@ onMounted(async () => {
             hasAccessToken: hasAccessTokenCookie.value
           }
         })
-        errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
+        player.errorMessage.value = '登入成功但認證檢查失敗，請重新整理頁面'
       }
     } else if (loginStatus === 'cancelled') {
-      errorMessage.value = message || '您已取消 LINE 登入'
+      player.errorMessage.value = message || '您已取消 LINE 登入'
     } else if (loginStatus === 'error') {
-      errorMessage.value = message || '登入失敗，請重試'
+      player.errorMessage.value = message || '登入失敗，請重試'
     }
 
     // 清除 query 參數
@@ -620,19 +719,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-/* 播放器區域 */
-.player-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* 嵌入播放器目標容器 */
-#embedded-player-target {
-  /* 容器本身不需要額外樣式，讓 Teleport 的內容決定佈局 */
-  width: 100%;
 }
 
 /* 認證提示訊息 */

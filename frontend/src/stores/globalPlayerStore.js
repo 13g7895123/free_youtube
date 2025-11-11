@@ -9,7 +9,6 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
   const currentIndex = ref(0)
   const isMinimized = ref(false)
   const isVisible = ref(false)
-  const displayMode = ref('embedded') // 'embedded' | 'floating'
   const loopMode = ref('playlist') // 'playlist' | 'single' | 'all'
   const shuffleEnabled = ref(false)
 
@@ -138,17 +137,6 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     isMinimized.value = false
   }
 
-  const show = () => {
-    isVisible.value = true
-  }
-
-  const setDisplayMode = (mode) => {
-    if (mode === 'embedded' || mode === 'floating') {
-      displayMode.value = mode
-      console.log('Display mode changed to:', mode)
-    }
-  }
-
   const close = () => {
     isVisible.value = false
     isPlaying.value = false
@@ -210,7 +198,6 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     currentIndex,
     isMinimized,
     isVisible,
-    displayMode,
     loopMode,
     shuffleEnabled,
     playerStatus,
@@ -230,8 +217,6 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
     previous,
     minimize,
     maximize,
-    show,
-    setDisplayMode,
     close,
     clear,
     toggleLoopMode,
