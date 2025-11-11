@@ -170,8 +170,8 @@ onMounted(async () => {
   try {
     // 特殊處理「所有影片」系統播放清單
     if (playlistId === 'all-videos') {
-      // 從 videoStore 獲取所有影片
-      await videoStore.fetchVideos()
+      // 從 videoStore 獲取所有影片（不限於第一頁）
+      await videoStore.fetchAllVideos()
 
       playlist.value = {
         id: 'all-videos',

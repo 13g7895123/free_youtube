@@ -305,9 +305,9 @@ const handlePlayPlaylist = async (playlist) => {
   try {
     // 特殊處理「所有影片」系統播放清單
     if (playlist.id === 'all-videos') {
-      // 從 videoStore 獲取所有影片
+      // 從 videoStore 獲取所有影片（不限於第一頁）
       if (!videoStore.videos || videoStore.videos.length === 0) {
-        await videoStore.fetchVideos()
+        await videoStore.fetchAllVideos()
       }
 
       // 將 videos 轉換為 playlist items 格式

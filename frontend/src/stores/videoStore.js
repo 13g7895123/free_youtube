@@ -44,6 +44,51 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  /**
+   * 獲取所有影片（不限於單頁）
+   * 會循環請求所有頁面直到獲取完整的影片庫
+   */
+  const fetchAllVideos = async () => {
+    loading.value = true
+    error.value = null
+    let allVideos = []
+    let page = 1
+
+    try {
+      // 循環請求直到獲取所有頁面
+      while (true) {
+        const response = await videoService.getVideos(page, perPage.value)
+        const pageVideos = response.data.data
+
+        // 如果當前頁沒有資料，代表已經到最後一頁
+        if (!pageVideos || pageVideos.length === 0) {
+          break
+        }
+
+        allVideos = [...allVideos, ...pageVideos]
+
+        // 檢查是否還有下一頁
+        const totalCount = response.data.pagination?.total || 0
+        const totalPages = Math.ceil(totalCount / perPage.value)
+
+        if (page >= totalPages) {
+          break
+        }
+
+        page++
+      }
+
+      videos.value = allVideos
+      total.value = allVideos.length
+      currentPage.value = 1 // 重置為第一頁
+    } catch (err) {
+      error.value = err.message || '無法載入所有影片'
+      console.error('Error fetching all videos:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   const searchVideos = async (query) => {
     if (query.length < 2) {
       videos.value = []
@@ -280,6 +325,7 @@ export const useVideoStore = defineStore('video', () => {
     filteredVideos,
     totalPages,
     fetchVideos,
+    fetchAllVideos,
     searchVideos,
     getVideo,
     createVideo,
