@@ -255,7 +255,7 @@ await videoStore.fetchAllVideos()
 * 6e28b03 feat: 添加路由守衛以處理離開頁面時的播放器狀態轉移至懸浮視窗
 ```
 
-## 追加修正（2025-11-11）
+## 追加修正 #1（2025-11-11）
 
 ### 問題發現
 在初次實作後發現，「所有影片」播放清單的數量顯示仍然只有 20，並非所有影片庫的總數。
@@ -292,6 +292,137 @@ onMounted(async () => {
 - **修正前：** 進入頁面 → 請求 `/api/videos?page=1&per_page=20` → 只有 20 筆
 - **修正後：** 進入頁面 → 循環請求所有頁面 → 獲得完整資料
 
+---
+
+## 追加修正 #2（2025-11-11）
+
+### 問題發現
+修正 #1 完成後，發現當使用者從播放清單頁面切換到影片庫頁面再回來時，「所有影片」的數量又會變回 20。
+
+### 根本原因
+問題在於 `videoStore.videos` 被多個頁面共用：
+
+**問題流程：**
+1. 進入 `/playlists` → `fetchAllVideos()` → `videoStore.videos` = 100 筆 ✅
+2. 切換到 `/library` → `fetchVideos(1)` → `videoStore.videos` = 20 筆（第一頁）❌
+3. 切回 `/playlists` → `allVideosPlaylist.item_count` = `videoStore.videos.length` = 20 ❌
+
+**衝突原因：**
+- `PlaylistManager.vue` 需要所有影片（用於顯示總數）
+- `VideoLibrary.vue` 需要分頁影片（用於瀏覽和分頁）
+- 兩者共用同一個 `videoStore.videos`，導致互相覆蓋
+
+### 解決方案
+採用**方案 B：videoStore 維護兩個獨立狀態**
+
+在 `videoStore` 中新增 `allVideos` 狀態，與原有的 `videos` 分開管理：
+- `videos`：分頁影片資料（供 VideoLibrary 使用）
+- `allVideos`：所有影片資料（供 PlaylistManager 使用）
+
+### 修改細節
+
+#### 1. videoStore.js - 新增 allVideos 狀態
+
+```javascript
+// State
+const videos = ref([]) // 分頁影片（用於 VideoLibrary）
+const allVideos = ref([]) // 所有影片（用於播放清單）
+```
+
+#### 2. videoStore.js - 修改 fetchAllVideos 儲存位置
+
+```javascript
+const fetchAllVideos = async () => {
+  // ... 循環請求邏輯 ...
+
+  // 儲存到 allVideos，不影響 videos
+  allVideos.value = tempAllVideos  // ✅ 改為儲存到 allVideos
+}
+```
+
+並在 return 中導出：
+```javascript
+return {
+  videos,
+  allVideos,  // ✅ 新增導出
+  // ... 其他導出
+}
+```
+
+#### 3. PlaylistManager.vue - 使用 allVideos
+
+**三處修改：**
+
+1. `allVideosPlaylist` computed（第 241 行）：
+```javascript
+const allVideosPlaylist = computed(() => ({
+  // ...
+  item_count: videoStore.allVideos?.length || 0,  // ✅ 改用 allVideos
+}))
+```
+
+2. `allPlaylists` computed（第 249 行）：
+```javascript
+const allPlaylists = computed(() => {
+  const hasVideos = videoStore.allVideos && videoStore.allVideos.length > 0  // ✅
+  // ...
+})
+```
+
+3. `handlePlayPlaylist` 函數（第 309-314 行）：
+```javascript
+if (playlist.id === 'all-videos') {
+  if (!videoStore.allVideos || videoStore.allVideos.length === 0) {  // ✅
+    await videoStore.fetchAllVideos()
+  }
+  const items = (videoStore.allVideos || []).map(...)  // ✅
+}
+```
+
+4. `onMounted` 生命週期（第 409 行）：
+```javascript
+if (!videoStore.allVideos || videoStore.allVideos.length === 0) {  // ✅
+  await videoStore.fetchAllVideos()
+}
+```
+
+#### 4. PlaylistDetail.vue - 使用 allVideos
+
+**兩處修改：**
+
+1. playlist.value（第 180 行）：
+```javascript
+playlist.value = {
+  // ...
+  item_count: videoStore.allVideos?.length || 0,  // ✅
+}
+```
+
+2. items.value（第 187 行）：
+```javascript
+items.value = (videoStore.allVideos || []).map(...)  // ✅
+```
+
+### 修正效果
+
+**現在的資料流：**
+- `/playlists` 頁面 → 使用 `videoStore.allVideos`（完整資料）
+- `/library` 頁面 → 使用 `videoStore.videos`（分頁資料）
+- 兩者互不干擾 ✅
+
+**測試場景：**
+1. 進入 `/playlists` → 顯示 100 筆 ✅
+2. 切換到 `/library` → 顯示第 1 頁（20 筆）✅
+3. 切回 `/playlists` → 仍然顯示 100 筆 ✅
+4. 在 `/library` 切換到第 2 頁 → 顯示第 2 頁（20 筆）✅
+5. 再切回 `/playlists` → 仍然顯示 100 筆 ✅
+
+### 優勢
+- ✅ 資料不會互相覆蓋
+- ✅ 各頁面功能獨立運作
+- ✅ 無需重複請求 API
+- ✅ 程式碼清晰易維護
+
 ## 總結
 
 成功完成以下操作：
@@ -299,7 +430,20 @@ onMounted(async () => {
 - ✅ 回退到指定 commit（172027b）
 - ✅ 拉取遠端最新代碼（356102f）
 - ✅ 重新套用 fetchAllVideos 功能
-- ✅ 修正 onMounted 中的 API 調用（追加修正）
+- ✅ 修正 #1：onMounted 中的 API 調用
+- ✅ 修正 #2：實作 videos/allVideos 雙狀態系統
 - ✅ 驗證修改內容正確
 
+### 最終修改檔案
+- `frontend/src/stores/videoStore.js` - 新增 allVideos 狀態和修改 fetchAllVideos
+- `frontend/src/views/PlaylistManager.vue` - 改用 allVideos（4 處修改）
+- `frontend/src/views/PlaylistDetail.vue` - 改用 allVideos（2 處修改）
+
 所有步驟執行順利，無衝突，功能已準備好進行測試和 commit。
+
+### 測試檢查清單
+- [ ] 進入播放清單頁面，確認「所有影片」數量正確
+- [ ] 切換到影片庫頁面，確認分頁功能正常
+- [ ] 切回播放清單頁面，確認「所有影片」數量不變
+- [ ] 點擊播放「所有影片」，確認所有影片都能播放
+- [ ] 在影片庫切換頁面，確認不影響播放清單

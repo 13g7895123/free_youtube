@@ -238,7 +238,7 @@ const allVideosPlaylist = computed(() => ({
   id: 'all-videos',
   name: '所有影片',
   description: '影片庫中的所有影片',
-  item_count: videoStore.videos?.length || 0,
+  item_count: videoStore.allVideos?.length || 0,
   is_active: true,
   is_system: true, // 標記為系統播放清單
   created_at: new Date().toISOString()
@@ -246,7 +246,7 @@ const allVideosPlaylist = computed(() => ({
 
 // 合併系統播放清單和使用者播放清單
 const allPlaylists = computed(() => {
-  const hasVideos = videoStore.videos && videoStore.videos.length > 0
+  const hasVideos = videoStore.allVideos && videoStore.allVideos.length > 0
   if (hasVideos) {
     return [allVideosPlaylist.value, ...playlists.value]
   }
@@ -306,12 +306,12 @@ const handlePlayPlaylist = async (playlist) => {
     // 特殊處理「所有影片」系統播放清單
     if (playlist.id === 'all-videos') {
       // 從 videoStore 獲取所有影片（不限於第一頁）
-      if (!videoStore.videos || videoStore.videos.length === 0) {
+      if (!videoStore.allVideos || videoStore.allVideos.length === 0) {
         await videoStore.fetchAllVideos()
       }
 
-      // 將 videos 轉換為 playlist items 格式
-      const items = (videoStore.videos || []).map((video, index) => ({
+      // 將 allVideos 轉換為 playlist items 格式
+      const items = (videoStore.allVideos || []).map((video, index) => ({
         id: `all-videos-item-${video.id}`,
         video_id: video.video_id || video.id,
         title: video.title,
@@ -406,7 +406,7 @@ const cancelImport = () => {
 onMounted(async () => {
   await fetchPlaylists()
   // 載入所有影片數據以顯示「所有影片」播放清單
-  if (!videoStore.videos || videoStore.videos.length === 0) {
+  if (!videoStore.allVideos || videoStore.allVideos.length === 0) {
     await videoStore.fetchAllVideos()
   }
 })

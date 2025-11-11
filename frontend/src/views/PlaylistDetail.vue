@@ -177,14 +177,14 @@ onMounted(async () => {
         id: 'all-videos',
         name: '所有影片',
         description: '影片庫中的所有影片',
-        item_count: videoStore.videos?.length || 0,
+        item_count: videoStore.allVideos?.length || 0,
         is_active: true,
         is_system: true,
         created_at: new Date().toISOString()
       }
 
-      // 將 videos 轉換為 playlist items 格式
-      items.value = (videoStore.videos || []).map((video, index) => ({
+      // 將 allVideos 轉換為 playlist items 格式
+      items.value = (videoStore.allVideos || []).map((video, index) => ({
         id: `all-videos-item-${video.id}`,
         video_id: video.video_id || video.id,
         title: video.title,

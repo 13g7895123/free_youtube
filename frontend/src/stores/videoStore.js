@@ -4,7 +4,8 @@ import { videoService } from '@/services/api'
 
 export const useVideoStore = defineStore('video', () => {
   // State
-  const videos = ref([])
+  const videos = ref([]) // 分頁影片（用於 VideoLibrary）
+  const allVideos = ref([]) // 所有影片（用於播放清單）
   const selectedVideo = ref(null)
   const loading = ref(false)
   const error = ref(null)
@@ -47,11 +48,12 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 獲取所有影片（不限於單頁）
    * 會循環請求所有頁面直到獲取完整的影片庫
+   * 資料會儲存在 allVideos 中，不影響 videos（分頁資料）
    */
   const fetchAllVideos = async () => {
     loading.value = true
     error.value = null
-    let allVideos = []
+    let tempAllVideos = []
     let page = 1
 
     try {
@@ -65,7 +67,7 @@ export const useVideoStore = defineStore('video', () => {
           break
         }
 
-        allVideos = [...allVideos, ...pageVideos]
+        tempAllVideos = [...tempAllVideos, ...pageVideos]
 
         // 檢查是否還有下一頁
         const totalCount = response.data.pagination?.total || 0
@@ -78,9 +80,8 @@ export const useVideoStore = defineStore('video', () => {
         page++
       }
 
-      videos.value = allVideos
-      total.value = allVideos.length
-      currentPage.value = 1 // 重置為第一頁
+      // 儲存到 allVideos，不影響 videos
+      allVideos.value = tempAllVideos
     } catch (err) {
       error.value = err.message || '無法載入所有影片'
       console.error('Error fetching all videos:', err)
@@ -315,6 +316,7 @@ export const useVideoStore = defineStore('video', () => {
 
   return {
     videos,
+    allVideos,
     selectedVideo,
     loading,
     error,
