@@ -1,12 +1,9 @@
 <template>
-  <!-- 動態容器：根據 displayMode 決定是否使用 Teleport -->
-  <component
-    :is="playerStore.displayMode === 'floating' ? 'Teleport' : 'div'"
-    :to="playerStore.displayMode === 'floating' ? 'body' : undefined"
-  >
+  <!-- 動態容器：根據 displayMode 決定 Teleport 目標 -->
+  <Teleport :to="teleportTarget">
     <div v-if="playerStore.isVisible && playerStore.currentVideo"
          :class="[
-           playerStore.displayMode === 'floating' ? 'floating-player-container' : 'embedded-player-container'
+           actualDisplayMode === 'floating' ? 'floating-player-container' : 'embedded-player-container'
          ]">
       <!-- Minimized View -->
       <div v-show="playerStore.isMinimized" class="floating-player minimized" role="region" aria-label="播放器控制">
@@ -117,6 +114,15 @@
           <h3>{{ playerStore.currentVideo.title }}</h3>
           <div class="header-actions">
             <button
+              @click="toggleDisplayMode"
+              class="btn-icon"
+              :class="{ 'active': playerStore.displayMode === 'floating' }"
+              v-tooltip="playerStore.displayMode === 'floating' ? '切換為嵌入模式' : '切換為懸浮模式'"
+              :aria-label="playerStore.displayMode === 'floating' ? '切換為嵌入模式' : '切換為懸浮模式'"
+            >
+              <RectangleStackIcon class="icon-sm" />
+            </button>
+            <button
               @click="toggleFullscreen"
               class="btn-icon"
               v-tooltip="isFullscreen ? '退出滿版' : '滿版'"
@@ -146,8 +152,8 @@
         <div class="player-body">
           <div id="floating-youtube-player" class="youtube-container"></div>
         </div>
-        <!-- 音量控制區域 - 放在影片下方 -->
-        <div class="volume-control-section">
+        <!-- 音量控制區域 - 放在影片下方（僅在懸浮模式顯示） -->
+        <div v-if="actualDisplayMode === 'floating'" class="volume-control-section">
           <button
             @click.stop="playerStore.toggleMute"
             class="btn-volume"
@@ -172,7 +178,8 @@
           />
           <span class="volume-value">{{ playerStore.volume }}%</span>
         </div>
-        <div class="player-controls">
+        <!-- 播放控制區域（僅在懸浮模式顯示） -->
+        <div v-if="actualDisplayMode === 'floating'" class="player-controls">
           <!-- 播放列表控制 -->
           <template v-if="playerStore.hasPlaylist">
             <div class="playback-controls">
@@ -246,11 +253,11 @@
         </div>
       </div>
     </div>
-  </component>
+  </Teleport>
 </template>
 
 <script setup>
-import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
+import { watch, onMounted, onUnmounted, nextTick, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGlobalPlayerStore } from '@/stores/globalPlayerStore'
 import {
@@ -267,25 +274,35 @@ import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
   SpeakerWaveIcon,
-  SpeakerXMarkIcon
+  SpeakerXMarkIcon,
+  RectangleStackIcon
 } from '@heroicons/vue/24/solid'
 
 const route = useRoute()
 const playerStore = useGlobalPlayerStore()
 const isFullscreen = ref(false)
 
-// 監聽路由變化，自動切換顯示模式
-watch(() => route.path, (newPath) => {
-  if (playerStore.isVisible) {
-    if (newPath === '/') {
-      // 在首頁時，使用嵌入模式
-      playerStore.setDisplayMode('embedded')
-    } else {
-      // 在其他頁面時，使用懸浮模式
-      playerStore.setDisplayMode('floating')
-    }
+// 計算 Teleport 目標，確保在非首頁時強制使用 floating 模式
+const teleportTarget = computed(() => {
+  // 如果不在首頁，強制使用 floating 模式
+  if (route.path !== '/' && playerStore.displayMode === 'embedded') {
+    console.log('FloatingPlayer: Not on home page, forcing floating mode')
+    return 'body'
   }
-}, { immediate: true })
+  const target = playerStore.displayMode === 'floating' ? 'body' : '#embedded-player-target'
+  console.log('FloatingPlayer: teleportTarget =', target, 'displayMode =', playerStore.displayMode, 'route =', route.path)
+  return target
+})
+
+// 計算實際使用的顯示模式（考慮路由）
+const actualDisplayMode = computed(() => {
+  if (route.path !== '/' && playerStore.displayMode === 'embedded') {
+    return 'floating'
+  }
+  const mode = playerStore.displayMode
+  console.log('FloatingPlayer: actualDisplayMode =', mode)
+  return mode
+})
 
 // Debug logging
 watch(() => playerStore.isVisible, (val) => {
@@ -321,6 +338,12 @@ const disposePlayerInstance = () => {
 // 全螢幕切換
 const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
+}
+
+// 切換顯示模式
+const toggleDisplayMode = () => {
+  const newMode = playerStore.displayMode === 'floating' ? 'embedded' : 'floating'
+  playerStore.setDisplayMode(newMode)
 }
 
 // 載入 YouTube IFrame API
@@ -684,17 +707,27 @@ onUnmounted(() => {
 .embedded-player-container {
   width: 100%;
   max-width: 1200px;
-  margin: 1.5rem auto;
+  margin: 0 auto;
 }
 
 .embedded-player-container .floating-player {
   width: 100%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
 }
 
 .embedded-player-container .floating-player .player-body {
-  height: 600px;
-  max-height: 70vh;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 比例 */
+  position: relative;
+}
+
+.embedded-player-container .floating-player .player-body .youtube-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* Hidden player for minimized mode */
@@ -910,6 +943,16 @@ onUnmounted(() => {
 
 .btn-icon:active {
   transform: scale(0.95);
+}
+
+.btn-icon.active {
+  background: var(--color-info);
+  color: white;
+}
+
+.btn-icon.active:hover {
+  background: var(--color-info-dark);
+  color: white;
 }
 
 .btn-icon .icon-sm {

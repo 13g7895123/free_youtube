@@ -128,50 +128,54 @@
         </div>
       </div>
 
-      <!-- FloatingPlayer 會在這裡以嵌入模式顯示 -->
-      <!-- 實際渲染由 FloatingPlayer 組件控制 -->
+      <!-- 播放器區域 - 容器始終存在 -->
+      <div class="player-section">
+        <!-- 嵌入模式播放器容器 - 始終保留在 DOM 中供 Teleport 使用 -->
+        <div id="embedded-player-target"></div>
 
-      <!-- 播放控制 -->
-      <PlayerControls
-        v-if="globalPlayerStore.isVisible"
-        :is-playing="globalPlayerStore.isPlaying"
-        :is-paused="!globalPlayerStore.isPlaying"
-        :volume="globalPlayerStore.volume"
-        :is-muted="globalPlayerStore.isMuted"
-        @play="globalPlayerStore.play"
-        @pause="globalPlayerStore.pause"
-        @volume-change="globalPlayerStore.setVolume"
-        @mute-toggle="globalPlayerStore.toggleMute"
-      />
+        <!-- 有影片時顯示控制項 -->
+        <template v-if="globalPlayerStore.isVisible">
+          <!-- 播放控制 -->
+          <PlayerControls
+            :is-playing="globalPlayerStore.isPlaying"
+            :is-paused="!globalPlayerStore.isPlaying"
+            :volume="globalPlayerStore.volume"
+            :is-muted="globalPlayerStore.isMuted"
+            @play="globalPlayerStore.play"
+            @pause="globalPlayerStore.pause"
+            @volume-change="globalPlayerStore.setVolume"
+            @mute-toggle="globalPlayerStore.toggleMute"
+          />
 
-      <!-- 儲存影片操作 -->
-      <SaveVideoActions
-        v-if="globalPlayerStore.isVisible && globalPlayerStore.currentVideo"
-        :get-video-info="getGlobalVideoInfo"
-      />
+          <!-- 儲存影片操作 -->
+          <SaveVideoActions
+            v-if="globalPlayerStore.currentVideo"
+            :get-video-info="getGlobalVideoInfo"
+          />
 
-      <!-- 循環播放控制 -->
-      <LoopToggle
-        v-if="globalPlayerStore.isVisible"
-        :is-enabled="globalPlayerStore.loopMode === 'single'"
-        @toggle="globalPlayerStore.toggleLoopMode"
-      />
+          <!-- 循環播放控制 -->
+          <LoopToggle
+            :is-enabled="globalPlayerStore.loopMode === 'single'"
+            @toggle="globalPlayerStore.toggleLoopMode"
+          />
+        </template>
 
-      <!-- 初始狀態提示 -->
-      <div v-if="!hasVideo && !isLoading" class="welcome-message">
-        <div class="welcome-icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
-          </svg>
+        <!-- 無影片時顯示歡迎訊息 -->
+        <div v-else-if="!isLoading" class="welcome-message">
+          <div class="welcome-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
+            </svg>
+          </div>
+          <h2 class="welcome-title">歡迎使用 YouTube Loop Player</h2>
+          <p class="welcome-text">
+            在上方輸入框貼上 YouTube 影片或播放清單網址，即可開始自動循環播放
+          </p>
         </div>
-        <h2 class="welcome-title">歡迎使用 YouTube Loop Player</h2>
-        <p class="welcome-text">
-          在上方輸入框貼上 YouTube 影片或播放清單網址，即可開始自動循環播放
-        </p>
       </div>
 
       <!-- 訪客播放歷史 -->
@@ -292,6 +296,13 @@ async function handleUrlSubmit(url) {
   try {
     // 只取影片 ID（已經在 parser 中排除 list 參數）
     if (parser.videoId.value) {
+      // 先設為嵌入模式
+      globalPlayerStore.setDisplayMode('embedded')
+      console.log('已設置 displayMode 為 embedded')
+
+      // 等待 DOM 更新
+      await nextTick()
+
       // 使用 globalPlayerStore 播放影片
       globalPlayerStore.playVideo({
         video_id: parser.videoId.value,
@@ -302,10 +313,7 @@ async function handleUrlSubmit(url) {
         channel_name: ''
       })
 
-      // 設為嵌入模式
-      globalPlayerStore.setDisplayMode('embedded')
-
-      console.log('影片已加入 FloatingPlayer:', parser.videoId.value)
+      console.log('影片已加入 FloatingPlayer:', parser.videoId.value, 'displayMode:', globalPlayerStore.displayMode)
     }
   } catch (error) {
     console.error('播放影片時發生錯誤:', error)
@@ -612,6 +620,19 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* 播放器區域 */
+.player-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 嵌入播放器目標容器 */
+#embedded-player-target {
+  /* 容器本身不需要額外樣式，讓 Teleport 的內容決定佈局 */
+  width: 100%;
 }
 
 /* 認證提示訊息 */
