@@ -1,164 +1,115 @@
-# YouTube Player Constitution
 <!--
-Sync Impact Report - Constitution Version 1.0.0
-===============================================
-Version Change: N/A → 1.0.0 (Initial creation)
-Rationale: Initial constitution establishing core principles for code quality, testing, UX, and performance
-
-Modified Principles: N/A (new constitution)
-
-Added Sections:
-- Core Principles (4 principles established)
-- Development Standards
-- Quality Gates
-- Governance
-
-Removed Sections: N/A
-
-Templates Status:
-✅ .specify/templates/plan-template.md - Reviewed, Constitution Check section aligns
-✅ .specify/templates/spec-template.md - Reviewed, requirements and success criteria align
-✅ .specify/templates/tasks-template.md - Reviewed, task organization reflects principles
-
-Follow-up TODOs: None
+同步影響報告：
+- 版本：1.0.0 → 1.1.0（增強技術堆疊規範）
+- 修改原則：第五條「TypeScript 與 Next.js 標準」→「技術堆疊穩定性標準」
+- 新增內容：明確前端 (Vue.js 3.x) 與後端 (PHP 8.1+ / CodeIgniter 4.x) 技術標準
+- 移除章節：N/A
+- 模板狀態：✅ 無需模板變更
+- 後續追蹤：確保所有特性規劃遵循前後端技術堆疊規範
 -->
 
-## Core Principles
+# 官方網站專案憲章
 
-### I. Code Quality First (NON-NEGOTIABLE)
+## 核心原則
 
-**All code MUST:**
-- Follow single responsibility principle - one function/class does one thing well
-- Maintain clean separation of concerns - UI, business logic, and data access layers clearly separated
-- Use meaningful names that reveal intent - no abbreviations except widely accepted conventions
-- Keep functions under 50 lines and classes under 300 lines
-- Avoid code duplication - extract shared logic into reusable utilities
-- Include inline comments only when explaining "why", never "what"
+### 一、尊重棕地專案（不可協商）
 
-**Rationale**: Code is read far more often than written. High-quality, maintainable code reduces bugs, accelerates feature development, and enables team scalability. This principle is non-negotiable because technical debt compounds exponentially.
+**絕對禁止**在未經使用者明確要求的情況下重構或修改現有的正常運作程式碼。
+**必須**僅對被要求的特定部分進行精準的最小化修改。**必須**保留現有的架構、
+模式和程式碼風格。除非使用者明確表示「refactor」或「重構」，否則**禁止**
+進行重構。
 
-### II. Test-Driven Development (NON-NEGOTIABLE)
+**理由說明**：這是一個正式上線的棕地專案。不必要的變更會造成現有功能損壞的
+風險，並危及團隊穩定性。工作安全取決於對現有程式碼庫的尊重。
 
-**Testing discipline MUST be followed:**
-- Tests written BEFORE implementation (Red-Green-Refactor cycle strictly enforced)
-- Unit tests MUST cover all business logic with minimum 80% coverage
-- Integration tests MUST verify all API contracts and service interactions
-- Contract tests MUST be written for all public APIs and interfaces
-- Tests MUST be independent, fast (<1s per unit test), and deterministic
-- Test failures block all commits - no exceptions
+### 二、最小化變更原則
 
-**When tests are NOT required**: Proof-of-concept branches explicitly marked `poc/` may defer tests until promoted to feature branches.
+每次修改**必須**是達成目標所需的最小變更。**必須**避免觸碰不相關的檔案、
+函式或程式碼行。**必須**保留現有的註解、格式和結構，除非這些特定項目被明確
+指定需要變更。
 
-**Rationale**: TDD catches bugs before they exist, serves as living documentation, enables confident refactoring, and ensures every feature is testable by design. Non-negotiable because untested code is legacy code from day one.
+**理由說明**：最小化變更範圍可降低風險、簡化程式碼審查，並在棕地環境中維持
+系統穩定性。
 
-### III. User Experience Consistency
+### 三、需要明確許可
 
-**All user-facing features MUST:**
-- Follow established design patterns and component library
-- Provide immediate feedback for all user actions (<100ms visual response)
-- Handle errors gracefully with clear, actionable error messages
-- Support keyboard navigation and screen reader accessibility (WCAG 2.1 Level AA minimum)
-- Maintain consistent visual language (typography, colors, spacing, animations)
-- Work seamlessly across target platforms (desktop, mobile web, native apps as applicable)
+程式碼變更、架構決策和依賴套件更新**需要**使用者明確批准才能實施。**必須**
+提供選項並等待確認。**絕對禁止**擅自修改程式碼結構、新增函式庫或變更建置
+配置。
 
-**User testing requirements**:
-- Every user story MUST include acceptance scenarios testable by non-developers
-- Critical user journeys MUST be validated with at least 3 users before release
-- Confusing UX patterns MUST be documented with rationale or redesigned
+**理由說明**：使用者對所有變更保有控制權，以保護正式環境穩定性並確保符合
+團隊標準。
 
-**Rationale**: Inconsistent UX creates cognitive load, reduces user confidence, and increases support burden. Users judge quality by interface consistency and responsiveness.
+### 四、測試紀律
 
-### IV. Performance as a Feature
+現有測試**必須**在變更後持續通過。新功能**應該**在被要求時包含測試（單元測試
+使用 Jest）。**絕對禁止**修改或移除現有測試檔案，除非
+被明確指示。
 
-**Performance targets MUST be defined and measured:**
-- Page/screen load time: <2s on 3G connection
-- Time to interactive: <3s for critical paths
-- API response time: p95 <500ms, p99 <1s
-- Memory footprint: <200MB for mobile, <500MB for desktop
-- Bundle size: <500KB initial load (web), incremental loading for large assets
-- Database query time: <100ms for common operations
+**理由說明**：測試套件保護系統免於功能退化。在棕地專案中，維持現有測試覆蓋率
+至關重要。
 
-**Monitoring requirements**:
-- All performance-critical code paths MUST be instrumented
-- Performance regression tests MUST run in CI/CD pipeline
-- Real user monitoring (RUM) data MUST inform optimization priorities
-- Performance budgets MUST be defined in plan.md for every feature
+### 五、技術堆疊穩定性標準
 
-**When to defer optimization**: Premature optimization is prohibited unless performance targets are explicitly defined in spec.md. Profile first, optimize second.
+**必須**遵循程式碼庫中現有的技術標準和慣例：
+- **前端**: JavaScript ES2020+ 模式和 Vue.js 3.x (Composition API) 慣例
+- **後端**: PHP 8.1+ 模式和 CodeIgniter 4.x 框架慣例
 
-**Rationale**: Performance impacts user satisfaction, conversion rates, and operational costs. Defining performance as a measurable feature ensures it receives equal priority with functional requirements.
+**絕對禁止**在未經明確批准的情況下：
+- 升級主要版本 (Vue 3.x → 4.x, CodeIgniter 4.x → 5.x, PHP 8.1 → 9.x)
+- 引入新框架或語言
+- 新增 npm 或 composer 套件依賴
 
-## Development Standards
+**理由說明**：技術堆疊穩定性對棕地專案至關重要。版本變更可能在整個程式碼庫
+中引發連鎖性的破壞性變更。
 
-### Code Review Requirements
+## 變更分類
 
-All code changes MUST:
-- Pass automated linting and formatting checks
-- Include tests that cover new/changed functionality
-- Be reviewed and approved by at least one other developer
-- Pass all CI/CD quality gates (tests, coverage, performance benchmarks)
-- Update relevant documentation (API docs, quickstart guides, architecture diagrams)
+### 允許的變更（需使用者要求）
+- 修復特定函式/元件的錯誤
+- 在新檔案中建立新功能
+- 安全性依賴套件修補（經批准後）
+- 文件更新
+- 測試新增（非修改）
 
-### Documentation Standards
+### 禁止的變更（除非明確要求）
+- 重構現有正常運作的程式碼
+- 變更檔案結構或架構
+- 修改編碼模式或慣例
+- 升級主要依賴套件版本
+- 移除或重組現有功能
 
-Documentation MUST be:
-- Written concurrently with code (not deferred)
-- Technology-agnostic where possible (focus on "what" and "why", not "how")
-- Versioned alongside code
-- Kept up-to-date (outdated docs are worse than no docs)
+## 開發工作流程
 
-Required documentation:
-- API contracts for all public interfaces (contracts/ directory)
-- Architecture decision records (ADRs) for significant design choices
-- Quickstart guides testable by new developers
-- Data models with entity relationships clearly documented
+### 變更前
+1. **仔細閱讀**要求的變更內容
+2. **識別**需要修改的最小檔案集
+3. **提議**具體變更（如果不清楚）
+4. **等待**明確批准（如果範圍模糊）
 
-## Quality Gates
+### 實施期間
+1. **僅修改**被要求的部分
+2. **保留**所有現有程式碼風格和結構
+3. **測試**現有功能仍正常運作
+4. **驗證**無意外副作用
 
-### Pre-Commit Gates
-- All tests pass locally
-- Code formatted per project standards
-- No linting errors or warnings
+### 變更後
+1. **報告**確切變更內容及原因
+2. **確認**測試仍然通過
+3. **等待**使用者驗證才算完成
 
-### CI/CD Gates
-- All automated tests pass (unit, integration, contract)
-- Code coverage meets minimum threshold (80%)
-- Performance benchmarks within budget
-- Security scans show no critical/high vulnerabilities
-- Build artifacts under size limits
+## 治理規範
 
-### Pre-Release Gates
-- All acceptance scenarios validated
-- Performance targets met in staging environment
-- Accessibility audit passed (automated + manual)
-- User testing completed for critical journeys (if applicable)
-- Documentation reviewed and updated
+本憲章**優先於**本專案的所有其他開發指南。任何在此程式碼庫上工作的 AI 代理、
+開發者或工具**必須**遵守這些原則。
 
-## Governance
+**修訂程序**：憲章變更需要使用者明確要求並記錄理由。版本號遵循語意化版本控制
+（主版本.次版本.修訂版本）。
 
-### Constitutional Authority
-This constitution supersedes all other development practices and guidelines. In case of conflict between this constitution and any other document (coding standards, team norms, etc.), this constitution takes precedence.
+**合規性**：每次程式碼變更**必須**在實施前根據這些原則進行驗證。如有疑問，
+應詢問使用者而非自行假設。
 
-### Amendment Process
-**Amendments require:**
-1. Written proposal documenting: what changes, why needed, impact analysis
-2. Review by all active contributors
-3. Approval by project maintainer(s)
-4. Update to dependent templates (plan, spec, tasks) to maintain consistency
-5. Version increment per semantic versioning rules
+**緊急覆寫**：使用者可以透過明確表示「ignore constitution」或「憲法暫停」
+來暫時性地針對特定要求暫停原則。
 
-### Compliance Verification
-All pull requests and code reviews MUST verify:
-- Adherence to all four core principles
-- Completion of all quality gates
-- Justification for any complexity introduced (documented in plan.md Complexity Tracking section)
-
-### Complexity Justification Policy
-Any pattern or architecture that violates YAGNI (You Aren't Gonna Need It) MUST be justified:
-- Document why simpler alternative is insufficient
-- Demonstrate specific problem being solved
-- Include removal plan if assumption proves wrong
-
-Use plan.md Complexity Tracking table to document justified violations.
-
-**Version**: 1.0.0 | **Ratified**: 2025-10-22 | **Last Amended**: 2025-10-22
+**版本**：1.1.0 | **批准日期**：2025-10-31 | **最後修訂**：2025-11-01
