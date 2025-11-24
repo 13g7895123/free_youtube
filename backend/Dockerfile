@@ -1,4 +1,4 @@
-FROM php:8.1-cli-alpine
+FROM php:8.5-cli-alpine
 
 # 安裝系統依賴和 PHP 擴展
 RUN apk add --no-cache \
