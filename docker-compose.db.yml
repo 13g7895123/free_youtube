@@ -66,14 +66,10 @@ services:
 
 volumes:
   mariadb_prod_data:
-    driver: local
-    # 使用外部 volume 以便與應用程式共享
     external: true
     name: free_youtube_mariadb_prod_data
 
 networks:
   app_network_prod:
-    driver: bridge
-    # 使用外部網路以便與應用程式共享
     external: true
     name: free_youtube_app_network_prod
