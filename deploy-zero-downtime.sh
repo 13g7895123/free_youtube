@@ -154,10 +154,13 @@ update_upstream() {
 # ========================================
 # 自動生成於: $(date '+%Y-%m-%d %H:%M:%S')
 # 目前活躍環境: $target_env
+#
+# 使用變數方式，讓 Nginx 可以動態解析 DNS
+# 即使容器不存在也不會導致啟動失敗
 
-upstream app_frontend {
-    server ${frontend_container}:80;
-    keepalive 32;
+# 應用程式前端主機
+map \$host \$app_frontend_host {
+    default "${frontend_container}:80";
 }
 EOF
     
