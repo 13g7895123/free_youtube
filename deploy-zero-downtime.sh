@@ -113,6 +113,12 @@ get_frontend_container() {
     echo "${project}-frontend-1"
 }
 
+# 取得 backend 容器名稱
+get_backend_container() {
+    local project=$(get_project_name "$1")
+    echo "${project}-backend-1"
+}
+
 # 檢查容器是否健康
 check_container_health() {
     local container_name="$1"
@@ -145,6 +151,7 @@ check_container_health() {
 update_upstream() {
     local target_env="$1"
     local frontend_container=$(get_frontend_container "$target_env")
+    local backend_container=$(get_backend_container "$target_env")
     
     log_info "更新 upstream 配置指向 $target_env 環境..."
     
@@ -161,6 +168,11 @@ update_upstream() {
 # 應用程式前端主機
 map \$host \$app_frontend_host {
     default "${frontend_container}:80";
+}
+
+# 應用程式後端主機
+map \$host \$app_backend_host {
+    default "${backend_container}:8000";
 }
 EOF
     
