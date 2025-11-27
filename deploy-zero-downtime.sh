@@ -37,7 +37,8 @@ ENV_FILE=".env.prod"
 
 # Docker Compose 檔案
 COMPOSE_DB="docker-compose.db.yml"
-COMPOSE_APP="docker-compose.app.yml"
+COMPOSE_APP_BLUE="docker-compose.app-blue.yml"
+COMPOSE_APP_GREEN="docker-compose.app-green.yml"
 COMPOSE_GATEWAY="docker-compose.gateway.yml"
 
 # 網路和 Volume 名稱
@@ -109,14 +110,29 @@ get_project_name() {
 
 # 取得 frontend 容器名稱
 get_frontend_container() {
-    local project=$(get_project_name "$1")
-    echo "${project}-frontend-1"
+    if [ "$1" = "blue" ]; then
+        echo "free_youtube_frontend_blue"
+    else
+        echo "free_youtube_frontend_green"
+    fi
 }
 
 # 取得 backend 容器名稱
 get_backend_container() {
-    local project=$(get_project_name "$1")
-    echo "${project}-backend-1"
+    if [ "$1" = "blue" ]; then
+        echo "free_youtube_backend_blue"
+    else
+        echo "free_youtube_backend_green"
+    fi
+}
+
+# 取得 compose 檔案
+get_compose_file() {
+    if [ "$1" = "blue" ]; then
+        echo "$COMPOSE_APP_BLUE"
+    else
+        echo "$COMPOSE_APP_GREEN"
+    fi
 }
 
 # 檢查容器是否健康
@@ -164,6 +180,10 @@ update_upstream() {
 #
 # 使用變數方式，讓 Nginx 可以動態解析 DNS
 # 即使容器不存在也不會導致啟動失敗
+#
+# 容器名稱對應:
+#   Blue:  free_youtube_frontend_blue / free_youtube_backend_blue
+#   Green: free_youtube_frontend_green / free_youtube_backend_green
 
 # 應用程式前端主機
 map \$host \$app_frontend_host {
@@ -230,11 +250,11 @@ show_status() {
     echo ""
     
     echo "=== Blue 環境 ==="
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$PROJECT_BLUE" ps 2>/dev/null || echo "未啟動"
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP_BLUE" ps 2>/dev/null || echo "未啟動"
     echo ""
     
     echo "=== Green 環境 ==="
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$PROJECT_GREEN" ps 2>/dev/null || echo "未啟動"
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP_GREEN" ps 2>/dev/null || echo "未啟動"
     echo ""
 }
 
@@ -322,6 +342,21 @@ rollback() {
     
     log_info "從 $active 回滾到 $target..."
     
+    # 啟動目標環境（如果已停止）
+    local target_compose=$(get_compose_file "$target")
+    docker compose --env-file "$ENV_FILE" -f "$target_compose" up -d
+    
+    # 等待健康檢查
+    local target_backend=$(get_backend_container "$target")
+    if ! check_container_health "$target_backend"; then
+        log_error "Backend 健康檢查失敗，回滾中止"
+        exit 1
+    fi
+    if ! check_container_health "$target_frontend"; then
+        log_error "Frontend 健康檢查失敗，回滾中止"
+        exit 1
+    fi
+    
     # 更新 upstream 並重載
     update_upstream "$target"
     reload_gateway
@@ -381,37 +416,37 @@ deploy() {
     # 決定目標環境
     local active=$(get_active_env)
     local target=$(get_target_env)
-    local target_project=$(get_project_name "$target")
+    local target_compose=$(get_compose_file "$target")
     local target_frontend=$(get_frontend_container "$target")
+    local target_backend=$(get_backend_container "$target")
     
     log_info "目前活躍環境: $active"
     log_info "目標部署環境: $target"
     
     # 構建新環境
     log_step "Step 2: 構建 $target 環境映像"
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$target_project" build
+    docker compose --env-file "$ENV_FILE" -f "$target_compose" build
     log_success "映像構建完成"
     
     # 啟動新環境
     log_step "Step 3: 啟動 $target 環境"
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$target_project" up -d
+    docker compose --env-file "$ENV_FILE" -f "$target_compose" up -d
     log_success "$target 環境已啟動"
     
     # 等待健康檢查
     log_step "Step 4: 健康檢查"
     
     # 等待 backend
-    local target_backend="${target_project}-backend-1"
     if ! check_container_health "$target_backend"; then
         log_error "Backend 健康檢查失敗，中止部署"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$target_project" down
+        docker compose --env-file "$ENV_FILE" -f "$target_compose" down
         exit 1
     fi
     
     # 等待 frontend
     if ! check_container_health "$target_frontend"; then
         log_error "Frontend 健康檢查失敗，中止部署"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$target_project" down
+        docker compose --env-file "$ENV_FILE" -f "$target_compose" down
         exit 1
     fi
     
@@ -429,13 +464,13 @@ deploy() {
     # 清理舊環境
     if [ "$active" != "none" ]; then
         log_step "Step 6: 清理 $active 環境"
-        local old_project=$(get_project_name "$active")
+        local old_compose=$(get_compose_file "$active")
         
         # 等待一段時間確保沒有進行中的請求
         log_info "等待 10 秒確保舊連線完成..."
         sleep 10
         
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_APP" -p "$old_project" down
+        docker compose --env-file "$ENV_FILE" -f "$old_compose" down
         log_success "$active 環境已清理"
     fi
     
@@ -452,9 +487,9 @@ deploy() {
     echo "  - 部署耗時: ${duration} 秒"
     echo ""
     echo "🔧 常用命令:"
-    echo "  - 查看狀態:    ./deploy-prod.sh --status"
-    echo "  - 回滾:        ./deploy-prod.sh --rollback"
-    echo "  - 查看日誌:    docker compose --env-file $ENV_FILE -f $COMPOSE_APP -p $target_project logs -f"
+    echo "  - 查看狀態:    ./deploy-zero-downtime.sh --status"
+    echo "  - 回滾:        ./deploy-zero-downtime.sh --rollback"
+    echo "  - 查看日誌:    docker compose --env-file $ENV_FILE -f $target_compose logs -f"
     echo ""
 }
 
