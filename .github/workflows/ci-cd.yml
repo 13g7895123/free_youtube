@@ -269,11 +269,11 @@ jobs:
             git pull
 
             echo "🔧 Ensuring deployment script is executable..."
-            chmod +x deploy-prod.sh
+            chmod +x deploy-zero-downtime.sh
             chmod +x backend/docker-entrypoint.prod.sh
 
-            echo "🚀 Executing production deployment..."
-            ./deploy-prod.sh
+            echo "🚀 Executing zero-downtime deployment..."
+            ./deploy-zero-downtime.sh
 
             echo "✅ Production deployment completed successfully!"
           EOF

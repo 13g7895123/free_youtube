@@ -1,0 +1,40 @@
+# ========================================
+# YouTube Loop Player - Gateway Nginx (流量入口)
+# ========================================
+# 此檔案負責管理流量入口的 Nginx，實現藍綠部署切換
+# Gateway 會根據配置將流量導向 Blue 或 Green 環境
+#
+# 使用方式:
+#   啟動: docker compose --env-file .env.prod -f docker-compose.gateway.yml up -d
+#   重載: docker exec free_youtube_gateway nginx -s reload
+#   停止: docker compose --env-file .env.prod -f docker-compose.gateway.yml down
+
+services:
+  gateway:
+    image: nginx:alpine
+    container_name: free_youtube_gateway
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx.gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+      # SSL 憑證掛載 (如有需要)
+      # - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - free_youtube_app_network_prod
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  free_youtube_app_network_prod:
+    external: true

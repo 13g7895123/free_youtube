@@ -1,0 +1,79 @@
+# ========================================
+# YouTube Loop Player - 資料庫服務 (獨立運行)
+# ========================================
+# 此檔案獨立管理資料庫服務，不參與藍綠部署切換
+# 資料庫應該長期運行，應用程式藍綠切換時不需重啟
+#
+# 使用方式:
+#   啟動: docker compose --env-file .env.prod -f docker-compose.db.yml up -d
+#   停止: docker compose --env-file .env.prod -f docker-compose.db.yml down
+#   查看: docker compose --env-file .env.prod -f docker-compose.db.yml ps
+
+services:
+  # MariaDB 資料庫服務 - 正式環境
+  mariadb:
+    image: mariadb:10.6
+    container_name: free_youtube_db_prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Taipei
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mariadb_prod_data:/var/lib/mysql
+      - ./backend/database/migrations.sql:/docker-entrypoint-initdb.d/migrations.sql:ro
+    networks:
+      - app_network_prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # phpMyAdmin 資料庫管理工具 - 正式環境
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: free_youtube_phpmyadmin_prod
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_ABSOLUTE_URI: ${PMA_ABSOLUTE_URI:-https://free.youtube.mercylife.cc/pma/}
+      UPLOAD_LIMIT: 100M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 600
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network_prod
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mariadb_prod_data:
+    driver: local
+    # 使用外部 volume 以便與應用程式共享
+    external: true
+    name: free_youtube_mariadb_prod_data
+
+networks:
+  app_network_prod:
+    driver: bridge
+    # 使用外部網路以便與應用程式共享
+    external: true
+    name: free_youtube_app_network_prod
