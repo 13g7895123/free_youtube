@@ -44,7 +44,7 @@ if [ ! -f "spark" ]; then
     echo "⚠️  Warning: spark file not found!"
     echo "Falling back to PHP built-in server..."
     cd /var/www/html/public
-    exec php -S 0.0.0.0:8000
+    exec php -S 0.0.0.0:8000 router.php
 fi
 
 # 使用 spark serve 啟動（CI4 官方推薦方式）

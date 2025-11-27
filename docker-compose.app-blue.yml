@@ -1,0 +1,107 @@
+# ========================================
+# YouTube Loop Player - Blue 環境應用程式服務
+# ========================================
+# 使用方式:
+#   啟動: docker compose --env-file .env.prod -f docker-compose.app-blue.yml up -d
+#   停止: docker compose --env-file .env.prod -f docker-compose.app-blue.yml down
+#
+# 注意: Blue 和 Green 使用相同的對外端口，同時只能啟動一個環境暴露端口
+
+services:
+  # Frontend 服務 - Blue 環境
+  frontend-blue:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        NODE_VERSION: 22
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: free_youtube_frontend_blue
+    # ports:
+    #   - "${FRONTEND_PORT:-9104}:80"  # 可選：測試時取消註解直接訪問
+    expose:
+      - "80"
+    networks:
+      - free_youtube_app_network_prod
+    depends_on:
+      backend-blue:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Backend API 服務 - Blue 環境
+  backend-blue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: free_youtube_backend_blue
+    # ports:
+    #   - "${BACKEND_PORT:-9204}:8000"  # 可選：測試時取消註解直接訪問
+    expose:
+      - "8000"
+    environment:
+      CI_ENVIRONMENT: ${APP_ENV:-production}
+      # 認證模式
+      AUTH_MODE: ${AUTH_MODE:-line}
+      MOCK_USER_ID: ${MOCK_USER_ID:-1}
+      # MySQL 環境變數 - 連線到外部資料庫容器
+      MYSQL_HOST: free_youtube_db_prod
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-free_youtube}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # CI4 資料庫環境變數
+      database.default.hostname: free_youtube_db_prod
+      database.default.database: ${MYSQL_DATABASE:-free_youtube}
+      database.default.username: ${MYSQL_USER:-app_user}
+      database.default.password: ${MYSQL_PASSWORD}
+      database.default.DBDriver: MySQLi
+      database.default.port: 3306
+      database.default.charset: utf8mb4
+      database.default.DBCollat: utf8mb4_unicode_ci
+      # LINE Login 環境變數
+      LINE_LOGIN_CHANNEL_ID: ${LINE_LOGIN_CHANNEL_ID:-}
+      LINE_LOGIN_CHANNEL_SECRET: ${LINE_LOGIN_CHANNEL_SECRET:-}
+      LINE_LOGIN_CALLBACK_URL: ${LINE_LOGIN_CALLBACK_URL:-}
+      TOKEN_EXPIRE_SECONDS: ${TOKEN_EXPIRE_SECONDS:-2592000}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      # JWT 配置
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRE: ${JWT_ACCESS_TOKEN_EXPIRE:-900}
+      JWT_REFRESH_TOKEN_EXPIRE: ${JWT_REFRESH_TOKEN_EXPIRE:-2592000}
+      # Cookie 配置
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # CodeIgniter App 配置
+      app.baseURL: ${APP_BASEURL:-https://free.youtube.mercylife.cc/}
+      app.forceGlobalSecureRequests: ${APP_FORCE_HTTPS:-true}
+    volumes:
+      - ./backend/writable:/var/www/html/writable
+    networks:
+      - free_youtube_app_network_prod
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  free_youtube_app_network_prod:
+    external: true

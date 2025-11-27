@@ -137,7 +137,7 @@ if [ ! -f "spark" ]; then
     echo "⚠️  Warning: spark file not found!"
     echo "Falling back to PHP built-in server..."
     cd /var/www/html/public
-    exec php -S 0.0.0.0:8000 \
+    exec php -S 0.0.0.0:8000 router.php \
         -d display_errors=0 \
         -d error_reporting=E_ALL \
         -d log_errors=1 \
@@ -151,13 +151,13 @@ cd /var/www/html/public
 # 如果當前是 root 用戶，切換到 appuser 執行應用（提升安全性）
 if [ "$(id -u)" = "0" ]; then
     echo "Switching to appuser for security..."
-    exec su-exec appuser php -S 0.0.0.0:8000 \
+    exec su-exec appuser php -S 0.0.0.0:8000 router.php \
         -d display_errors=1 \
         -d error_reporting=E_ALL \
         -d log_errors=1 \
         -d error_log=/var/www/html/writable/logs/php-error.log
 else
-    exec php -S 0.0.0.0:8000 \
+    exec php -S 0.0.0.0:8000 router.php \
         -d display_errors=1 \
         -d error_reporting=E_ALL \
         -d log_errors=1 \
