@@ -62,7 +62,7 @@ export function useYouTubePlayer(containerId, options = {}) {
 
     // 檢測影片結束
     if (state === window.YT.PlayerState.ENDED) {
-      handleVideoEnd()
+      handleVideoEnd(event.target)
     }
 
     // 如果正在播放，清除任何錯誤狀態
@@ -74,14 +74,16 @@ export function useYouTubePlayer(containerId, options = {}) {
 
   /**
    * 處理影片結束事件
+   * @param {Object} player - 播放器實例
    */
-  function handleVideoEnd() {
+  function handleVideoEnd(player) {
     // 如果啟用循環播放
     if (loopEnabled.value) {
+      const targetPlayer = player || playerInstance
       // 跳轉到開頭並重新播放
-      if (playerInstance) {
-        playerInstance.seekTo(0, true)
-        playerInstance.playVideo()
+      if (targetPlayer && typeof targetPlayer.seekTo === 'function') {
+        targetPlayer.seekTo(0, true)
+        targetPlayer.playVideo()
       }
     }
   }
