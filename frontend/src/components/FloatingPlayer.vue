@@ -415,8 +415,15 @@ const initPlayer = async (videoId) => {
         if (event.data === window.YT.PlayerState.ENDED) {
           console.log('FloatingPlayer: Video ended, loopMode:', playerStore.loopMode, 'shuffleEnabled:', playerStore.shuffleEnabled)
           if (playerStore.hasPlaylist) {
-            // next() function will handle loop mode and shuffle
-            playerStore.next()
+            if (playerStore.loopMode === 'single') {
+              // 單曲循環模式：重播當前影片
+              console.log('FloatingPlayer: Single loop mode, replaying')
+              ytPlayer.seekTo(0)
+              ytPlayer.playVideo()
+            } else {
+              // next() function will handle shuffle and playlist loop
+              playerStore.next()
+            }
           } else {
             // Single video - replay it
             console.log('FloatingPlayer: Single video ended, replaying')

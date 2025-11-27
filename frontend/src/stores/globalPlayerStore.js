@@ -68,15 +68,6 @@ export const useGlobalPlayerStore = defineStore('globalPlayer', () => {
 
     const playlistLength = currentPlaylist.value.items.length
 
-    // 單曲循環模式
-    if (loopMode.value === 'single') {
-      currentVideo.value = { ...currentPlaylist.value.items[currentIndex.value] }
-      // 延遲設置播放狀態
-      await nextTick()
-      isPlaying.value = true
-      return
-    }
-
     // 隨機播放邏輯
     let nextIndex
     if (shuffleEnabled.value) {
