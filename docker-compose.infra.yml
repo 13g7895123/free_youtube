@@ -1,0 +1,29 @@
+# ========================================
+# YouTube Loop Player - 基礎設施 (網路與 Volume)
+# ========================================
+# 此檔案用於初始化共享的網路和 Volume
+# 只需在首次部署時執行一次
+#
+# 使用方式:
+#   docker compose -f docker-compose.infra.yml up -d
+
+services:
+  # 這是一個佔位服務，用於讓 Compose 建立網路和 Volume
+  # 啟動後會立即退出
+  init:
+    image: busybox
+    command: ["echo", "Infrastructure initialized"]
+    networks:
+      - app_network_prod
+    volumes:
+      - mariadb_prod_data:/data
+
+volumes:
+  mariadb_prod_data:
+    driver: local
+    name: free_youtube_mariadb_prod_data
+
+networks:
+  app_network_prod:
+    driver: bridge
+    name: free_youtube_app_network_prod

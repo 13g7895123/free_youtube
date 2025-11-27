@@ -234,22 +234,24 @@ init_environment() {
     fi
     log_success "環境檔案存在"
     
-    # 建立外部網路
-    log_info "建立 Docker 網路..."
-    if ! docker network inspect "$NETWORK_NAME" > /dev/null 2>&1; then
-        docker network create "$NETWORK_NAME"
-        log_success "網路 $NETWORK_NAME 已建立"
+    # 使用 Docker Compose 建立網路和 Volume
+    log_info "使用 Docker Compose 建立基礎設施 (網路與 Volume)..."
+    docker compose -f docker-compose.infra.yml up -d
+    log_success "基礎設施已建立"
+    
+    # 驗證網路和 Volume
+    if docker network inspect "$NETWORK_NAME" > /dev/null 2>&1; then
+        log_success "網路 $NETWORK_NAME 已就緒"
     else
-        log_info "網路 $NETWORK_NAME 已存在"
+        log_error "網路 $NETWORK_NAME 建立失敗"
+        exit 1
     fi
     
-    # 建立外部 Volume
-    log_info "建立 Docker Volume..."
-    if ! docker volume inspect "$VOLUME_NAME" > /dev/null 2>&1; then
-        docker volume create "$VOLUME_NAME"
-        log_success "Volume $VOLUME_NAME 已建立"
+    if docker volume inspect "$VOLUME_NAME" > /dev/null 2>&1; then
+        log_success "Volume $VOLUME_NAME 已就緒"
     else
-        log_info "Volume $VOLUME_NAME 已存在"
+        log_error "Volume $VOLUME_NAME 建立失敗"
+        exit 1
     fi
     
     # 啟動資料庫服務
